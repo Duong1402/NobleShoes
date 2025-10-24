@@ -1,36 +1,36 @@
 package com.example.datn.controller;
 
+import com.example.datn.dto.SanPhamRequest;
 import com.example.datn.entity.SanPham;
 import com.example.datn.service.SanPhamService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/san-pham")
+@RequestMapping("/admin/san-pham")
+@RequiredArgsConstructor
 public class SanPhamController {
-    private final SanPhamService service;
-    public SanPhamController(SanPhamService service) { this.service = service; }
+
+    private final SanPhamService sanPhamService;
 
     @GetMapping
-    public List<SanPham> all() { return service.findAll(); }
-
-    @GetMapping("/{id}")
-    public SanPham one(@PathVariable UUID id) {
-        return service.findById(id).orElseThrow(() -> new NoSuchElementException("SanPham not found"));
+    public List<SanPham> getAll() {
+        return sanPhamService.getAll();
     }
 
     @PostMapping
-    public SanPham create(@RequestBody SanPham obj) { return service.save(obj); }
-
-    @PutMapping("/{id}")
-    public SanPham update(@PathVariable UUID id, @RequestBody SanPham obj) {
-        obj.setId(id);
-        return service.save(obj);
+    public ResponseEntity<?> addSanPham(@Valid @RequestBody SanPhamRequest request) {
+        sanPhamService.saveSanPham(request);
+        return ResponseEntity.ok("Thêm sản phẩm thành công!");
     }
 
-    @DeleteMapping("/{id}")
-    public void delete(@PathVariable UUID id) { service.deleteById(id); }
+    @PutMapping("/{id}")
+    public SanPham update(@PathVariable UUID id, @Valid @RequestBody SanPham sp) {
+        return sanPhamService.update(id, sp);
+    }
 }
