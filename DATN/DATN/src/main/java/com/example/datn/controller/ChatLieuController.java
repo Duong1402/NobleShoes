@@ -2,35 +2,49 @@ package com.example.datn.controller;
 
 import com.example.datn.entity.ChatLieu;
 import com.example.datn.service.ChatLieuService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/chat-lieu")
+@RequestMapping("/admin/chat-lieu")
 public class ChatLieuController {
+
     private final ChatLieuService service;
-    public ChatLieuController(ChatLieuService service) { this.service = service; }
 
+    public ChatLieuController(ChatLieuService service) {
+        this.service = service;
+    }
+
+    // ✅ Lấy tất cả
     @GetMapping
-    public List<ChatLieu> all() { return service.findAll(); }
+    public List<ChatLieu> getAll() {
+        return service.getAll();
+    }
 
+    // ✅ Lấy theo ID
     @GetMapping("/{id}")
-    public ChatLieu one(@PathVariable UUID id) {
-        return service.findById(id).orElseThrow(() -> new NoSuchElementException("ChatLieu not found"));
+    public ChatLieu getById(@PathVariable UUID id) {
+        return service.getById(id);
     }
 
+    // ✅ Thêm mới (có validate)
     @PostMapping
-    public ChatLieu create(@RequestBody ChatLieu obj) { return service.save(obj); }
-
-    @PutMapping("/{id}")
-    public ChatLieu update(@PathVariable UUID id, @RequestBody ChatLieu obj) {
-        obj.setId(id);
-        return service.save(obj);
+    public ChatLieu create(@Valid @RequestBody ChatLieu cl) {
+        return service.create(cl);
     }
 
+    // ✅ Cập nhật (có validate)
+    @PutMapping("/{id}")
+    public ChatLieu update(@PathVariable UUID id, @Valid @RequestBody ChatLieu cl) {
+        return service.update(id, cl);
+    }
+
+    // ✅ Xóa
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable UUID id) { service.deleteById(id); }
+    public void delete(@PathVariable UUID id) {
+        service.delete(id);
+    }
 }

@@ -2,35 +2,49 @@ package com.example.datn.controller;
 
 import com.example.datn.entity.HinhAnh;
 import com.example.datn.service.HinhAnhService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/hinh-anh")
+@RequestMapping("/admin/hinh-anh")
 public class HinhAnhController {
+
     private final HinhAnhService service;
-    public HinhAnhController(HinhAnhService service) { this.service = service; }
 
+    public HinhAnhController(HinhAnhService service) {
+        this.service = service;
+    }
+
+    // ✅ Lấy tất cả hình ảnh
     @GetMapping
-    public List<HinhAnh> all() { return service.findAll(); }
+    public List<HinhAnh> getAll() {
+        return service.getAll();
+    }
 
+    // ✅ Lấy hình ảnh theo ID
     @GetMapping("/{id}")
-    public HinhAnh one(@PathVariable UUID id) {
-        return service.findById(id).orElseThrow(() -> new NoSuchElementException("HinhAnh not found"));
+    public HinhAnh getById(@PathVariable UUID id) {
+        return service.getById(id);
     }
 
+    // ✅ Thêm hình ảnh (có validate)
     @PostMapping
-    public HinhAnh create(@RequestBody HinhAnh obj) { return service.save(obj); }
-
-    @PutMapping("/{id}")
-    public HinhAnh update(@PathVariable UUID id, @RequestBody HinhAnh obj) {
-        obj.setId(id);
-        return service.save(obj);
+    public HinhAnh create(@Valid @RequestBody HinhAnh ha) {
+        return service.create(ha);
     }
 
+    // ✅ Cập nhật hình ảnh (có validate)
+    @PutMapping("/{id}")
+    public HinhAnh update(@PathVariable UUID id, @Valid @RequestBody HinhAnh ha) {
+        return service.update(id, ha);
+    }
+
+    // ✅ Xóa hình ảnh
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable UUID id) { service.deleteById(id); }
+    public void delete(@PathVariable UUID id) {
+        service.delete(id);
+    }
 }
