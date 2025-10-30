@@ -1,6 +1,6 @@
 <script setup>
 import Breadcrumb from "@/components/common/Breadcrumb.vue";
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { Modal } from "bootstrap";
 import Swal from "sweetalert2";
 import { useNotify } from "@/composables/useNotify";
@@ -15,7 +15,7 @@ const dayGiay = ref([]);
 const notify = useNotify();
 const selectedDayGiay = ref({
   id: "",
-  ma: "",
+  ma: "", // Mã sẽ được Backend tạo khi thêm mới (Để trống khi thêm)
   ten: "",
 });
 let modalInstance = null;
@@ -23,11 +23,19 @@ let modalInstance = null;
 // --- Bộ lọc ---
 const search = ref("");
 
+// --- Phân trang ---
+const currentPage = ref(1);
+const pageSize = ref(10);
+
 // Load danh sách dây giày
 const loadDayGiay = async () => {
   try {
     const res = await getAllDayGiay();
-    dayGiay.value = res.data;
+
+    // Sắp xếp theo Mã giảm dần (DG10, DG09, DG08,...)
+    dayGiay.value = res.data.sort((a, b) => b.ma.localeCompare(a.ma));
+
+    if (currentPage.value > totalPages.value) currentPage.value = 1;
   } catch (err) {
     console.error("❌ Lỗi khi tải dây giày:", err);
   }
@@ -48,19 +56,35 @@ const filteredDayGiay = computed(() => {
   );
 });
 
+// Tổng số trang
+const totalPages = computed(() =>
+  Math.ceil(filteredDayGiay.value.length / pageSize.value)
+);
+
+// Danh sách hiển thị theo trang
+const pagedDayGiay = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  return filteredDayGiay.value.slice(start, start + pageSize.value);
+});
+
+// Watch tìm kiếm → reset trang về 1
+watch(search, () => {
+  currentPage.value = 1;
+});
+
 const resetFilter = () => {
   search.value = "";
 };
 
-// Mở modal thêm
+// --- Modal ---
 const openModalAdd = () => {
-  selectedDayGiay.value = { id: "", ma: "", ten: "" };
+  // Bỏ trống mã để backend tự tạo
+  selectedDayGiay.value = { id: "", ma: "", ten: "" }; 
   const modalEl = document.getElementById("detailModal");
   if (!modalInstance) modalInstance = new Modal(modalEl);
   modalInstance.show();
 };
 
-// Mở modal sửa
 const editItem = (item) => {
   selectedDayGiay.value = JSON.parse(JSON.stringify(item));
   const modalEl = document.getElementById("detailModal");
@@ -68,19 +92,13 @@ const editItem = (item) => {
   modalInstance.show();
 };
 
-// ✅ Hàm validate form trước khi lưu
+// Validate
 const validateForm = () => {
-  if (!selectedDayGiay.value.ma?.trim()) {
-    notify.warning("Vui lòng nhập mã dây giày!");
-    return false;
-  }
+  // 💡 CHỈNH SỬA: BỎ validation cho Mã khi Thêm mới, chỉ kiểm tra Tên.
+  // Nếu là Cập nhật, mã vẫn được hiển thị (readonly) nhưng không cần kiểm tra.
+  
   if (!selectedDayGiay.value.ten?.trim()) {
     notify.warning("Vui lòng nhập tên dây giày!");
-    return false;
-  }
-  // Kiểm tra độ dài tối thiểu
-  if (selectedDayGiay.value.ma.length < 2) {
-    notify.warning("Mã dây giày phải có ít nhất 2 ký tự!");
     return false;
   }
   if (selectedDayGiay.value.ten.length < 3) {
@@ -93,13 +111,15 @@ const validateForm = () => {
 // Lưu thêm/sửa
 const saveItem = async () => {
   try {
-    if (!validateForm()) return; // ✅ Dừng nếu validate không đạt
+    if (!validateForm()) return;
 
     if (selectedDayGiay.value.id) {
+      // Cập nhật
       await updateDayGiay(selectedDayGiay.value.id, selectedDayGiay.value);
       notify.success("Cập nhật thành công!");
     } else {
-      await createDayGiay(selectedDayGiay.value);
+      // Thêm mới: Gửi đối tượng không có mã (mã sẽ được backend tạo)
+      await createDayGiay(selectedDayGiay.value); 
       notify.success("Thêm mới thành công!");
     }
     modalInstance.hide();
@@ -146,28 +166,32 @@ const confirmDelete = async (id) => {
     }
   }
 };
+
+// Phân trang
+const goToPage = (page) => {
+  if (totalPages.value === 0) {
+    currentPage.value = 1;
+    return;
+  }
+  if (page < 1) page = 1;
+  if (page > totalPages.value) page = totalPages.value;
+  currentPage.value = page;
+};
 </script>
 
 <template>
   <div class="container-fluid mt-4 px-5">
-    <!-- Header -->
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
-        <div
-          class="page-header d-flex align-items-center justify-content-between"
-        >
+        <div class="page-header d-flex align-items-center justify-content-between">
           <div>
             <h3 class="fw-bold text-warning mb-1">Quản lý Dây Giày</h3>
             <Breadcrumb class="mt-2 mb-0" />
           </div>
-          <button class="btn btn-warning text-white" @click="openModalAdd">
-            <i class="fa fa-plus me-2"></i>Thêm mới
-          </button>
         </div>
       </div>
     </div>
 
-    <!-- Bộ lọc -->
     <div class="card mb-4">
       <div class="card-header">
         <h4 class="card-title"><i class="fa fa-filter me-2"></i> Bộ Lọc</h4>
@@ -177,18 +201,11 @@ const confirmDelete = async (id) => {
           <div class="row g-3">
             <div class="col-md-4">
               <label class="form-label fw-bold">Tìm kiếm</label>
-              <input
-                type="text"
-                v-model="search"
-                class="form-control"
-                placeholder="Nhập mã hoặc tên dây giày..."
-              />
+              <input type="text" v-model="search" class="form-control" placeholder="Nhập mã hoặc tên dây giày..." />
             </div>
           </div>
 
-          <div
-            class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4"
-          >
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4">
             <p class="mb-2 mb-md-0">
               Tổng số:
               <span class="text-warning fw-bold">{{
@@ -199,11 +216,7 @@ const confirmDelete = async (id) => {
               <button type="button" class="btn btn-dark" @click="resetFilter">
                 Đặt lại bộ lọc
               </button>
-              <button
-                type="button"
-                class="btn btn-warning text-white"
-                @click="openModalAdd"
-              >
+              <button type="button" class="btn btn-warning text-white" @click="openModalAdd">
                 Thêm dây giày
               </button>
             </div>
@@ -212,7 +225,6 @@ const confirmDelete = async (id) => {
       </div>
     </div>
 
-    <!-- Danh sách -->
     <div class="card">
       <div class="card-header">
         <h4 class="card-title mb-0">
@@ -231,19 +243,16 @@ const confirmDelete = async (id) => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(item, index) in filteredDayGiay" :key="item.id">
-                <td>{{ index + 1 }}</td>
+              <tr v-for="(item, index) in pagedDayGiay" :key="item.id">
+                <td>{{ (currentPage - 1) * pageSize + index + 1 }}</td>
                 <td class="text-warning fw-bold">{{ item.ma }}</td>
                 <td>{{ item.ten }}</td>
                 <td class="text-center">
                   <div class="d-flex justify-content-center align-items-center gap-2">
-                    <!-- Show detail icon -->
-                    <button class="btn btn-link text-info btn-lg p-0" @click="editItem(item)" title="Xem chi tiết">
+                    <button class="btn btn-link text-info btn-lg p-0" @click="editItem(item)" title="Xem chi tiết/Sửa">
                       <i class="fa fa-eye"></i>
                     </button>
-
-                    <!-- Xóa ẩn đi: không hiển thị nút xóa -->
-                  </div>
+                    </div>
                 </td>
               </tr>
               <tr v-if="filteredDayGiay.length === 0">
@@ -251,72 +260,64 @@ const confirmDelete = async (id) => {
               </tr>
             </tbody>
           </table>
+
+          <nav v-if="totalPages >= 1" aria-label="Page navigation">
+            <ul class="pagination justify-content-end mt-3">
+              <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                <a class="page-link" href="#" @click.prevent="goToPage(currentPage - 1)">Trước</a>
+              </li>
+              <li class="page-item" v-for="page in totalPages" :key="page" :class="{ active: currentPage === page }">
+                <a class="page-link" href="#" @click.prevent="goToPage(page)">{{
+                  page
+                }}</a>
+              </li>
+              <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                <a class="page-link" href="#" @click.prevent="goToPage(currentPage + 1)">Sau</a>
+              </li>
+            </ul>
+          </nav>
         </div>
       </div>
     </div>
 
-    <!-- Modal -->
-    <div
-      class="modal fade"
-      id="detailModal"
-      tabindex="-1"
-      aria-labelledby="detailModalLabel"
-      aria-hidden="true"
-    >
+    <div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-header bg-warning text-white">
             <h5 class="modal-title" id="detailModalLabel">
               {{
-                selectedDayGiay.id
-                  ? "Cập nhật Dây Giày"
-                  : "Thêm mới Dây Giày"
+                selectedDayGiay.id ? "Cập nhật Dây Giày" : "Thêm mới Dây Giày"
               }}
             </h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
 
           <div class="modal-body">
             <div class="row g-3">
-              <div class="col-12">
+              <div class="col-12" v-if="selectedDayGiay.id">
                 <label class="form-label">Mã <span class="text-danger">*</span></label>
-                <input
-                  type="text"
-                  class="form-control"
-                  v-model="selectedDayGiay.ma"
-                  placeholder="Nhập mã dây giày"
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  v-model="selectedDayGiay.ma" 
+                  placeholder="Mã dây giày"
+                  readonly 
                 />
+                <small class="text-muted">Mã được tạo tự động và không thể thay đổi.</small>
               </div>
+
               <div class="col-12">
                 <label class="form-label">Tên <span class="text-danger">*</span></label>
-                <input
-                  type="text"
-                  class="form-control"
-                  v-model="selectedDayGiay.ten"
-                  placeholder="Nhập tên dây giày"
-                />
+                <input type="text" class="form-control" v-model="selectedDayGiay.ten" placeholder="Nhập tên dây giày" />
               </div>
             </div>
           </div>
 
           <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              data-bs-dismiss="modal"
-            >
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
               Đóng
             </button>
-            <button
-              type="button"
-              class="btn btn-warning text-white"
-              @click="confirmSave"
-            >
+            <button type="button" class="btn btn-warning text-white" @click="confirmSave">
               Lưu
             </button>
           </div>
@@ -333,9 +334,8 @@ const confirmDelete = async (id) => {
 }
 </style>
 
-
-
 <style>
+/* (GIỮ NGUYÊN CSS) */
 .badge {
   transition: all 0.2s ease;
 }

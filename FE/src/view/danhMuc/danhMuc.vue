@@ -1,6 +1,6 @@
 <script setup>
 import Breadcrumb from "@/components/common/Breadcrumb.vue";
-import { ref, onMounted, computed, watch } from "vue"; // 💡 THÊM watch
+import { ref, onMounted, computed, watch } from "vue";
 import { Modal } from "bootstrap";
 import Swal from "sweetalert2";
 import { useNotify } from "@/composables/useNotify";
@@ -15,7 +15,7 @@ const danhMucs = ref([]);
 const notify = useNotify();
 const selectedDanhMuc = ref({
   id: "",
-  ma: "",
+  ma: "", // Mã sẽ được tự động tạo khi thêm mới
   ten: "",
 });
 let modalInstance = null;
@@ -23,20 +23,35 @@ let modalInstance = null;
 // --- Bộ lọc ---
 const search = ref("");
 
-// 💡 PHÂN TRANG: Khởi tạo biến
+// PHÂN TRANG: Khởi tạo biến
 const currentPage = ref(1);
 const pageSize = ref(10); // Số lượng mục trên 1 trang
 
 // Load danh mục
 const loadDanhMucs = async () => {
-  try {
-    const res = await getAllDanhMuc();
-    danhMucs.value = res.data;
-    // 💡 PHÂN TRANG: Đảm bảo trang hiện tại hợp lệ sau khi tải dữ liệu
-    if (currentPage.value > totalPages.value) currentPage.value = 1;
-  } catch (err) {
-    console.error("❌ Lỗi khi tải danh mục:", err);
-  }
+    try {
+        const res = await getAllDanhMuc();
+        
+        // 💡 BƯỚC CẬP NHẬT: Sắp xếp theo Mã (ma) giảm dần (Z -> A)
+        danhMucs.value = res.data.sort((a, b) => {
+            // Dùng localeCompare để so sánh chuỗi
+            // b.ma.localeCompare(a.ma) sẽ sắp xếp GIẢM DẦN (DM10 lên trước DM09)
+            // LƯU Ý: Sắp xếp chuỗi DM10 VÀ DM09:
+            // Sắp xếp Alphabet: DM10 (chuỗi '1') đứng trước DM09 (chuỗi '0').
+            // => Đây là cách sắp xếp TỰ NHIÊN (DM10 sẽ lên đầu danh sách)
+            
+            // Trường hợp 1: Sắp xếp Tăng Dần (A -> Z):
+            // return a.ma.localeCompare(b.ma); // DM02, DM03, ..., DM09, DM10 (Nếu bạn muốn DM10 ở cuối)
+
+            // Trường hợp 2: Sắp xếp GIẢM DẦN (Z -> A, để DM10 lên đầu):
+            return b.ma.localeCompare(a.ma); // DM10, DM09, ..., DM02 (Nếu bạn muốn DM10 ở đầu)
+        }); 
+
+        // PHÂN TRANG: Đảm bảo trang hiện tại hợp lệ sau khi tải dữ liệu
+        if (currentPage.value > totalPages.value) currentPage.value = 1;
+    } catch (err) {
+        console.error("❌ Lỗi khi tải danh mục:", err);
+    }
 };
 
 onMounted(async () => {
@@ -54,16 +69,16 @@ const filteredDanhMucs = computed(() => {
   );
 });
 
-// 💡 PHÂN TRANG: Tính tổng số trang (Dựa trên filteredDanhMucs)
+// PHÂN TRANG: Tính tổng số trang (Dựa trên filteredDanhMucs)
 const totalPages = computed(() => Math.ceil(filteredDanhMucs.value.length / pageSize.value));
 
-// 💡 PHÂN TRANG: Danh sách hiển thị theo trang
+// PHÂN TRANG: Danh sách hiển thị theo trang
 const pagedDanhMucs = computed(() => {
     const start = (currentPage.value - 1) * pageSize.value;
     return filteredDanhMucs.value.slice(start, start + pageSize.value);
 });
 
-// 💡 WATCH: Theo dõi bộ lọc để đặt lại trang về 1
+// WATCH: Theo dõi bộ lọc để đặt lại trang về 1
 watch(search, () => {
     currentPage.value = 1;
 });
@@ -72,7 +87,7 @@ const resetFilter = () => {
   search.value = "";
 };
 
-// Mở modal thêm
+// Mở modal thêm (Mã danh mục sẽ để trống, Backend sẽ tự tạo)
 const openModalAdd = () => {
   selectedDanhMuc.value = { id: "", ma: "", ten: "" };
   const modalEl = document.getElementById("detailModal");
@@ -90,16 +105,21 @@ const editItem = (item) => {
 
 // ✅ Validate form trước khi lưu
 const validateForm = () => {
-  if (!selectedDanhMuc.value.ma?.trim()) {
-    notify.warning("Vui lòng nhập mã danh mục!");
-    return false;
+  // 💡 CHỈ kiểm tra Mã danh mục khi đang CẬP NHẬT
+  if (selectedDanhMuc.value.id) {
+    if (!selectedDanhMuc.value.ma?.trim()) {
+      notify.warning("Vui lòng nhập mã danh mục!");
+      return false;
+    }
+    if (selectedDanhMuc.value.ma.length < 2) {
+      notify.warning("Mã danh mục phải có ít nhất 2 ký tự!");
+      return false;
+    }
   }
+
+  // Luôn kiểm tra Tên danh mục
   if (!selectedDanhMuc.value.ten?.trim()) {
     notify.warning("Vui lòng nhập tên danh mục!");
-    return false;
-  }
-  if (selectedDanhMuc.value.ma.length < 2) {
-    notify.warning("Mã danh mục phải có ít nhất 2 ký tự!");
     return false;
   }
   if (selectedDanhMuc.value.ten.length < 3) {
@@ -115,9 +135,11 @@ const saveItem = async () => {
     if (!validateForm()) return; // ✅ kiểm tra form trước khi lưu
 
     if (selectedDanhMuc.value.id) {
+      // Cập nhật: Gửi cả mã (nếu cần thiết, hoặc backend tự xử lý)
       await updateDanhMuc(selectedDanhMuc.value.id, selectedDanhMuc.value);
       notify.success("Cập nhật thành công!");
     } else {
+      // Thêm mới: Mã rỗng, chờ Backend tự tạo mã
       await createDanhMuc(selectedDanhMuc.value);
       notify.success("Thêm mới thành công!");
     }
@@ -166,7 +188,7 @@ const confirmDelete = async (id) => {
   }
 };
 
-// 💡 PHÂN TRANG: Hàm chuyển trang
+// PHÂN TRANG: Hàm chuyển trang
 const goToPage = (page) => {
     if (totalPages.value === 0) {
         currentPage.value = 1;
@@ -177,7 +199,6 @@ const goToPage = (page) => {
     currentPage.value = page;
 };
 </script>
-
 <template>
   <div class="container-fluid mt-4 px-5">
     <div class="card shadow-sm border-0 mb-4">
@@ -189,9 +210,6 @@ const goToPage = (page) => {
             <h3 class="fw-bold text-warning mb-1">Quản lý Danh Mục</h3>
             <Breadcrumb class="mt-2 mb-0" />
           </div>
-          <button class="btn btn-warning text-white" @click="openModalAdd">
-            <i class="fa fa-plus me-2"></i>Thêm mới
-          </button>
         </div>
       </div>
     </div>
@@ -264,11 +282,13 @@ const goToPage = (page) => {
                 <td>{{ item.ten }}</td>
                 <td class="text-center">
                   <div class="d-flex justify-content-center align-items-center gap-2">
-                    <button class="btn btn-link text-info btn-lg p-0" @click="editItem(item)" title="Xem chi tiết">
+                    <button class="btn btn-link text-info btn-lg p-0" @click="editItem(item)" title="Xem chi tiết/Sửa">
                       <i class="fa fa-eye"></i>
                     </button>
-
-                    </div>
+                    <!-- <button class="btn btn-link text-danger btn-lg p-0" @click="confirmDelete(item.id)" title="Xóa">
+                      <i class="fa fa-trash"></i>
+                    </button> -->
+                  </div>
                 </td>
               </tr>
               <tr v-if="filteredDanhMucs.length === 0">
@@ -279,18 +299,18 @@ const goToPage = (page) => {
 
           <nav v-if="totalPages > 1" aria-label="Page navigation">
               <ul class="pagination justify-content-end mt-3">
-                  <li class="page-item" :class="{ disabled: currentPage === 1 }">
-                      <a class="page-link" href="#" @click.prevent="goToPage(currentPage - 1)">Trước</a>
-                  </li>
-                  <li class="page-item" v-for="page in totalPages" :key="page" :class="{ active: currentPage === page }">
-                      <a class="page-link" href="#" @click.prevent="goToPage(page)">{{ page }}</a>
-                  </li>
-                  <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-                      <a class="page-link" href="#" @click.prevent="goToPage(currentPage + 1)">Sau</a>
-                  </li>
+                <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                  <a class="page-link" href="#" @click.prevent="goToPage(currentPage - 1)">Trước</a>
+                </li>
+                <li class="page-item" v-for="page in totalPages" :key="page" :class="{ active: currentPage === page }">
+                  <a class="page-link" href="#" @click.prevent="goToPage(page)">{{ page }}</a>
+                </li>
+                <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                  <a class="page-link" href="#" @click.prevent="goToPage(currentPage + 1)">Sau</a>
+                </li>
               </ul>
           </nav>
-          </div>
+        </div>
       </div>
     </div>
 
@@ -317,15 +337,18 @@ const goToPage = (page) => {
 
           <div class="modal-body">
             <div class="row g-3">
-              <div class="col-12">
+              <div class="col-12" v-if="selectedDanhMuc.id">
                 <label class="form-label">Mã <span class="text-danger">*</span></label>
                 <input
                   type="text"
                   class="form-control"
                   v-model="selectedDanhMuc.ma"
-                  placeholder="Nhập mã danh mục"
+                  placeholder="Mã danh mục"
+                  readonly
                 />
+                 <small class="text-muted">Mã được tạo tự động và không thể thay đổi.</small>
               </div>
+
               <div class="col-12">
                 <label class="form-label">Tên <span class="text-danger">*</span></label>
                 <input
@@ -359,7 +382,6 @@ const goToPage = (page) => {
     </div>
   </div>
 </template>
-
 <style scoped>
 .table td,
 .table th {

@@ -1,5 +1,6 @@
 package com.example.datn.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.Data;
@@ -9,6 +10,8 @@ import java.util.UUID;
 
 @Data
 public class SanPhamRequest {
+
+    private UUID id;
 
     @NotBlank(message = "Tên sản phẩm không được để trống")
     @Size(max = 300, message = "Tên sản phẩm không được vượt quá 300 ký tự")

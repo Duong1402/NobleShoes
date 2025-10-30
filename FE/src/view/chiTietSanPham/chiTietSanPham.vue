@@ -272,9 +272,16 @@ onMounted(async () => {
               <td>{{mauSacList.find(m => m.id === ct.mauSacId)?.ten}}</td>
               <td>{{kichThuocList.find(k => k.id === ct.kichThuocId)?.ten}}</td>
               <td>{{chatLieuList.find(c => c.id === ct.chatLieuId)?.ten}}</td>
-              <td class="text-center">
-                <button class="btn btn-sm btn-info" @click="openDetail(ct)">Chi tiết</button>
-              </td>
+<td class="text-center">
+  <button
+    class="btn btn-link text-info btn-lg p-0"
+    @click="openDetail(ct)"
+    title="Xem chi tiết"
+  >
+    <i class="fa fa-eye"></i>
+  </button>
+</td>
+
             </tr>
             <tr v-if="filteredChiTietSP.length === 0">
               <td colspan="12" class="text-center">Không có dữ liệu</td>

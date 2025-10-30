@@ -18,31 +18,32 @@ public class DanhMucController {
         this.service = service;
     }
 
-    // ✅ Lấy tất cả danh mục
+    // Lấy tất cả danh mục (OK)
     @GetMapping
     public List<DanhMuc> getAll() {
         return service.getAll();
     }
 
-    // ✅ Lấy danh mục theo ID
+    // Lấy danh mục theo ID (OK - dùng UUID)
     @GetMapping("/{id}")
     public DanhMuc getById(@PathVariable UUID id) {
         return service.getById(id);
     }
 
-    // ✅ Thêm mới danh mục (có validate)
+    // ✅ Thêm mới danh mục: BỎ @Valid để cho phép 'ma' rỗng.
+    // Logic sinh 'ma' sẽ nằm trong service.create(dm).
     @PostMapping
-    public DanhMuc create(@Valid @RequestBody DanhMuc dm) {
+    public DanhMuc create( @RequestBody DanhMuc dm) {
         return service.create(dm);
     }
 
-    // ✅ Cập nhật danh mục (có validate)
+    // Cập nhật danh mục: GIỮ @Valid để validate các trường như 'ten'.
     @PutMapping("/{id}")
     public DanhMuc update(@PathVariable UUID id, @Valid @RequestBody DanhMuc dm) {
         return service.update(id, dm);
     }
 
-    // ✅ Xóa danh mục
+    // Xóa danh mục (OK - dùng UUID)
     @DeleteMapping("/{id}")
     public void delete(@PathVariable UUID id) {
         service.delete(id);
