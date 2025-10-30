@@ -9,37 +9,60 @@ import lombok.Setter;
 import java.util.Date;
 import java.util.UUID;
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
-@Entity @Table(name = "khach_hang")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
+@Table(name = "khach_hang")
 public class KhachHang {
-    @Id @GeneratedValue
-    @Column(name="id", columnDefinition="uniqueidentifier")
+    @Id
+    @GeneratedValue
+    @Column(name = "id")
     private UUID id;
 
-    @Column(name="ma", nullable=false, unique=true)
+    @Column(name = "ma", unique = true)
     private String ma;
 
-    @Column(name="ho_ten")
+    @Column(name = "ho_ten")
     private String hoTen;
 
-    @Column(name="sdt")
+    @Column(name = "sdt")
     private String sdt;
 
-    @Column(name="email", unique=true)
+    @Column(name = "email")
     private String email;
 
-    @Column(name="gioi_tinh")
-    private Integer gioiTinh;
+    @Column(name = "url_anh")
+    private String urlAnh;
 
-    @Column(name="ngay_sinh")
+    @Column(name = "gioi_tinh")
+    private Boolean gioiTinh;
+
+    @Column(name = "ngay_sinh")
     private Date ngaySinh;
 
-    @Column(name="tai_khoan", unique=true)
+    @Column(name = "dia_chi")
+    private String diaChi;
+
+    @Column(name = "tai_khoan")
     private String taiKhoan;
 
-    @Column(name="mat_khau")
+    @Column(name = "mat_khau")
     private String matKhau;
 
-    @Column(name="trang_thai")
-    private Integer trangThai;
+    @Column(name = "ngay_tao")
+    private Date ngayTao;
+
+    @Column(name = "ngay_sua")
+    private Date ngaySua;
+
+    @Column(name = "nguoi_tao", length = 20)
+    private String nguoiTao;
+
+    @Column(name = "nguoi_sua", length = 20)
+    private String nguoiSua;
+
+    @Column(name = "trang_thai")
+    private Byte trangThai;
 }
