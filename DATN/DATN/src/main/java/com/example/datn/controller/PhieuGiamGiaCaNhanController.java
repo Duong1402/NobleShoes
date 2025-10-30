@@ -2,6 +2,7 @@ package com.example.datn.controller;
 
 import com.example.datn.entity.PhieuGiamGiaCaNhan;
 import com.example.datn.service.PhieuGiamGiaCaNhanService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,10 +28,10 @@ public class PhieuGiamGiaCaNhanController {
     }
 
     @PostMapping
-    public PhieuGiamGiaCaNhan create(@RequestBody PhieuGiamGiaCaNhan obj) { return service.save(obj); }
+    public PhieuGiamGiaCaNhan create(@Valid @RequestBody PhieuGiamGiaCaNhan obj) { return service.save(obj); }
 
     @PutMapping("/{id}")
-    public PhieuGiamGiaCaNhan update(@PathVariable UUID id, @RequestBody PhieuGiamGiaCaNhan obj) {
+    public PhieuGiamGiaCaNhan update(@PathVariable UUID id,@Valid @RequestBody PhieuGiamGiaCaNhan obj) {
         obj.setId(id);
         return service.save(obj);
     }

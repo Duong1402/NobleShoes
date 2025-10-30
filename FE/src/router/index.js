@@ -6,9 +6,11 @@ import TrangChu from "@/components/trangChu.vue";
 import NhanVien from "@/view/nhanVien/nhanVien.vue";
 import NhanVienAdd from "@/view/nhanVien/nhanVienAdd.vue";
 import PhieuGiamGia from "@/view/phieuGiamGia/phieuGiamGia.vue";
-import PhieuGiamGiaCaNhan from "@/view/PhieuGiamGiaCaNhan/phieuGiamGiaCaNhan.vue";
+import PhieuGiamGiaCaNhan from "@/view/phieuGiamGiaCaNhan/phieuGiamGiaCaNhan.vue";
 import PhieuGiamGiaAdd from "@/view/phieuGiamGia/phieuGiamGiaAdd.vue";
-import PhieuGiamGiaCaNhanAdd from "@/view/PhieuGiamGiaCaNhan/phieuGiamGiaCaNhanAdd.vue";
+import PhieuGiamGiaCaNhanAdd from "@/view/phieuGiamGiaCaNhan/phieuGiamGiaCaNhanAdd.vue";
+import DotGiamGia from "@/view/dotGiamGia/dotGiamGia.vue";
+import DotGiamGiaAdd from "@/view/dotGiamGia/dotGiamGiaAdd.vue";
 
 const listRouter = [
   {
@@ -63,10 +65,22 @@ const listRouter = [
         meta: { title: "Phiếu giảm giá cá nhân" },
       },
       {
-        path: "add",
+        path: "phieu-giam-gia-ca-nhan/add",
         name: "PhieuGiamGiaCaNhanAdd",
         component: PhieuGiamGiaCaNhanAdd,
         meta: { title: "Thêm phiếu giảm giá cá nhân" },
+      },
+      {
+        path: "dot-giam-gia",
+        name: "DotGiamGia",
+        component: DotGiamGia,
+        meta: { title: "Thêm đợt giảm giá" },
+      },
+      {
+        path: "dot-giam-gia/add",
+        name: "DotGiamGiaAdd",
+        component: DotGiamGiaAdd,
+        meta: { title: "Thêm đợt giảm giá" },
       },
     ],
   },

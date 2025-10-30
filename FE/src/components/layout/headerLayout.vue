@@ -92,8 +92,15 @@ import FooterLayout from "./footerLayout.vue";
                     <router-link to="/admin/phieu-giam-gia">
                       <span class="sub-item">Phiếu giảm giá</span>
                     </router-link>
+                    </li>
+                    <li>
                     <router-link to="/admin/phieu-giam-gia-ca-nhan">
                       <span class="sub-item">Phiếu giảm giá cá nhân</span>
+                    </router-link>
+                  </li>
+                    <li>
+                    <router-link to="/admin/dot-giam-gia">
+                      <span class="sub-item">Đợt giảm giá</span>
                     </router-link>
                   </li>
                 </ul>

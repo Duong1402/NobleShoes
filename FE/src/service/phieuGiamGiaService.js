@@ -2,7 +2,7 @@ import axios from "axios";
 
 const API_URL = "http://localhost:8080/admin/phieu-giam-gia";
 
-export const getAllPhieuGiamGia = () => axios.get(API_URL);
+export const getAllPhieuGiamGia = (page = 0, size = 10, sortBy = "ma") => axios.get(API_URL, {params :{page, size, sortBy}});
 export const getPhieuGiamGiaById = (id) => axios.get(`${API_URL}/${id}`);
 export const createPhieuGiamGia = (data) => {
   return axios.post(API_URL, data, {

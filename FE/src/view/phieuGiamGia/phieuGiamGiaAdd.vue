@@ -1,3 +1,71 @@
+<script setup>
+import { reactive, ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import Breadcrumb from "@/components/common/Breadcrumb.vue";
+import { useNotify } from "@/composables/useNotify";
+import Swal from "sweetalert2";
+import { createPhieuGiamGia } from "@/service/phieuGiamGiaService";
+
+const router = useRouter();
+const notify = useNotify();
+const errors = reactive({});
+
+// Form thêm phiếu giảm giá
+const form = reactive({
+  ten: null,
+  ngayBatDau: null,
+  ngayKetThuc: null,
+  hinhThucGiamGia: false,
+  giaTriGiam: null,
+  giaTriGiamToiThieu: null,
+  giaTriGiamToiDa: null,
+  trangThai: true,
+  moTa: null,
+});
+
+//Thêm phiếu giảm giá
+const addPhieuGiamGia = async () => {
+  try {
+    Object.keys(errors).forEach((key) => (errors[key] = ""));
+
+    const res = await createPhieuGiamGia(form);
+
+    if (!res) throw new Error("Lỗi khi thêm phiếu giảm giá");
+
+    notify.success("Thêm phiếu giảm giá thành công!");
+    router.push("/admin/phieu-giam-gia");
+  } catch (error) {
+    if (error.response && error.response.status === 400) {
+      // Gán lỗi validation từ backend
+      Object.assign(errors, error.response.data);
+      notify.error("Vui lòng kiểm tra lại thông tin!");
+      console.log("Lỗi validation:", errors);
+    } else {
+      console.error("Lỗi khi thêm phiếu giảm giá:", error);
+      notify.error("Thêm thất bại, vui lòng thử lại!");
+    }
+  }
+};
+
+// Tạo hàm confirm
+const confirmSave = async () => {
+  const result = await Swal.fire({
+    title: "Xác nhận thêm phiếu giảm giá ?",
+    text: "Bạn có chắc chắn muốn thêm phiếu giảm giá này?",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Có, lưu lại",
+    cancelButtonText: "Hủy",
+    reverseButtons: true,
+    confirmButtonColor: "#ffc107", // màu vàng giống btn
+    cancelButtonColor: "#6c757d",
+  });
+
+  if (result.isConfirmed) {
+    await addPhieuGiamGia(); // gọi hàm lưu
+  }
+};
+</script>
 <template>
   <div class="container-fluid mt-4 px-5">
     <div class="card shadow-sm border-0 mb-4">
@@ -23,36 +91,51 @@
               v-model="form.ten"
               type="text"
               class="form-control"
+              :class="{ 'is-invalid': errors.ten }"
               placeholder="Nhập họ tên phiếu giảm giá"
             />
+            <div class="invalid-feedback">{{ errors.ten }}</div>
           </div>
 
           <!-- Ngày bắt đầu -->
           <div class="col-md-6">
             <label class="form-label">Ngày bắt đầu</label>
-            <input v-model="form.ngayBatDau" type="date" class="form-control" />
+            <input
+              v-model="form.ngayBatDau"
+              type="date"
+              class="form-control"
+              :class="{ 'is-invalid': errors.ngayBatDau }"
+            />
+            <div class="invalid-feedback">{{ errors.ngayBatDau }}</div>
           </div>
 
           <!-- Ngày kết thúc -->
           <div class="col-md-6">
             <label class="form-label">Ngày kết thúc</label>
-            <input v-model="form.email" type="date" class="form-control" />
+            <input
+              v-model="form.ngayKetThuc"
+              type="date"
+              class="form-control"
+              :class="{ 'is-invalid': errors.ngayKetThuc }"
+            />
+            <div class="invalid-feedback">{{ errors.ngayKetThuc }}</div>
           </div>
           <!-- Hình thức giảm giá -->
           <div class="col-md-6">
             <label class="form-label d-block">Hình thức giảm giá</label>
             <div class="d-flex gap-3">
-              <div class="form-check">
+              <div class="form-check custom-radio">
                 <input
                   class="form-check-input"
                   type="radio"
                   id="%"
                   :value="true"
                   v-model="form.hinhThucGiamGia"
+                  checked
                 />
                 <label class="form-check-label">%</label>
               </div>
-              <div class="form-check">
+              <div class="form-check custom-radio">
                 <input
                   class="form-check-input"
                   type="radio"
@@ -72,8 +155,10 @@
               v-model="form.giaTriGiam"
               type="number"
               class="form-control"
+              :class="{ 'is-invalid': errors.giaTriGiam }"
               placeholder="Nhập giá trị giảm"
             />
+            <div class="invalid-feedback">{{ errors.giaTriGiam }}</div>
           </div>
 
           <!-- Giá trị giảm tối thiểu-->
@@ -83,8 +168,10 @@
               v-model="form.giaTriGiamToiThieu"
               type="number"
               class="form-control"
+              :class="{ 'is-invalid': errors.giaTriGiamToiThieu }"
               placeholder="Nhập giá trị giảm tối thiểu"
             />
+            <div class="invalid-feedback">{{ errors.giaTriGiamToiThieu }}</div>
           </div>
           <!-- Giá trị giảm tối đa-->
           <div class="col-md-6">
@@ -93,35 +180,10 @@
               v-model="form.giaTriGiamToiDa"
               type="number"
               class="form-control"
+              :class="{ 'is-invalid': errors.giaTriGiamToiDa }"
               placeholder="Nhập giá trị giảm tối đa"
             />
-          </div>
-
-          <!-- Trạng thái -->
-          <div class="col-md-6">
-            <label class="form-label d-block">Trạng thái</label>
-            <div class="d-flex gap-3">
-              <div class="form-check">
-                <input
-                  class="form-check-input"
-                  type="radio"
-                  id="hoatDong"
-                  :value="true"
-                  v-model="form.trangThai"
-                />
-                <label class="form-check-label">Hoạt động</label>
-              </div>
-              <div class="form-check">
-                <input
-                  class="form-check-input"
-                  type="radio"
-                  id="ngungHoatDong"
-                  :value="false"
-                  v-model="form.gioiTinh"
-                />
-                <label class="form-check-label">Ngưng hoạt động</label>
-              </div>
-            </div>
+            <div class="invalid-feedback">{{ errors.giaTriGiamToiDa }}</div>
           </div>
 
           <!-- Mô tả -->
@@ -153,70 +215,15 @@
   </div>
 </template>
 
-<script setup>
-import { reactive, ref, onMounted } from "vue";
-import { useRouter } from "vue-router";
-import Breadcrumb from "@/components/common/Breadcrumb.vue";
-import { useNotify } from "@/composables/useNotify";
-import Swal from "sweetalert2";
-import { createPhieuGiamGia } from "@/service/phieuGiamGiaService";
-
-const router = useRouter();
-const notify = useNotify();
-
-// Form thêm phiếu giảm giá
-const form = reactive({
-  ten: "",
-  ngayBatDau: "",
-  ngayKetThuc: "",
-  hinhThucGiamGia: false,
-  giaTriGiam: 0,
-  giaTriGiamToiThieu: 0,
-  giaTriGiamToiDa: 0,
-  trangThai: true,
-  moTa: "",
-});
-
-//Thêm phiếu giảm giá
-const addPhieuGiamGia = async () => {
-  try {
-    const res = await createPhieuGiamGia(form);
-
-    if (!res) throw new Error("Lỗi khi thêm phiếu giảm giá");
-
-    notify.success("Thêm phiếu giảm giá thành công!");
-    router.push("/admin/phieu-giam-gia");
-  } catch (error) {
-    console.error("Lỗi khi thêm phiếu giảm giá:", error);
-    notify.error("Thêm thất bại, vui lòng thử lại!");
-  }
-};
-
-// Tạo hàm confirm
-const confirmSave = async () => {
-  const result = await Swal.fire({
-    title: "Xác nhận thêm phiếu giảm giá ?",
-    text: "Bạn có chắc chắn muốn thêm phiếu giảm giá này?",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonText: "Có, lưu lại",
-    cancelButtonText: "Hủy",
-    reverseButtons: true,
-    confirmButtonColor: "#ffc107", // màu vàng giống btn
-    cancelButtonColor: "#6c757d",
-  });
-
-  // if (result.isConfirmed) {
-    addPhieuGiamGia(); // gọi hàm lưu
-  // }
-};
-</script>
-
 <style scoped>
 .form-label {
   font-weight: 600;
 }
 .card {
   border-radius: 12px;
+}
+.custom-radio .form-check-input:checked {
+  background-color: #ffc107 !important; /* màu cam */
+  border-color: #ffc107 !important;
 }
 </style>

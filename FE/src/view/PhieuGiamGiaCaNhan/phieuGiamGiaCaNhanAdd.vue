@@ -6,7 +6,7 @@
           class="page-header d-flex align-items-center justify-content-between"
         >
           <div>
-            <h3 class="fw-bold text-warning mb-1">Quản lý nhân viên</h3>
+            <h3 class="fw-bold text-warning mb-1">Phiếu giảm giá add</h3>
             <Breadcrumb class="mt-1 mb-0" />
           </div>
         </div>
@@ -18,163 +18,108 @@
         <div class="row g-3">
           <!-- Họ tên -->
           <div class="col-md-6">
-            <label class="form-label">Họ tên</label>
+            <label class="form-label">Tên phiếu giảm giá</label>
             <input
-              v-model="form.hoTen"
+              v-model="form.ten"
               type="text"
               class="form-control"
-              placeholder="Nhập họ tên nhân viên"
-              required
+              placeholder="Nhập họ tên phiếu giảm giá"
             />
           </div>
 
-          <!-- Số điện thoại -->
+          <!-- Ngày bắt đầu -->
           <div class="col-md-6">
-            <label class="form-label">Số điện thoại</label>
-            <input
-              v-model="form.sdt"
-              type="text"
-              class="form-control"
-              placeholder="Nhập số điện thoại"
-              required
-            />
+            <label class="form-label">Ngày bắt đầu</label>
+            <input v-model="form.ngayBatDau" type="date" class="form-control" />
           </div>
 
-          <!-- Email -->
+          <!-- Ngày kết thúc -->
           <div class="col-md-6">
-            <label class="form-label">Email</label>
-            <input
-              v-model="form.email"
-              type="email"
-              class="form-control"
-              placeholder="Nhập email nhân viên"
-              required
-            />
+            <label class="form-label">Ngày kết thúc</label>
+            <input v-model="form.email" type="date" class="form-control" />
           </div>
-
-          <!-- CCCD -->
+          <!-- Hình thức giảm giá -->
           <div class="col-md-6">
-            <label class="form-label">CCCD</label>
-            <input
-              v-model="form.cccd"
-              type="text"
-              class="form-control"
-              placeholder="Nhập CCCD nhân viên"
-              required
-            />
-          </div>
-
-          <!-- Tài khoản -->
-          <div class="col-md-6">
-            <label class="form-label">Tài khoản</label>
-            <input
-              v-model="form.taiKhoan"
-              type="text"
-              class="form-control"
-              placeholder="Nhập tài khoản nhân viên"
-              required
-            />
-          </div>
-
-          <!-- Giới tính -->
-          <div class="col-md-6">
-            <label class="form-label d-block">Giới tính</label>
-            <div class="d-flex gap-3">
+            <label class="form-label d-block">Hình thức giảm giá</label>
+            <div class="d-flex gap-3 custom-radio">
               <div class="form-check">
                 <input
                   class="form-check-input"
                   type="radio"
-                  id="gioiTinhNam"
+                  id="%"
                   :value="true"
-                  v-model="form.gioiTinh"
+                  v-model="form.hinhThucGiamGia"
                 />
-                <label class="form-check-label" for="gioiTinhNam">Nam</label>
+                <label class="form-check-label">%</label>
               </div>
-              <div class="form-check">
+              <div class="form-check custom-radio">
                 <input
                   class="form-check-input"
                   type="radio"
-                  id="gioiTinhNu"
+                  id="tienMat"
                   :value="false"
-                  v-model="form.gioiTinh"
+                  v-model="form.hinhThucGiamGia"
                 />
-                <label class="form-check-label" for="gioiTinhNu">Nữ</label>
+                <label class="form-check-label">Tiền mặt</label>
               </div>
             </div>
           </div>
 
-          <!-- Ngày sinh -->
+          <!-- Giá trị giảm -->
           <div class="col-md-6">
-            <label class="form-label">Ngày sinh</label>
+            <label class="form-label">Giá trị giảm</label>
             <input
-              v-model="form.ngaySinh"
+              v-model="form.giaTriGiam"
+              type="number"
+              class="form-control"
+              placeholder="Nhập giá trị giảm"
+            />
+          </div>
+
+          <!-- Giá trị giảm tối thiểu-->
+          <div class="col-md-6">
+            <label class="form-label">Giá trị giảm tối thiểu</label>
+            <input
+              v-model="form.giaTriGiamToiThieu"
+              type="number"
+              class="form-control"
+              placeholder="Nhập giá trị giảm tối thiểu"
+            />
+          </div>
+          <!-- Giá trị giảm tối đa-->
+          <div class="col-md-6">
+            <label class="form-label">Giá trị giảm tối đa</label>
+            <input
+              v-model="form.giaTriGiamToiDa"
+              type="number"
+              class="form-control"
+              placeholder="Nhập giá trị giảm tối đa"
+            />
+          </div>
+
+
+          <!-- Mô tả -->
+          <div class="col-md-6">
+            <label class="form-label">Mô tả</label>
+            <textarea
+              v-model="form.moTa"
               type="date"
               class="form-control"
-              required
-            />
-          </div>
-
-          <div class="row g-3">
-            <!-- Địa chỉ: Tỉnh/Thành phố, Quận/Huyện, Xã/Phường -->
-            <div class="col-md-4">
-              <label class="form-label">Tỉnh/Thành phố</label>
-              <input
-                v-model="form.tinh"
-                type="text"
-                class="form-control"
-                placeholder="Chọn tỉnh/thành phố"
-              />
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Quận/Huyện</label>
-              <input
-                v-model="form.huyen"
-                type="text"
-                class="form-control"
-                placeholder="Chọn quận/huyện"
-              />
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Xã/Phường</label>
-              <input
-                v-model="form.xa"
-                type="text"
-                class="form-control"
-                placeholder="Chọn xã/phường"
-              />
-            </div>
-
-            <!-- Địa chỉ cụ thể -->
-            <div class="col-12 mt-2">
-              <label class="form-label">Địa chỉ cụ thể</label>
-              <input
-                v-model="form.chiTiet"
-                type="text"
-                class="form-control"
-                placeholder="Số nhà, thôn, đường..."
-              />
-            </div>
-          </div>
-
-          <!-- Chức vụ -->
-          <div class="col-md-6">
-            <label class="form-label">Chức vụ</label>
-            <select v-model="form.chucVu.id" class="form-select" required>
-              <option disabled value="">-- Chọn chức vụ --</option>
-              <option v-for="cv in chucVuList" :key="cv.id" :value="cv.id">
-                {{ cv.ten }}
-              </option>
-            </select>
+              placeholder="Nhập mô tả"
+            ></textarea>
           </div>
         </div>
 
         <!-- Nút hành động -->
         <div class="mt-4 text-end">
-          <router-link to="/admin/nhan-vien" class="btn btn-secondary me-2">
+          <router-link
+            to="/admin/phieu-giam-gia"
+            class="btn btn-secondary me-2"
+          >
             <i class="fa fa-arrow-left me-1"></i> Quay lại
           </router-link>
           <button type="submit" class="btn btn-warning text-white">
-            <i class="fa fa-save me-1"></i> Thêm nhân viên
+            <i class="fa fa-save me-1"></i> Thêm phiếu giảm giá
           </button>
         </div>
       </form>
@@ -188,57 +133,35 @@ import { useRouter } from "vue-router";
 import Breadcrumb from "@/components/common/Breadcrumb.vue";
 import { useNotify } from "@/composables/useNotify";
 import Swal from "sweetalert2";
+import { createPhieuGiamGia } from "@/service/phieuGiamGiaService";
 
 const router = useRouter();
-const chucVuList = ref([]);
 const notify = useNotify();
 
-// Form thêm nhân viên
+// Form thêm phiếu giảm giá
 const form = reactive({
-  hoTen: "",
-  sdt: "",
-  email: "",
-  gioiTinh: true,
-  ngaySinh: "",
-  diaChi: "",
-  cccd: "",
-  chucVu: {
-    id: "",
-  },
-  taiKhoan:""
+  ten: null,
+  ngayBatDau: null,
+  ngayKetThuc: null,
+  hinhThucGiamGia: false,
+  giaTriGiam: null,
+  giaTriGiamToiThieu: null,
+  giaTriGiamToiDa: null,
+  trangThai: true,
+  moTa: "",
 });
 
-// Load danh sách chức vụ
-const loadChucVu = async () => {
+//Thêm phiếu giảm giá
+const addPhieuGiamGia = async () => {
   try {
-    const res = await fetch("http://localhost:8080/admin/chuc-vu");
-    const data = await res.json();
-    chucVuList.value = data;
-  } catch (err) {
-    console.error("Lỗi khi tải chức vụ:", err);
-  }
-};
+    const res = await createPhieuGiamGia(form);
 
-// Gọi API thêm nhân viên
-const addNhanVien = async () => {
-  try {
-    // Ghép đầy đủ địa chỉ trước khi gửi lên server
-    form.diaChi = `${form.chiTiet || ""}, ${form.xa || ""}, ${
-      form.huyen || ""
-    }, ${form.tinh || ""}`.replace(/(^[,\s]+)|([,\s]+$)/g, ""); // loại bỏ dấu phẩy thừa
+    if (!res) throw new Error("Lỗi khi thêm phiếu giảm giá");
 
-    const res = await fetch("http://localhost:8080/admin/nhan-vien", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-
-    if (!res.ok) throw new Error("Lỗi khi thêm nhân viên");
-
-    notify.success("Thêm nhân viên thành công!");
-    router.push("/admin/nhan-vien");
+    notify.success("Thêm phiếu giảm giá thành công!");
+    router.push("/admin/phieu-giam-gia");
   } catch (error) {
-    console.error("Lỗi khi thêm nhân viên:", error);
+    console.error("Lỗi khi thêm phiếu giảm giá:", error);
     notify.error("Thêm thất bại, vui lòng thử lại!");
   }
 };
@@ -246,24 +169,21 @@ const addNhanVien = async () => {
 // Tạo hàm confirm
 const confirmSave = async () => {
   const result = await Swal.fire({
-    title: "Xác nhận thêm nhân viên ?",
-    text: "Bạn có chắc chắn muốn thêm nhân viên này?",
+    title: "Xác nhận thêm phiếu giảm giá ?",
+    text: "Bạn có chắc chắn muốn thêm phiếu giảm giá này?",
     icon: "warning",
     showCancelButton: true,
     confirmButtonText: "Có, lưu lại",
     cancelButtonText: "Hủy",
     reverseButtons: true,
     confirmButtonColor: "#ffc107", // màu vàng giống btn
-    cancelButtonColor: "#6c757d"
+    cancelButtonColor: "#6c757d",
   });
 
-  if (result.isConfirmed) {
-    addNhanVien(); // gọi hàm lưu
-  }
+  // if (result.isConfirmed) {
+    addPhieuGiamGia(); // gọi hàm lưu
+  // }
 };
-
-
-onMounted(() => loadChucVu());
 </script>
 
 <style scoped>
@@ -273,4 +193,9 @@ onMounted(() => loadChucVu());
 .card {
   border-radius: 12px;
 }
+.custom-radio .form-check-input:checked {
+  background-color: #ffc107 !important; /* màu cam */
+  border-color: #ffc107 !important;
+}
 </style>
+.

@@ -1,6 +1,6 @@
 <script setup>
 import Breadcrumb from "@/components/common/Breadcrumb.vue";
-import { ref, onMounted } from "vue";
+import { ref, onMounted, reactive } from "vue";
 import { Modal } from "bootstrap";
 import Swal from "sweetalert2";
 import {
@@ -17,17 +17,19 @@ const phieuGiamGia = ref([]);
 const notify = useNotify();
 const selectedphieuGiamGia = ref({
   ma: "",
-  ten: "",
-  ngayBatDau: "",
-  ngayKetThuc: "",
+  ten: null,
+  ngayBatDau: null,
+  ngayKetThuc: null,
   hinhThucGiamGia: false,
-  giaTriGiam: 0,
-  giaTriGiamToiThieu: 0,
-  giaTriGiamToiDa: 0,
+  giaTriGiam: null,
+  giaTriGiamToiThieu: null,
+  giaTriGiamToiDa: null,
   trangThai: true,
   moTa: "",
 });
+const errors = reactive({});
 
+// Hàm định dạng ngày tháng
 const formatDate = (dateStr) => {
   if (!dateStr) return "";
   return new Date(dateStr).toLocaleDateString("vi-VN");
@@ -58,17 +60,28 @@ onMounted(async () => {
   }
 });
 
+const totalPages = ref(0);
+const page = ref(0);
+const size = ref(10);
+
 // Hàm load danh sách phiếu giảm giá
 const loadphieuGiamGia = async () => {
   try {
-    const res = await getAllPhieuGiamGia();
-    phieuGiamGia.value = res.data;
+    const res = await getAllPhieuGiamGia(page.value, size.value);
+    phieuGiamGia.value = res.data.content;
+    totalPages.value = res.data.totalPages;
   } catch (err) {
     console.error("Lỗi khi tải danh sách phiếu giảm giá:", err);
   }
 };
 
-// ✅ Hàm load danh sách chức vụ
+//Chuyển trang
+const gotoPage = (p) => {
+  if (p >= 0 && p < totalPages.value) {
+    page.value = p;
+    loadphieuGiamGia();
+  }
+};
 
 // Hàm mở modal chi tiết + update
 const editphieuGiamGia = (p) => {
@@ -94,6 +107,7 @@ const savephieuGiamGia = async () => {
     modalInstance.hide();
     await loadphieuGiamGia();
   } catch (err) {
+    Object.assign(errors, err.response.data);
     console.error("❌ Lỗi khi cập nhật phiếu giảm giá:", err);
     notify.error("Có lỗi khi cập nhật!");
   }
@@ -118,6 +132,7 @@ const confirmSave = async () => {
   }
 };
 
+//Toggle trạng thái
 const toggleTrangThai = async (p) => {
   const oldValue = p.trangThai;
   p.trangThai = !p.trangThai; // Đổi 1↔0 thay vì true/false
@@ -165,7 +180,7 @@ const toggleTrangThai = async (p) => {
       </div>
       <div class="card-body">
         <form>
-          <div class="row g-3">
+          <div class="row g-3 mb-3">
             <div class="col-md-4">
               <label class="form-label fw-bold">Tìm kiếm</label>
               <input
@@ -179,7 +194,7 @@ const toggleTrangThai = async (p) => {
             <div class="col-md-4">
               <label class="form-label fw-bold">Trạng thái</label>
               <div class="d-flex mt-2">
-                <div class="form-check me-3 custom-radio">
+                <div class="form-check me-3 custom-radio d-flex">
                   <input
                     class="form-check-input"
                     type="radio"
@@ -188,15 +203,25 @@ const toggleTrangThai = async (p) => {
                   />
                   <label class="form-check-label">Tất cả</label>
                 </div>
-                <div class="form-check me-3 custom-radio">
+                <div class="form-check me-3 custom-radio d-flex">
                   <input class="form-check-input" type="radio" name="status" />
                   <label class="form-check-label">Còn hoạt động</label>
                 </div>
-                <div class="form-check custom-radio">
+                <div class="form-check custom-radio d-flex">
                   <input class="form-check-input" type="radio" name="status" />
                   <label class="form-check-label">Ngừng hoạt động</label>
                 </div>
               </div>
+            </div>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Ngày bắt đầu</label>
+              <input type="date" class="form-control" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Ngày kết thúc</label>
+              <input type="date" class="form-control" />
             </div>
           </div>
 
@@ -204,12 +229,7 @@ const toggleTrangThai = async (p) => {
           <div
             class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4"
           >
-            <p class="mb-2 mb-md-0">
-              Tổng số phiếu giảm giá:
-              <span class="text-warning fw-bold">{{
-                phieuGiamGia.length
-              }}</span>
-            </p>
+            <p class="mb-2 mb-md-0"></p>
             <div class="d-flex align-items-center gap-2">
               <button type="reset" class="btn btn-dark">Đặt lại bộ lọc</button>
               <router-link
@@ -229,7 +249,7 @@ const toggleTrangThai = async (p) => {
         <div class="card">
           <div class="card-header">
             <div class="d-flex align-items-center justify-content-between">
-              <h4 class="card-title mb-0">Danh Sách phiếu giảm giá</h4>
+              <h4 class="card-title mb-0">Danh sách Phiếu giảm giá</h4>
             </div>
           </div>
 
@@ -308,6 +328,43 @@ const toggleTrangThai = async (p) => {
                 </tbody>
               </table>
             </div>
+
+            <nav aria-label="Page navigation">
+              <ul class="pagination justify-content-end mt-3">
+                <li class="page-item" :class="{ disabled: page === 0 }">
+                  <a
+                    class="page-link"
+                    href="#"
+                    @click.prevent="gotoPage(page - 1)"
+                    >Trước</a
+                  >
+                </li>
+                <li
+                  class="page-item"
+                  v-for="n in totalPages"
+                  :key="n"
+                  :class="{ active: n - 1 === page }"
+                >
+                  <a
+                    class="page-link"
+                    href="#"
+                    @click.prevent="gotoPage(n - 1)"
+                    >{{ n }}</a
+                  >
+                </li>
+                <li
+                  class="page-item"
+                  :class="{ disabled: page === totalPages - 1 }"
+                >
+                  <a
+                    class="page-link"
+                    href="#"
+                    @click.prevent="gotoPage(page + 1)"
+                    >Sau</a
+                  >
+                </li>
+              </ul>
+            </nav>
           </div>
 
           <!-- Modal Detail + Update -->
@@ -322,7 +379,7 @@ const toggleTrangThai = async (p) => {
               <div class="modal-content">
                 <div class="modal-header bg-warning text-white">
                   <h5 class="modal-title" id="detailModalLabel">
-                    Chi tiết phiếu giảm giá
+                    Sửa phiếu giảm giá
                   </h5>
                   <button
                     type="button"
@@ -350,7 +407,11 @@ const toggleTrangThai = async (p) => {
                         type="text"
                         class="form-control"
                         v-model="selectedphieuGiamGia.ten"
+                        :class="{ 'is-invalid': errors.ten }"
                       />
+                      <div class="invalid-feedback">
+                        {{ errors.ten }}
+                      </div>
                     </div>
 
                     <div class="col-md-6">
@@ -359,7 +420,11 @@ const toggleTrangThai = async (p) => {
                         type="date"
                         class="form-control"
                         v-model="selectedphieuGiamGia.ngayBatDau"
+                        :class="{ 'is-invalid': errors.ngayBatDau }"
                       />
+                      <div class="invalid-feedback">
+                        {{ errors.ngayBatDau }}
+                      </div>
                     </div>
 
                     <div class="col-md-6">
@@ -368,18 +433,40 @@ const toggleTrangThai = async (p) => {
                         type="date"
                         class="form-control"
                         v-model="selectedphieuGiamGia.ngayKetThuc"
+                        :class="{ 'is-invalid': errors.ngayKetThuc }"
                       />
+                      <div class="invalid-feedback">
+                        {{ errors.ngayKetThuc }}
+                      </div>
                     </div>
 
                     <div class="col-md-6">
-                      <label class="form-label">Hình thức giảm giá</label>
-                      <select
-                        class="form-select"
-                        v-model="selectedphieuGiamGia.hinhThucGiamGia"
+                      <label class="form-label d-block"
+                        >Hình thức giảm giá</label
                       >
-                        <option :value="true">Phần trăm (%)</option>
-                        <option :value="false">Theo tiền (VNĐ)</option>
-                      </select>
+                      <div class="d-flex gap-3">
+                        <div class="form-check custom-radio">
+                          <input
+                            class="form-check-input"
+                            type="radio"
+                            id="%"
+                            :value="true"
+                            v-model="selectedphieuGiamGia.hinhThucGiamGia"
+                            checked
+                          />
+                          <label class="form-check-label">%</label>
+                        </div>
+                        <div class="form-check custom-radio">
+                          <input
+                            class="form-check-input"
+                            type="radio"
+                            id="tienMat"
+                            :value="false"
+                            v-model="selectedphieuGiamGia.hinhThucGiamGia"
+                          />
+                          <label class="form-check-label">Tiền mặt</label>
+                        </div>
+                      </div>
                     </div>
 
                     <div class="col-md-6">
@@ -388,7 +475,11 @@ const toggleTrangThai = async (p) => {
                         type="number"
                         class="form-control"
                         v-model="selectedphieuGiamGia.giaTriGiam"
+                        :class="{ 'is-invalid': errors.giaTriGiam }"
                       />
+                      <div class="invalid-feedback">
+                        {{ errors.giaTriGiam }}
+                      </div>
                     </div>
 
                     <div class="col-md-6">
@@ -397,7 +488,11 @@ const toggleTrangThai = async (p) => {
                         type="number"
                         class="form-control"
                         v-model="selectedphieuGiamGia.giaTriGiamToiThieu"
+                        :class="{ 'is-invalid': errors.giaTriGiamToiThieu }"
                       />
+                      <div class="invalid-feedback">
+                        {{ errors.giaTriGiamToiThieu }}
+                      </div>
                     </div>
 
                     <div class="col-md-6">
@@ -406,7 +501,11 @@ const toggleTrangThai = async (p) => {
                         type="number"
                         class="form-control"
                         v-model="selectedphieuGiamGia.giaTriGiamToiDa"
+                        :class="{ 'is-invalid': errors.giaTriGiamToiDa }"
                       />
+                      <div class="invalid-feedback">
+                        {{ errors.giaTriGiamToiDa }}
+                      </div>
                     </div>
 
                     <div class="col-md-12">
@@ -416,28 +515,6 @@ const toggleTrangThai = async (p) => {
                         rows="2"
                         v-model="selectedphieuGiamGia.moTa"
                       ></textarea>
-                    </div>
-
-                    <div class="col-md-6">
-                      <label class="form-label d-block">Trạng thái</label>
-                      <div class="form-check form-check-inline">
-                        <input
-                          class="form-check-input"
-                          type="radio"
-                          :value="true"
-                          v-model="selectedphieuGiamGia.trangThai"
-                        />
-                        <label class="form-check-label">Còn hoạt động</label>
-                      </div>
-                      <div class="form-check form-check-inline">
-                        <input
-                          class="form-check-input"
-                          type="radio"
-                          :value="false"
-                          v-model="selectedphieuGiamGia.trangThai"
-                        />
-                        <label class="form-check-label">Ngừng hoạt động</label>
-                      </div>
                     </div>
                   </div>
                 </div>

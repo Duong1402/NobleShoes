@@ -1,6 +1,7 @@
 package com.example.datn.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,15 +27,19 @@ public class PhieuGiamGiaCaNhan {
     @Column(name = "ma", unique = true)
     private String ma;
 
+    @NotBlank(message = "Không được để trống")
     @Column(name = "ten")
     private String ten;
 
+    @NotBlank(message = "Không được để trống")
     @Column(name = "ngay_nhan")
     private Date ngayNhan;
 
+    @NotBlank(message = "Không được để trống")
     @Column(name = "ngay_het_han")
     private Date ngayHetHan;
 
+    @NotBlank(message = "Không được để trống")
     @Column(name = "trang_thai")
     private Boolean trangThai; //0 la false, 1 la true
 

@@ -1,33 +1,32 @@
 <script setup>
 import Breadcrumb from "@/components/common/Breadcrumb.vue";
-import { ref, onMounted } from "vue";
+import { ref, onMounted, reactive } from "vue";
 import { Modal } from "bootstrap";
 import Swal from "sweetalert2";
 import {
-  getAllPhieuGiamGiaCaNhan,
-  // createphieuGiamGiaCaNhan,
-  updatePhieuGiamGiaCaNhan,
-  // deletephieuGiamGiaCaNhan,
-} from "@/service/phieuGiamGiaCaNhanService";
+  getAllDotGiamGia,
+  // createDotGiamGia,
+  updateDotGiamGia,
+  // deleteDotGiamGia,
+} from "@/service/dotGiamGiaService";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { useNotify } from "@/composables/useNotify";
 import Decimal from "decimal.js";
 
-const phieuGiamGiaCaNhan = ref([]);
+const DotGiamGia = ref([]);
 const notify = useNotify();
-const selectedPhieuGiamGiaCaNhan = ref({
+const selectedDotGiamGia = ref({
   ma: "",
   ten: "",
-  ngayNhan: "",
-  ngayHetHan: "",
+  giaTriGiam: 0,
+  soTienGiamToiDa: 0,
+  ngayBatDau: "",
+  ngayKetThuc: "",
   trangThai: true,
-  moTa: "",
-  phieuGiamGia: {},
-  khachHang: {},
 });
-const phieuGiamGiaList = ref([]);
-const khachHangList = ref([]);
+const errors = reactive({});
 
+// Hàm định dạng ngày tháng
 const formatDate = (dateStr) => {
   if (!dateStr) return "";
   return new Date(dateStr).toLocaleDateString("vi-VN");
@@ -35,19 +34,17 @@ const formatDate = (dateStr) => {
 
 let modalInstance = null;
 
-// Khi component mount, load danh sách phiếu giảm giá cá nhân
+// Khi component mount, load danh sách đợt giảm giá
 onMounted(async () => {
-  await loadPhieuGiamGiaCaNhan();
+  await loadDotGiamGia();
 
   // Nếu URL có ?id=... thì tự động mở modal chi tiết
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
   if (id) {
-    const p = phieuGiamGiaCaNhan.value.find(
-      (n) => String(n.id).trim() === id.trim()
-    );
+    const p = DotGiamGia.value.find((n) => String(n.id).trim() === id.trim());
     if (p) {
-      setTimeout(() => editPhieuGiamGiaCaNhan(p), 200);
+      setTimeout(() => editDotGiamGia(p), 200);
     }
   }
 
@@ -55,27 +52,38 @@ onMounted(async () => {
   const modalEl = document.getElementById("detailModal");
   if (modalEl) {
     modalEl.addEventListener("hidden.bs.modal", () => {
-      window.history.pushState({}, "", "/admin/phieu-giam-gia-ca-nhan");
+      window.history.pushState({}, "", "/admin/dot-giam-gia");
     });
   }
 });
 
-// Hàm load danh sách phiếu giảm giá cá nhân
-const loadPhieuGiamGiaCaNhan = async () => {
+const totalPages = ref(0);
+const page = ref(0);
+const size = ref(10);
+
+// Hàm load danh sách đợt giảm giá
+const loadDotGiamGia = async () => {
   try {
-    const res = await getAllPhieuGiamGiaCaNhan();
-    phieuGiamGiaCaNhan.value = res.data;
-    phieuGiamGiaList.value = res.phieuGiamGia;
-    khachHangList.value = res.khachHang;
+    const res = await getAllDotGiamGia(page.value, size.value);
+    DotGiamGia.value = res.data.content;
+    totalPages.value = res.data.totalPages;
   } catch (err) {
-    console.error("Lỗi khi tải danh sách phiếu giảm giá cá nhân:", err);
+    console.error("Lỗi khi tải danh sách đợt giảm giá:", err);
+  }
+};
+
+//Chuyển trang
+const gotoPage = (p) => {
+  if (p >= 0 && p < totalPages.value) {
+    page.value = p;
+    loadDotGiamGia();
   }
 };
 
 // Hàm mở modal chi tiết + update
-const editPhieuGiamGiaCaNhan = (p) => {
+const editDotGiamGia = (p) => {
   // Deep copy để tránh ảnh hưởng đến list chính
-  selectedPhieuGiamGiaCaNhan.value = JSON.parse(JSON.stringify(p));
+  selectedDotGiamGia.value = JSON.parse(JSON.stringify(p));
   window.history.pushState({}, "", `?id=${p.id}`);
 
   const modalEl = document.getElementById("detailModal");
@@ -83,20 +91,21 @@ const editPhieuGiamGiaCaNhan = (p) => {
   modalInstance.show();
 };
 
-// Hàm lưu cập nhật phiếu giảm giá cá nhân
-const savePhieuGiamGiaCaNhan = async () => {
+// Hàm lưu cập nhật đợt giảm giá
+const saveDotGiamGia = async () => {
   try {
     // Chuẩn dữ liệu gửi về BE (chỉ cần ID chức vụ)
     const payload = {
-      ...selectedPhieuGiamGiaCaNhan.value,
+      ...selectedDotGiamGia.value,
     };
 
-    await updatePhieuGiamGiaCaNhan(payload.id, payload);
+    await updateDotGiamGia(payload.id, payload);
     notify.success("Cập nhật thành công!");
     modalInstance.hide();
-    await loadPhieuGiamGiaCaNhan();
+    await loadDotGiamGia();
   } catch (err) {
-    console.error("❌ Lỗi khi cập nhật phiếu giảm giá cá nhân:", err);
+    Object.assign(errors, err.response.data);
+    console.error("❌ Lỗi khi cập nhật đợt giảm giá:", err);
     notify.error("Có lỗi khi cập nhật!");
   }
 };
@@ -105,7 +114,7 @@ const savePhieuGiamGiaCaNhan = async () => {
 const confirmSave = async () => {
   const result = await Swal.fire({
     title: "Xác nhận lưu thay đổi?",
-    text: "Bạn có chắc chắn muốn cập nhật phiếu giảm giá cá nhân này?",
+    text: "Bạn có chắc chắn muốn cập nhật đợt giảm giá này?",
     icon: "warning",
     showCancelButton: true,
     confirmButtonText: "Có, lưu lại",
@@ -116,10 +125,11 @@ const confirmSave = async () => {
   });
 
   if (result.isConfirmed) {
-    savePhieuGiamGiaCaNhan(); // gọi hàm lưu
+    saveDotGiamGia(); // gọi hàm lưu
   }
 };
 
+//Toggle trạng thái
 const toggleTrangThai = async (p) => {
   const oldValue = p.trangThai;
   p.trangThai = !p.trangThai; // Đổi 1↔0 thay vì true/false
@@ -128,10 +138,9 @@ const toggleTrangThai = async (p) => {
     // Tạo payload đầy đủ, tránh làm mất các field khác
     const payload = {
       ...p,
-      trangThai: p.trangThai,
     };
 
-    await updatePhieuGiamGiaCaNhan(p.id, payload);
+    await updateDotGiamGia(p.id, payload);
 
     notify.success(
       `Đã chuyển sang trạng thái: ${
@@ -144,7 +153,16 @@ const toggleTrangThai = async (p) => {
     notify.error("Cập nhật trạng thái thất bại!");
   }
 };
+
+const formatCurrency = (value) => {
+  if (value == null) return "";
+  return Number(value).toLocaleString("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  });
+};
 </script>
+
 <template>
   <div class="container-fluid mt-4 px-5">
     <div class="card shadow-sm border-0 mb-4">
@@ -153,9 +171,7 @@ const toggleTrangThai = async (p) => {
           class="page-header d-flex align-items-center justify-content-between"
         >
           <div>
-            <h3 class="fw-bold text-warning mb-1">
-              Quản lý phiếu giảm giá cá nhân
-            </h3>
+            <h3 class="fw-bold text-warning mb-1">Quản lý đợt giảm giá</h3>
             <Breadcrumb class="mt-2 mb-0" />
           </div>
         </div>
@@ -170,7 +186,7 @@ const toggleTrangThai = async (p) => {
       </div>
       <div class="card-body">
         <form>
-          <div class="row g-3">
+          <div class="row g-3 mb-3">
             <div class="col-md-4">
               <label class="form-label fw-bold">Tìm kiếm</label>
               <input
@@ -204,24 +220,29 @@ const toggleTrangThai = async (p) => {
               </div>
             </div>
           </div>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Ngày bắt đầu</label>
+              <input type="date" class="form-control" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Ngày kết thúc</label>
+              <input type="date" class="form-control" />
+            </div>
+          </div>
 
           <!-- Footer -->
           <div
             class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4"
           >
-            <p class="mb-2 mb-md-0">
-              Tổng số phiếu giảm giá cá nhân:
-              <span class="text-warning fw-bold">{{
-                phieuGiamGiaCaNhan.length
-              }}</span>
-            </p>
+            <p class="mb-2 mb-md-0"></p>
             <div class="d-flex align-items-center gap-2">
               <button type="reset" class="btn btn-dark">Đặt lại bộ lọc</button>
               <router-link
-                to="/admin/phieu-giam-gia-ca-nhan/add"
+                to="/admin/dot-giam-gia/add"
                 class="btn btn-warning text-white"
               >
-                Thêm phiếu giảm giá cá nhân
+                Thêm đợt giảm giá
               </router-link>
             </div>
           </div>
@@ -234,7 +255,7 @@ const toggleTrangThai = async (p) => {
         <div class="card">
           <div class="card-header">
             <div class="d-flex align-items-center justify-content-between">
-              <h4 class="card-title mb-0">Danh Sách phiếu giảm giá cá nhân</h4>
+              <h4 class="card-title mb-0">Danh sách Đợt giảm giá</h4>
             </div>
           </div>
 
@@ -246,25 +267,25 @@ const toggleTrangThai = async (p) => {
                     <th>STT</th>
                     <th>Mã</th>
                     <th>Tên</th>
-                    <th>Ngày nhận</th>
-                    <th>Ngày hết hạn</th>
-                    <th>Phiếu giảm giá</th>
-                    <th>Khách hàng</th>
+                    <th>Giá trị giảm</th>
+                    <th>Số tiền giảm tối đa</th>
+                    <th>Ngày bắt đầu</th>
+                    <th>Ngày kết thúc</th>
                     <th>Trạng thái</th>
                     <th style="width: 10%">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(p, index) in phieuGiamGiaCaNhan" :key="p.id">
+                  <tr v-for="(p, index) in DotGiamGia" :key="p.id">
                     <td>{{ index + 1 }}</td>
                     <td>
                       {{ p.ma }}
                     </td>
                     <td>{{ p.ten }}</td>
-                    <td>{{ formatDate(p.ngayNhan) }}</td>
-                    <td>{{ formatDate(p.ngayHetHan) }}</td>
-                    <td>{{ p.phieuGiamGia.ten }}</td>
-                    <td>{{ p.khachHang.hoTen }}</td>
+                    <td>{{ p.giaTriGiam }}%</td>
+                    <td>{{ formatCurrency(p.soTienGiamToiDa) }}</td>
+                    <td>{{ formatDate(p.ngayBatDau) }}</td>
+                    <td>{{ formatDate(p.ngayKetThuc) }}</td>
                     <td>
                       <span
                         class="badge rounded-pill fs-6 px-3 status-badge"
@@ -301,8 +322,8 @@ const toggleTrangThai = async (p) => {
                         <button
                           type="button"
                           class="btn btn-link btn-warning btn-lg p-0"
-                          @click="editPhieuGiamGiaCaNhan(p)"
-                          title="Cập nhật phiếu giảm giá cá nhân"
+                          @click="editDotGiamGia(p)"
+                          title="Cập nhật đợt giảm giá"
                         >
                           <i class="fa fa-edit"></i>
                         </button>
@@ -312,6 +333,43 @@ const toggleTrangThai = async (p) => {
                 </tbody>
               </table>
             </div>
+
+            <nav aria-label="Page navigation">
+              <ul class="pagination justify-content-end mt-3">
+                <li class="page-item" :class="{ disabled: page === 0 }">
+                  <a
+                    class="page-link"
+                    href="#"
+                    @click.prevent="gotoPage(page - 1)"
+                    >Trước</a
+                  >
+                </li>
+                <li
+                  class="page-item"
+                  v-for="n in totalPages"
+                  :key="n"
+                  :class="{ active: n - 1 === page }"
+                >
+                  <a
+                    class="page-link"
+                    href="#"
+                    @click.prevent="gotoPage(n - 1)"
+                    >{{ n }}</a
+                  >
+                </li>
+                <li
+                  class="page-item"
+                  :class="{ disabled: page === totalPages - 1 }"
+                >
+                  <a
+                    class="page-link"
+                    href="#"
+                    @click.prevent="gotoPage(page + 1)"
+                    >Sau</a
+                  >
+                </li>
+              </ul>
+            </nav>
           </div>
 
           <!-- Modal Detail + Update -->
@@ -326,7 +384,7 @@ const toggleTrangThai = async (p) => {
               <div class="modal-content">
                 <div class="modal-header bg-warning text-white">
                   <h5 class="modal-title" id="detailModalLabel">
-                    Chi tiết phiếu giảm giá cá nhân
+                    Chi tiết đợt giảm giá
                   </h5>
                   <button
                     type="button"
@@ -339,97 +397,75 @@ const toggleTrangThai = async (p) => {
                 <div class="modal-body">
                   <div class="row g-3">
                     <div class="col-md-6">
-                      <label class="form-label">Mã</label>
+                      <label class="form-label">Mã đợt giảm giá</label>
                       <input
                         type="text"
                         class="form-control"
-                        v-model="selectedPhieuGiamGiaCaNhan.ma"
+                        v-model="selectedDotGiamGia.ma"
                         disabled
                       />
                     </div>
 
                     <div class="col-md-6">
-                      <label class="form-label">Tên</label>
+                      <label class="form-label">Tên đợt giảm giá</label>
                       <input
                         type="text"
                         class="form-control"
-                        v-model="selectedPhieuGiamGiaCaNhan.ten"
+                        :class="{ 'is-invalid': errors.ten }"
+                        v-model="selectedDotGiamGia.ten"
                       />
+                      <div class="invalid-feedback">{{ errors.ten }}</div>
                     </div>
 
                     <div class="col-md-6">
-                      <label class="form-label">Ngày nhận</label>
+                      <label class="form-label">Giá trị giảm</label>
                       <input
-                        type="date"
+                        type="number"
                         class="form-control"
-                        v-model="selectedPhieuGiamGiaCaNhan.ngayNhan"
+                        :class="{ 'is-invalid': errors.giaTriGiam }"
+                        v-model="selectedDotGiamGia.giaTriGiam"
                       />
-                    </div>
-
-                    <div class="col-md-6">
-                      <label class="form-label">Ngày hết hạn</label>
-                      <input
-                        type="date"
-                        class="form-control"
-                        v-model="selectedPhieuGiamGiaCaNhan.ngayHetHan"
-                      />
-                    </div>
-
-                    <div class="col-md-6">
-                      <label class="form-label">Phiếu giảm giá</label>
-                      <select
-                        class="form-select"
-                        v-model="selectedPhieuGiamGiaCaNhan.phieuGiamGia"
-                      >
-                        <option disabled value="">
-                          -- Chọn phiếu giảm giá --
-                        </option>
-                        <option
-                          v-for="p in phieuGiamGiaList"
-                          :key="p.id"
-                          :value="p"
-                        >
-                          {{ p.ten }}
-                        </option>
-                      </select>
-                    </div>
-
-                    <div class="col-md-6">
-                      <label class="form-label">Khách hàng</label>
-                      <select
-                        class="form-select"
-                        v-model="selectedPhieuGiamGiaCaNhan.khachHang"
-                      >
-                        <option disabled value="">-- Chọn khách hàng --</option>
-                        <option
-                          v-for="k in khachHangList"
-                          :key="k.id"
-                          :value="k"
-                        >
-                          {{ k.hoTen }}
-                        </option>
-                      </select>
-                    </div>
-
-                    <div class="col-md-6">
-                      <label class="form-label d-block">Trạng thái</label>
-                      <div class="form-check form-check-inline">
-                        <input
-                          class="form-check-input"
-                          type="radio"
-                          :value="true"
-                          v-model="selectedPhieuGiamGiaCaNhan.trangThai"
-                        />
-                        <label class="form-check-label">Còn hoạt động</label>
+                      <div class="invalid-feedback">
+                        {{ errors.giaTriGiam }}
                       </div>
-                      <div class="form-check form-check-inline">
-                        <input
-                          class="form-check-input"
-                          type="radio"
-                          :value="false"
-                          v-model="selectedPhieuGiamGiaCaNhan.trangThai"
-                        />
-                        <label class="form-check-label">Ngừng hoạt động</label>
+                    </div>
+
+                    <div class="col-md-6">
+                      <label class="form-label">Số tiền giảm tối đa</label>
+                      <input
+                        type="number"
+                        class="form-control"
+                        :class="{ 'is-invalid': errors.soTienGiamToiDa }"
+                        v-model="selectedDotGiamGia.soTienGiamToiDa"
+                      />
+                      <div class="invalid-feedback">
+                        {{ errors.soTienGiamToiDa }}
+                      </div>
+                    </div>
+
+                    <div class="col-md-6">
+                      <label class="form-label">Ngày bắt đầu</label>
+                      <input
+                        type="date"
+                        class="form-control"
+                        :class="{ 'is-invalid': errors.ngayBatDau }"
+                        v-model="selectedDotGiamGia.ngayBatDau"
+                      />
+                      <div class="invalid-feedback">
+                        {{ errors.ngayBatDau }}
+                      </div>
+                    </div>
+
+                    <div class="col-md-6">
+                      <label class="form-label">Ngày kết thúc</label>
+                      <input
+                        type="date"
+                        class="form-control"
+                        :class="{ 'is-invalid': errors.ngayKetThuc }"
+                        v-model="selectedDotGiamGia.ngayKetThuc"
+                      />
+                      <div class="invalid-feedback">
+                        {{ errors.ngayKetThuc }}
                       </div>
                     </div>
                   </div>
