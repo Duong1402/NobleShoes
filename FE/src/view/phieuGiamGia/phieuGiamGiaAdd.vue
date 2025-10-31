@@ -4,33 +4,80 @@ import { useRouter } from "vue-router";
 import Breadcrumb from "@/components/common/Breadcrumb.vue";
 import { useNotify } from "@/composables/useNotify";
 import Swal from "sweetalert2";
-import { createPhieuGiamGia } from "@/service/phieuGiamGiaService";
+import {
+  createPhieuGiamGia,
+  getAllKhachHang,
+  createPhieuGiamGiaCaNhan,
+} from "@/service/phieuGiamGiaService";
 
 const router = useRouter();
 const notify = useNotify();
 const errors = reactive({});
+const loaiPhieu = ref("");
+const khachHang = ref([]);
+const khachHangSelected = ref([]);
+const totalPages = ref(0);
+const page = ref(0);
+const size = ref(10);
 
 // Form thêm phiếu giảm giá
-const form = reactive({
-  ten: null,
-  ngayBatDau: null,
-  ngayKetThuc: null,
-  hinhThucGiamGia: false,
-  giaTriGiam: null,
-  giaTriGiamToiThieu: null,
-  giaTriGiamToiDa: null,
-  trangThai: true,
-  moTa: null,
-});
+const form = reactive({ hinhThucGiamGia: true });
+
+const loadKhachHang = async () => {
+  try {
+    const res = await getAllKhachHang(page.value, size.value);
+    khachHang.value = res.data.content;
+    totalPages.value = res.totalPages;
+  } catch (error) {
+    console.error("Lỗi khi tải danh sách khách hàng:", error);
+  }
+};
+
+const gotoPage = (p) => {
+  if (p >= 0 && p < totalPages.value) {
+    page.value = p;
+    loadKhachHang();
+  }
+};
 
 //Thêm phiếu giảm giá
 const addPhieuGiamGia = async () => {
   try {
-    Object.keys(errors).forEach((key) => (errors[key] = ""));
+    let payload = {
+      ...form,
+      trangThai: true,
+      iaTriGiamToiThieu: form.giaTriGiamToiThieu || 0, // đảm bảo không null
+      giaTriGiamToiDa: form.giaTriGiamToiDa || 0,
+    };
 
-    const res = await createPhieuGiamGia(form);
+    // if (loaiPhieu.value === "Cá nhân") {
+    //   if (!khachHangSelected.value.length) {
+    //     notify.error("Vui lòng chọn 1 khách hàng!");
+    //     return;
+    //   }
+    // }
 
-    if (!res) throw new Error("Lỗi khi thêm phiếu giảm giá");
+    if (loaiPhieu.value === "Cá nhân") {
+      if (!khachHangSelected.value.length) {
+        notify.error("Vui lòng chọn 1 khách hàng!");
+        return;
+      }
+
+      // 1️⃣ Tạo phiếu giảm giá chung
+      const p = await createPhieuGiamGia(JSON.parse(JSON.stringify(payload)));
+
+      // 2️⃣ Chuẩn bị dữ liệu phiếu giảm giá cá nhân (chỉ giữ dữ liệu cần thiết)
+      const payloadCaNhan = {
+        ten: form.ten,
+        ngayNhan: form.ngayBatDau,
+        ngayHetHan: form.ngayKetThuc,
+        phieuGiamGia: { id: p.data.id }, // chỉ cần ID
+        khachHang: { id: khachHangSelected.value[0].id }, // danh sách ID khách hàng
+      };
+
+      // 3️⃣ Gửi dữ liệu
+      await createPhieuGiamGiaCaNhan(payloadCaNhan);
+    }
 
     notify.success("Thêm phiếu giảm giá thành công!");
     router.push("/admin/phieu-giam-gia");
@@ -162,19 +209,17 @@ const confirmSave = async () => {
           </div>
 
           <!-- Giá trị giảm tối thiểu-->
-          <div class="col-md-6">
+          <div class="col-md-6" v-if="form.hinhThucGiamGia === true">
             <label class="form-label">Giá trị giảm tối thiểu</label>
             <input
               v-model="form.giaTriGiamToiThieu"
               type="number"
               class="form-control"
-              :class="{ 'is-invalid': errors.giaTriGiamToiThieu }"
               placeholder="Nhập giá trị giảm tối thiểu"
             />
-            <div class="invalid-feedback">{{ errors.giaTriGiamToiThieu }}</div>
           </div>
           <!-- Giá trị giảm tối đa-->
-          <div class="col-md-6">
+          <div class="col-md-6" v-if="form.hinhThucGiamGia === true">
             <label class="form-label">Giá trị giảm tối đa</label>
             <input
               v-model="form.giaTriGiamToiDa"
@@ -183,7 +228,9 @@ const confirmSave = async () => {
               :class="{ 'is-invalid': errors.giaTriGiamToiDa }"
               placeholder="Nhập giá trị giảm tối đa"
             />
-            <div class="invalid-feedback">{{ errors.giaTriGiamToiDa }}</div>
+            <div class="invalid-feedback" v-if="form.hinhThucGiamGia === false">
+              {{ errors.giaTriGiamToiDa }}
+            </div>
           </div>
 
           <!-- Mô tả -->
@@ -196,7 +243,37 @@ const confirmSave = async () => {
               placeholder="Nhập mô tả"
             ></textarea>
           </div>
+          <!-- Loại giảm giá -->
+          <div class="col-md-6">
+            <label class="form-label d-block">Loại phiếu giảm giá</label>
+            <div class="d-flex gap-3">
+              <div class="form-check custom-radio">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  id="congKhai"
+                  value="Công khai"
+                  v-model="loaiPhieu"
+                  checked
+                />
+                <label class="form-check-label">Công khai</label>
+              </div>
+              <div class="form-check custom-radio">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  id="caNhan"
+                  value="Cá nhân"
+                  v-model="loaiPhieu"
+                  @click="loadKhachHang"
+                />
+                <label class="form-check-label">Cá nhân</label>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <div></div>
 
         <!-- Nút hành động -->
         <div class="mt-4 text-end">
@@ -211,6 +288,107 @@ const confirmSave = async () => {
           </button>
         </div>
       </form>
+    </div>
+
+    <!-- Hiển thị danh sách khách hàng khi bấm vào loại phiếu cá nhân -->
+    <div class="row" v-if="loaiPhieu === 'Cá nhân'">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header">
+            <div class="d-flex align-items-center justify-content-between">
+              <h4 class="card-title mb-0">Danh sách Khách hàng</h4>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="table-responsive">
+              <table id="add-row" class="display table">
+                <thead>
+                  <tr style="text-align: center">
+                    <th class="text-center">
+                      <i class="fa-regular fa-square"></i>
+                    </th>
+                    <th>STT</th>
+                    <th>Mã</th>
+                    <th>Ảnh</th>
+                    <th>Họ tên</th>
+                    <th>SĐT</th>
+                    <th>Email</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(p, index) in khachHang" :key="p.id">
+                    <td>
+                      <input
+                        type="checkbox"
+                        :value="p"
+                        v-model="khachHangSelected"
+                      />
+                    </td>
+                    <td>{{ index + 1 + page * size }}</td>
+                    <td>
+                      {{ p.ma }}
+                    </td>
+                    <td class="text-center">
+                      <img
+                        :src="p.urlAnh || '/src/assets/img/default-avatar.png'"
+                        alt="Ảnh khách hàng"
+                        class="rounded-circle shadow-sm"
+                        style="
+                          width: 65px;
+                          height: 65px;
+                          object-fit: cover;
+                          border: 2px solid #ffc107;
+                        "
+                      />
+                    </td>
+                    <td>{{ p.hoTen }}</td>
+                    <td>{{ p.sdt }}</td>
+                    <td>{{ p.email }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <nav aria-label="Page navigation">
+              <ul class="pagination justify-content-end mt-3">
+                <li class="page-item" :class="{ disabled: page === 0 }">
+                  <a
+                    class="page-link"
+                    href="#"
+                    @click.prevent="gotoPage(page - 1)"
+                    >Trước</a
+                  >
+                </li>
+                <li
+                  class="page-item"
+                  v-for="n in totalPages"
+                  :key="n"
+                  :class="{ active: n - 1 === page }"
+                >
+                  <a
+                    class="page-link"
+                    href="#"
+                    @click.prevent="gotoPage(n - 1)"
+                    >{{ n }}</a
+                  >
+                </li>
+                <li
+                  class="page-item"
+                  :class="{ disabled: page === totalPages - 1 }"
+                >
+                  <a
+                    class="page-link"
+                    href="#"
+                    @click.prevent="gotoPage(page + 1)"
+                    >Sau</a
+                  >
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
