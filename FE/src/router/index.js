@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 
 import HeaderLayout from "@/components/layout/headerLayout.vue";
-import TrangChu from "@/components/trangChu.vue";
 
 // Sản phẩm
 import SanPham from "@/view/sanPham/sanPham.vue";
@@ -20,23 +19,27 @@ import ThuongHieu from "@/view/thuongHieu/thuongHieu.vue";
 import NhanVien from "@/view/nhanVien/nhanVien.vue";
 import NhanVienAdd from "@/view/nhanVien/nhanVienAdd.vue";
 
-
 import PhieuGiamGia from "@/view/phieuGiamGia/phieuGiamGia.vue";
-import PhieuGiamGiaCaNhan from "@/view/phieuGiamGiaCaNhan/phieuGiamGiaCaNhan.vue";
 import PhieuGiamGiaAdd from "@/view/phieuGiamGia/phieuGiamGiaAdd.vue";
-import PhieuGiamGiaCaNhanAdd from "@/view/phieuGiamGiaCaNhan/phieuGiamGiaCaNhanAdd.vue";
 import DotGiamGia from "@/view/dotGiamGia/dotGiamGia.vue";
 import DotGiamGiaAdd from "@/view/dotGiamGia/dotGiamGiaAdd.vue";
+import NhanVienDetail from "@/view/nhanVien/nhanVienDetail.vue";
+import PhieuGiamGiaCaNhanAdd from "@/view/PhieuGiamGiaCaNhan/phieuGiamGiaCaNhanAdd.vue";
+import PhieuGiamGiaCaNhan from "@/view/PhieuGiamGiaCaNhan/phieuGiamGiaCaNhan.vue";
+import TrangChu from "@/components/trangChu.vue";
 
 const listRouter = [
   {
     path: "/admin",
     component: HeaderLayout,
-    meta: { title: "Admin" },
     children: [
-      { path: "", name: "home", component: TrangChu },
-      { path: "trang-chu", name: "TrangChu", component: TrangChu },
-    
+      {
+        path: "",
+        name: "home",
+        component: TrangChu,
+        meta: { title: "Trang chủ" },
+      },
+
       // Sản phẩm
       {
         path: "san-pham",
@@ -99,15 +102,25 @@ const listRouter = [
       // Nhân viên
       {
         path: "nhan-vien",
-        name: "NhanVien",
+        name: "nhanVien",
         component: NhanVien,
         meta: { title: "Nhân viên" },
       },
       {
-        path: "nhan-vien/them",
-        name: "NhanVienAdd",
+        path: "nhan-vien/them-nhan-vien",
+        name: "nhanVienAdd",
         component: NhanVienAdd,
-        meta: { title: "Thêm nhân viên" },
+        meta: { title: "Thêm nhân viên", breadcrumbParent: "/admin/nhan-vien" },
+      },
+      {
+        path: "/admin/nhan-vien/:id",
+        name: "chiTietNhanVien",
+        component: NhanVienDetail,
+        props: true,
+        meta: {
+          title: "Chi tiết nhân viên",
+          breadcrumbParent: "/admin/nhan-vien",
+        },
       },
       {
         path: "phieu-giam-gia",
@@ -145,13 +158,10 @@ const listRouter = [
         component: DotGiamGiaAdd,
         meta: { title: "Thêm đợt giảm giá" },
       },
-      
     ],
-    
   },
   { path: "/", redirect: "/admin" },
 ];
-
 
 const router = createRouter({
   history: createWebHistory(),
