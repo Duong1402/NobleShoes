@@ -25,6 +25,28 @@ const chiTietSP = ref([]);
 const filterMau = ref("");
 const filterSize = ref("");
 
+const filterKeyword = ref("");
+const filterDanhMuc = ref("");
+const filterThuongHieu = ref("");
+const filterChatLieu = ref("");
+const filterMucDich = ref("");
+const filterTrangThai = ref("");
+const filterMinPrice = ref(0);
+const filterMaxPrice = ref(0);
+
+const resetFilters = () => {
+  filterKeyword.value = "";
+  filterDanhMuc.value = "";
+  filterThuongHieu.value = "";
+  filterMau.value = "";
+  filterChatLieu.value = "";
+  filterSize.value = "";
+  filterMucDich.value = "";
+  filterTrangThai.value = "";
+  filterMinPrice.value = 0;
+  filterMaxPrice.value = 0;
+};
+ 
 // 💡 PHÂN TRANG: Khởi tạo biến
 const currentPage = ref(1);
 const pageSize = ref(10); // Số lượng mục trên 1 trang
@@ -57,13 +79,39 @@ const mauSacList = ref([]);
 const kichThuocList = ref([]);
 const chatLieuList = ref([]);
 
-// Filter table (GIỮ NGUYÊN)
 const filteredChiTietSP = computed(() =>
-  chiTietSP.value.filter(ct =>
-    (!filterMau.value || ct.mauSacId === filterMau.value) &&
-    (!filterSize.value || ct.kichThuocId === filterSize.value)
-  )
+  chiTietSP.value.filter(ct => {
+    const matchKeyword =
+      !filterKeyword.value ||
+      ct.tenSP.toLowerCase().includes(filterKeyword.value.toLowerCase()) ||
+      ct.maSP.toLowerCase().includes(filterKeyword.value.toLowerCase());
+    const matchDanhMuc = !filterDanhMuc.value || ct.danhMucId === filterDanhMuc.value;
+    const matchThuongHieu = !filterThuongHieu.value || ct.thuongHieuId === filterThuongHieu.value;
+    const matchChatLieu = !filterChatLieu.value || ct.chatLieuId === filterChatLieu.value;
+    const matchMau = !filterMau.value || ct.mauSacId === filterMau.value;
+    const matchSize = !filterSize.value || ct.kichThuocId === filterSize.value;
+    const matchMucDich = !filterMucDich.value || ct.mucDichSuDungId === filterMucDich.value;
+    const matchTrangThai =
+      !filterTrangThai.value || ct.trangThai === filterTrangThai.value;
+    const matchGia =
+      (!filterMinPrice.value || ct.giaBan >= filterMinPrice.value) &&
+      (!filterMaxPrice.value || ct.giaBan <= filterMaxPrice.value);
+
+    return (
+      matchKeyword &&
+      matchDanhMuc &&
+      matchThuongHieu &&
+      matchChatLieu &&
+      matchMau &&
+      matchSize &&
+      matchMucDich &&
+      matchTrangThai &&
+      matchGia
+    );
+  })
 );
+
+
 
 // 💡 PHÂN TRANG: Tính tổng số trang (Dựa trên filteredChiTietSP)
 const totalPages = computed(() => Math.ceil(filteredChiTietSP.value.length / pageSize.value));
@@ -76,7 +124,7 @@ const pagedChiTietSP = computed(() => {
 
 // 💡 WATCH: Theo dõi bộ lọc để đặt lại trang về 1
 watch([filterMau, filterSize], () => {
-    currentPage.value = 1;
+  currentPage.value = 1;
 });
 
 
@@ -209,6 +257,25 @@ onMounted(async () => {
   await loadComboBox();
   await loadChiTietSP();
 });
+
+import QRCode from "qrcode";
+const downloadQR = async () => {
+  try {
+    // 🧠 Nội dung QR có thể là mã sản phẩm hoặc URL
+    const qrContent = `https://yourdomain.com/san-pham/${selectedCTSP.value.id}`;
+    const canvas = document.createElement("canvas");
+
+    await QRCode.toCanvas(canvas, qrContent, { width: 300 });
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/png");
+    link.download = `${selectedCTSP.value.tenSP}_QR.png`;
+    link.click();
+  } catch (error) {
+    console.error(error);
+    notify.error("Không thể tạo mã QR!");
+  }
+};
+
 </script>
 
 <template>
@@ -224,18 +291,94 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div class="card mb-3">
-      <div class="card-body d-flex gap-2 flex-wrap">
-        <select class="form-select" v-model="filterMau">
-          <option value="">-- Chọn màu --</option>
-          <option v-for="m in mauSacList" :key="m.id" :value="m.id">{{ m.ten }}</option>
-        </select>
-        <select class="form-select" v-model="filterSize">
-          <option value="">-- Chọn size --</option>
-          <option v-for="k in kichThuocList" :key="k.id" :value="k.id">{{ k.ten }}</option>
+<div class="card mb-3 shadow-sm border-0">
+  <div class="card-body">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label text-muted small mb-1">Mã hoặc tên sản phẩm</label>
+        <input
+          v-model="filterKeyword"
+          type="text"
+          class="form-control"
+          placeholder="Nhập mã hoặc tên sản phẩm..."
+        />
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label text-muted small mb-1">Danh mục</label>
+        <select class="form-select" v-model="filterDanhMuc">
+          <option value="">Tất cả</option>
+          <option v-for="item in danhMucList" :key="item.id" :value="item.id">{{ item.ten }}</option>
         </select>
       </div>
+
+      <div class="col-md-2">
+        <label class="form-label text-muted small mb-1">Thương hiệu</label>
+        <select class="form-select" v-model="filterThuongHieu">
+          <option value="">Tất cả</option>
+          <option v-for="item in thuongHieuList" :key="item.id" :value="item.id">{{ item.ten }}</option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label text-muted small mb-1">Màu sắc</label>
+        <select class="form-select" v-model="filterMau">
+          <option value="">Tất cả</option>
+          <option v-for="item in mauSacList" :key="item.id" :value="item.id">{{ item.ten }}</option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label text-muted small mb-1">Chất liệu</label>
+        <select class="form-select" v-model="filterChatLieu">
+          <option value="">Tất cả</option>
+          <option v-for="item in chatLieuList" :key="item.id" :value="item.id">{{ item.ten }}</option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label text-muted small mb-1">Kích cỡ</label>
+        <select class="form-select" v-model="filterSize">
+          <option value="">Tất cả</option>
+          <option v-for="item in kichThuocList" :key="item.id" :value="item.id">{{ item.ten }}</option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label text-muted small mb-1">Mục đích sử dụng</label>
+        <select class="form-select" v-model="filterMucDich">
+          <option value="">Tất cả</option>
+          <option v-for="item in mucDichSuDungList" :key="item.id" :value="item.id">{{ item.ten }}</option>
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label text-muted small mb-1">Khoảng giá (VND)</label>
+        <div class="d-flex align-items-center gap-2">
+          <input type="number" v-model.number="filterMinPrice" class="form-control" placeholder="Từ" />
+          <span>-</span>
+          <input type="number" v-model.number="filterMaxPrice" class="form-control" placeholder="Đến" />
+        </div>
+      </div>
+
+      <!-- <div class="col-md-2">
+        <label class="form-label text-muted small mb-1">Trạng thái</label>
+        <select class="form-select" v-model="filterTrangThai">
+          <option value="">Tất cả</option>
+          <option value="Đang bán">Đang bán</option>
+          <option value="Ngừng bán">Ngừng bán</option>
+        </select>
+      </div> -->
+
+      <div class="col-md-2">
+        <button class="btn btn-warning w-100" @click="resetFilters">
+          <i class="fa fa-undo me-1"></i>Đặt lại
+        </button>
+      </div>
     </div>
+  </div>
+</div>
+
 
     <div class="card">
       <div class="card-body table-responsive">
@@ -272,15 +415,11 @@ onMounted(async () => {
               <td>{{mauSacList.find(m => m.id === ct.mauSacId)?.ten}}</td>
               <td>{{kichThuocList.find(k => k.id === ct.kichThuocId)?.ten}}</td>
               <td>{{chatLieuList.find(c => c.id === ct.chatLieuId)?.ten}}</td>
-<td class="text-center">
-  <button
-    class="btn btn-link text-info btn-lg p-0"
-    @click="openDetail(ct)"
-    title="Xem chi tiết"
-  >
-    <i class="fa fa-eye"></i>
-  </button>
-</td>
+              <td class="text-center">
+                <button class="btn btn-link text-info btn-lg p-0" @click="openDetail(ct)" title="Xem chi tiết">
+                  <i class="fa fa-eye"></i>
+                </button>
+              </td>
 
             </tr>
             <tr v-if="filteredChiTietSP.length === 0">
@@ -288,21 +427,21 @@ onMounted(async () => {
             </tr>
           </tbody>
         </table>
-        
+
         <nav v-if="totalPages > 1" aria-label="Page navigation">
-            <ul class="pagination justify-content-end mt-3">
-                <li class="page-item" :class="{ disabled: currentPage === 1 }">
-                    <a class="page-link" href="#" @click.prevent="goToPage(currentPage - 1)">Trước</a>
-                </li>
-                <li class="page-item" v-for="page in totalPages" :key="page" :class="{ active: currentPage === page }">
-                    <a class="page-link" href="#" @click.prevent="goToPage(page)">{{ page }}</a>
-                </li>
-                <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-                    <a class="page-link" href="#" @click.prevent="goToPage(currentPage + 1)">Sau</a>
-                </li>
-            </ul>
+          <ul class="pagination justify-content-end mt-3">
+            <li class="page-item" :class="{ disabled: currentPage === 1 }">
+              <a class="page-link" href="#" @click.prevent="goToPage(currentPage - 1)">Trước</a>
+            </li>
+            <li class="page-item" v-for="page in totalPages" :key="page" :class="{ active: currentPage === page }">
+              <a class="page-link" href="#" @click.prevent="goToPage(page)">{{ page }}</a>
+            </li>
+            <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+              <a class="page-link" href="#" @click.prevent="goToPage(currentPage + 1)">Sau</a>
+            </li>
+          </ul>
         </nav>
-        </div>
+      </div>
     </div>
 
     <div v-if="showModal" class="modal fade show d-block" style="background: rgba(0,0,0,0.5);">
@@ -376,6 +515,9 @@ onMounted(async () => {
             </div>
           </div>
           <div class="modal-footer">
+              <button class="btn btn-primary" @click="downloadQR">
+    <i class="fa fa-qrcode me-1"></i> Tải QR
+  </button>
             <button class="btn btn-success" @click="saveDetail">Lưu</button>
             <button class="btn btn-secondary" @click="closeModal">Đóng</button>
           </div>

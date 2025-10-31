@@ -3,7 +3,7 @@ import Breadcrumb from "@/components/common/Breadcrumb.vue";
 import { ref, onMounted, computed, watch } from "vue"; // Thêm watch
 import { Modal } from "bootstrap";
 import Swal from "sweetalert2";
-import { getAllSanPham, updateSanPham } from "@/service/SanPhamService";
+import { getAllSanPham, updateSanPham, updateTrangThai } from "@/service/SanPhamService";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { useNotify } from "@/composables/useNotify";
 
@@ -29,15 +29,24 @@ const currentPage = ref(1);
 const pageSize = ref(5); // số sản phẩm trên 1 trang
 
 // Load danh sách sản phẩm
+// const loadSanPham = async () => {
+//   try {
+//     const res = await getAllSanPham();
+//     // ⚠️ CHỈ TẢI DỮ LIỆU: Không sắp xếp ở đây để giữ mảng gốc
+//     sanPham.value = Array.isArray(res) ? res : res.data || [];
+//   } catch (err) {
+//     console.error("❌ Lỗi khi tải danh sách sản phẩm:", err);
+//   }
+// };
 const loadSanPham = async () => {
   try {
     const res = await getAllSanPham();
-    // ⚠️ CHỈ TẢI DỮ LIỆU: Không sắp xếp ở đây để giữ mảng gốc
     sanPham.value = Array.isArray(res) ? res : res.data || [];
   } catch (err) {
-    console.error("❌ Lỗi khi tải danh sách sản phẩm:", err);
+    console.error("❌ Lỗi khi tải thống kê sản phẩm:", err);
   }
 };
+
 
 // Computed danh sách đã lọc (chỉ lọc, chưa sắp xếp)
 const preFilteredSanPham = computed(() => {
@@ -77,7 +86,7 @@ const pagedSanPham = computed(() => { // ✅ ĐÃ SỬ DỤNG
 
 // Theo dõi sự thay đổi của bộ lọc để đặt lại trang về 1
 watch([filterText, filterStatus], () => {
-    currentPage.value = 1;
+  currentPage.value = 1;
 });
 
 // Modal instance
@@ -106,9 +115,9 @@ const saveSanPham = async () => {
     await updateSanPham(payload.id, payload);
     notify.success("Cập nhật thành công!");
     getModalInstance()?.hide();
-    
+
     // ⚠️ CẬP NHẬT: Tải lại dữ liệu. Computed property sẽ tự sắp xếp.
-    await loadSanPham(); 
+    await loadSanPham();
   } catch (err) {
     console.error("❌ Lỗi khi cập nhật sản phẩm:", err);
     notify.error("Có lỗi khi cập nhật!");
@@ -132,19 +141,21 @@ const confirmSave = async () => {
   if (result.isConfirmed) saveSanPham();
 };
 
-// Toggle trạng thái (GIỮ NGUYÊN)
 const toggleTrangThai = async (sp, newValue) => {
   const oldValue = sp.trangThai;
   sp.trangThai = newValue;
 
   try {
-    await updateSanPham(sp.id, { ...sp, trangThai: newValue });
-    notify.success(`Đã chuyển sang: ${newValue ? "Còn hoạt động" : "Ngừng hoạt động"}`);
+    await updateTrangThai(sp.id, newValue); // gọi body API
+    notify.success(`Đã chuyển sang: ${newValue ? "Đang bán" : "Ngừng bán"}`);
   } catch (err) {
     sp.trangThai = oldValue;
+    console.error("❌ Lỗi cập nhật trạng thái:", err);
     notify.error("Cập nhật trạng thái thất bại!");
   }
 };
+
+
 
 // Chuyển trang ✅ ĐÃ THÊM
 const goToPage = (page) => {
@@ -175,6 +186,36 @@ onMounted(async () => {
     });
   }
 });
+
+import * as XLSX from "xlsx";
+
+// 👉 Hàm xuất Excel
+const exportToExcel = () => {
+  if (!sortedAndFilteredSanPham.value.length) {
+    notify.warning("Không có dữ liệu để xuất!");
+    return;
+  }
+
+  const data = sortedAndFilteredSanPham.value.map((sp, index) => ({
+    STT: index + 1,
+    "Mã SP": sp.ma || "",
+    "Tên sản phẩm": sp.ten || "",
+    "Danh mục": sp.danhMuc || "",
+    "Xuất xứ": sp.xuatXu || "",
+    "Thương hiệu": sp.thuongHieu || "",
+    "Ngày tạo": new Date(sp.ngayTao).toLocaleDateString("vi-VN"),
+    "Số lượng": sp.soLuongChiTiet || 0,
+    "Trạng thái": sp.trangThai ? "Đang bán" : "Ngừng bán",
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Sản phẩm");
+  XLSX.writeFile(workbook, "DanhSachSanPham.xlsx");
+
+  notify.success("Đã xuất file Excel thành công!");
+};
+
 </script>
 
 <template>
@@ -190,88 +231,67 @@ onMounted(async () => {
       </div>
     </div>
 
-<div class="card">
-  <div class="card-header">
-    <h4 class="card-title"><i class="fa fa-filter me-2"></i> Bộ lọc</h4>
-  </div>
-  <div class="card-body">
-    <form @reset.prevent="filterText = ''; filterStatus = 'all'">
-      <div class="row g-3 align-items-start">
-        <div class="col-md-6">
-          <label class="form-label fw-bold">Tìm kiếm:</label>
-          <input
-            type="text"
-            class="form-control mt-1"
-            placeholder="Mã, tên sản phẩm..."
-            v-model="filterText"
-          />
-        </div>
+    <div class="card">
+      <div class="card-header">
+        <h4 class="card-title"><i class="fa fa-filter me-2"></i> Bộ lọc</h4>
+      </div>
+      <div class="card-body">
+        <form @reset.prevent="filterText = ''; filterStatus = 'all'">
+          <div class="row g-3 align-items-start">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Tìm kiếm:</label>
+              <input type="text" class="form-control mt-1" placeholder="Mã, tên sản phẩm..." v-model="filterText" />
+            </div>
 
-        <div class="col-md-6">
-          <label class="form-label fw-bold">Trạng thái:</label>
-          <div class="d-flex align-items-center flex-wrap gap-4 mt-1">
-            <div class="form-check form-check-inline m-0">
-              <input
-                class="form-check-input"
-                type="radio"
-                name="status"
-                value="all"
-                id="filterAll"
-                v-model="filterStatus"
-              />
-              <label for="filterAll" class="form-check-label">Tất cả</label>
-            </div>
-            <div class="form-check form-check-inline m-0">
-              <input
-                class="form-check-input"
-                type="radio"
-                name="status"
-                value="1"
-                id="filterActive"
-                v-model="filterStatus"
-              />
-              <label for="filterActive" class="form-check-label">Đang bán</label>
-            </div>
-            <div class="form-check form-check-inline m-0">
-              <input
-                class="form-check-input"
-                type="radio"
-                name="status"
-                value="0"
-                id="filterInactive"
-                v-model="filterStatus"
-              />
-              <label for="filterInactive" class="form-check-label">Ngừng bán</label>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Trạng thái:</label>
+              <div class="d-flex align-items-center flex-wrap gap-4 mt-1">
+                <div class="form-check form-check-inline m-0">
+                  <input class="form-check-input" type="radio" name="status" value="all" id="filterAll"
+                    v-model="filterStatus" />
+                  <label for="filterAll" class="form-check-label">Tất cả</label>
+                </div>
+                <div class="form-check form-check-inline m-0">
+                  <input class="form-check-input" type="radio" name="status" value="1" id="filterActive"
+                    v-model="filterStatus" />
+                  <label for="filterActive" class="form-check-label">Đang bán</label>
+                </div>
+                <div class="form-check form-check-inline m-0">
+                  <input class="form-check-input" type="radio" name="status" value="0" id="filterInactive"
+                    v-model="filterStatus" />
+                  <label for="filterInactive" class="form-check-label">Ngừng bán</label>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <div
-        class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4"
-      >
-        <p class="mb-2 mb-md-0">
-          Tổng số sản phẩm:
-          <span class="text-warning fw-bold">{{ sortedAndFilteredSanPham.length }}</span>
-        </p>
-        <div class="d-flex align-items-center gap-2">
-          <button type="reset" class="btn btn-dark">Đặt lại bộ lọc</button>
-          <router-link to="/admin/san-pham/them" class="btn btn-warning text-white">
-            Thêm sản phẩm
-          </router-link>
-        </div>
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4">
+            <p class="mb-2 mb-md-0">
+              Tổng số sản phẩm:
+              <span class="text-warning fw-bold">{{ sortedAndFilteredSanPham.length }}</span>
+            </p>
+            <div class="d-flex align-items-center gap-2">
+              <button type="reset" class="btn btn-dark">Đặt lại bộ lọc</button>
+              <router-link to="/admin/san-pham/them" class="btn btn-warning text-white">
+                Thêm sản phẩm
+              </router-link>
+            </div>
+          </div>
+        </form>
       </div>
-    </form>
-  </div>
-</div>
+    </div>
 
 
     <div class="row mt-3">
       <div class="col-md-12">
         <div class="card">
-          <div class="card-header">
-            <h4 class="card-title mb-0">Danh sách sản phẩm</h4>
-          </div>
+<div class="card-header d-flex justify-content-between align-items-center">
+  <h4 class="card-title mb-0">Danh sách sản phẩm</h4>
+  <button class="btn btn-success btn-sm" @click="exportToExcel">
+    <i class="fa fa-file-excel me-1"></i> Xuất Excel
+  </button>
+</div>
+
 
           <div class="card-body">
             <div class="table-responsive">
@@ -280,10 +300,11 @@ onMounted(async () => {
                   <tr>
                     <th>STT</th>
                     <th>Tên sản phẩm</th>
-                    <th>Danh mục</th>
+                    <!-- <th>Danh mục</th> -->
                     <th>Xuất xứ</th>
                     <th>Thương hiệu</th>
                     <th>Ngày tạo</th>
+                    <th>Số lượng</th>
                     <th>Trạng thái</th>
                     <th>Thao tác</th>
                   </tr>
@@ -292,35 +313,30 @@ onMounted(async () => {
                   <tr v-for="(sp, index) in pagedSanPham" :key="sp.id">
                     <td>{{ (currentPage - 1) * pageSize + index + 1 }}</td>
                     <td>{{ sp.ten }}</td>
-                    <td>{{ sp.danhMuc?.ten || '-' }}</td>
+                    <!-- <td>{{ sp.danhMuc?.ten || '-' }}</td>
                     <td>{{ sp.xuatXu?.ten || '-' }}</td>
-                    <td>{{ sp.thuongHieu?.ten || '-' }}</td>
+                    <td>{{ sp.thuongHieu?.ten || '-' }}</td> -->
+                    <!-- <td>{{ sp.danhMuc || '-' }}</td> -->
+                    <td>{{ sp.xuatXu || '-' }}</td>
+                    <td>{{ sp.thuongHieu || '-' }}</td>
+
                     <td>{{ new Date(sp.ngayTao).toLocaleDateString("vi-VN") }}</td>
+                    <td>{{ sp.soLuongChiTiet }}</td>
+
                     <td>
-                      <span
-                        class="badge rounded-pill fs-6 px-3"
-                        :class="sp.trangThai ? 'bg-warning text-white' : 'bg-danger text-white'"
-                      >
+                      <span class="badge rounded-pill fs-6 px-3"
+                        :class="sp.trangThai ? 'bg-warning text-white' : 'bg-danger text-white'">
                         {{ sp.trangThai ? "Đang bán" : "Ngừng bán" }}
                       </span>
                     </td>
                     <td>
                       <div class="d-flex justify-content-center align-items-center gap-2">
                         <div class="form-check form-switch m-0">
-                          <input
-                            class="form-check-input"
-                            type="checkbox"
-                            role="switch"
-                            :checked="sp.trangThai"
-                            @change="(e) => toggleTrangThai(sp, e.target.checked)"
-                          />
+                          <input class="form-check-input" type="checkbox" role="switch" :checked="sp.trangThai"
+                            @change="(e) => toggleTrangThai(sp, e.target.checked)" />
                         </div>
-                        <router-link
-                          v-if="sp.trangThai"
-                          :to="`/admin/san-pham/chi-tiet/${sp.id}`"
-                          class="btn btn-sm btn-link text-info p-0"
-                          title="Xem chi tiết"
-                        >
+                        <router-link v-if="sp.trangThai" :to="`/admin/san-pham/chi-tiet/${sp.id}`"
+                          class="btn btn-sm btn-link text-info p-0" title="Xem chi tiết">
                           <i class="fa fa-eye fs-5"></i>
                         </router-link>
                         <span v-else class="text-muted" title="Ngừng hoạt động">
@@ -338,12 +354,7 @@ onMounted(async () => {
                 <li class="page-item" :class="{ disabled: currentPage === 1 }">
                   <a class="page-link" href="#" @click.prevent="goToPage(currentPage - 1)">Trước</a>
                 </li>
-                <li
-                  class="page-item"
-                  v-for="page in totalPages"
-                  :key="page"
-                  :class="{ active: currentPage === page }"
-                >
+                <li class="page-item" v-for="page in totalPages" :key="page" :class="{ active: currentPage === page }">
                   <a class="page-link" href="#" @click.prevent="goToPage(page)">{{ page }}</a>
                 </li>
                 <li class="page-item" :class="{ disabled: currentPage === totalPages }">
@@ -380,22 +391,28 @@ onMounted(async () => {
   cursor: pointer;
   transform: scale(1.1);
 }
+
 .table .fa-eye,
 .table .fa-eye-slash {
-  margin-top: 6px; /* 👈 hạ icon xuống nhẹ */
+  margin-top: 6px;
+  /* 👈 hạ icon xuống nhẹ */
 }
+
 .form-check-inline {
   margin-right: 1rem;
 }
 
 @media (max-width: 768px) {
+
   /* Cho giao diện mobile hiển thị dọc */
-  .row.g-3 > .col-md-6 {
+  .row.g-3>.col-md-6 {
     width: 100%;
   }
 }
+
 .form-check-input:checked {
-  background-color: #ffc107 !important; /* màu vàng Bootstrap */
+  background-color: #ffc107 !important;
+  /* màu vàng Bootstrap */
   border-color: #ffc107 !important;
   box-shadow: none !important;
 }

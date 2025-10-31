@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -82,14 +83,14 @@ public class SanPhamService {
         return saved;
     }
 
-    public List<SanPham> getAll() {
-        return sanPhamRepository.findAll();
-    }
+//    public List<SanPham> getAll() {
+//        return sanPhamRepository.findAll();
+//    }
 
-    public SanPham update(UUID id, SanPham sp) {
-        sp.setId(id);
-        return sanPhamRepository.save(sp);
-    }
+//    public SanPham update(UUID id, SanPham sp) {
+//        sp.setId(id);
+//        return sanPhamRepository.save(sp);
+//    }
 
     public SanPham createSanPham(SanPham sp) {
         if (sp.getHinhAnh() == null) {
@@ -99,4 +100,37 @@ public class SanPhamService {
         }
         return sanPhamRepository.save(sp); // cascade sẽ lưu cả HinhAnh
     }
+    public List<Map<String, Object>> getAll() {
+        return sanPhamRepository.getDanhSachSanPhamVaChiTiet();
+    }
+    @Transactional
+    public void updateSanPham(UUID id, SanPhamRequest req) {
+        SanPham sp = sanPhamRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm!"));
+
+        // Cập nhật các trường cơ bản
+        sp.setTen(req.getTen());
+        sp.setTrangThai(req.getTrangThai());
+        sp.setNgayCapNhat(LocalDate.now());
+
+        // Cập nhật các quan hệ
+        sp.setDanhMuc(danhMucRepository.findById(req.getIdDanhMuc()).orElse(null));
+        sp.setThuongHieu(thuongHieuRepository.findById(req.getIdThuongHieu()).orElse(null));
+        sp.setXuatXu(xuatXuRepository.findById(req.getIdXuatXu()).orElse(null));
+        sp.setMucDichSuDung(mucDichSuDungRepository.findById(req.getIdMucDichSuDung()).orElse(null));
+        sp.setDeGiay(deGiayRepository.findById(req.getIdDeGiay()).orElse(null));
+        sp.setDayGiay(dayGiayRepository.findById(req.getIdDayGiay()).orElse(null));
+
+        sanPhamRepository.save(sp);
+    }
+    public void updateTrangThai(UUID id, boolean newValue) {
+        SanPham sp = sanPhamRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm!"));
+        sp.setTrangThai(newValue);
+        sanPhamRepository.save(sp);
+    }
+
+
+
+
 }
