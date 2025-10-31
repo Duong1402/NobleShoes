@@ -77,9 +77,19 @@ import FooterLayout from "./footerLayout.vue";
               <div class="collapse" id="forms">
                 <ul class="nav nav-collapse">
                   <li>
-                    <a href="forms/forms.html">
-                      <span class="sub-item">Basic Form</span>
-                    </a>
+                    <router-link to="/admin/phieu-giam-gia">
+                      <span class="sub-item">Phiếu giảm giá</span>
+                    </router-link>
+                    </li>
+                    <li>
+                    <router-link to="/admin/phieu-giam-gia-ca-nhan">
+                      <span class="sub-item">Phiếu giảm giá cá nhân</span>
+                    </router-link>
+                  </li>
+                    <li>
+                    <router-link to="/admin/dot-giam-gia">
+                      <span class="sub-item">Đợt giảm giá</span>
+                    </router-link>
                   </li>
                 </ul>
               </div>

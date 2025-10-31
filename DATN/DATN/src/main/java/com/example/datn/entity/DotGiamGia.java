@@ -1,47 +1,54 @@
 package com.example.datn.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
-import lombok.*;
-import java.time.LocalDate;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.util.Date;
 import java.util.UUID;
 
 @Entity
-@Table(name = "dot_giam_gia")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@Table(name = "dot_giam_gia")
 public class DotGiamGia {
 
     @Id
     @GeneratedValue
+    @Column(name = "id")
     private UUID id;
 
-    @Column(length = 50, unique = true, nullable = false)
-    @NotBlank(message = "Mã đợt giảm giá không được để trống")
-    @Size(max = 50, message = "Mã đợt giảm giá không được vượt quá 50 ký tự")
+    @Column(name = "ma", unique = true)
     private String ma;
 
-    @Column(length = 200, nullable = false)
-    @NotBlank(message = "Tên đợt giảm giá không được để trống")
-    @Size(max = 200, message = "Tên đợt giảm giá không được vượt quá 200 ký tự")
+    @NotBlank(message = "Không được để trống")
+    @Column(name = "ten")
     private String ten;
 
-    @Min(value = 0, message = "Giá trị giảm không được âm")
-    @Max(value = 100, message = "Giá trị giảm tối đa là 100%")
+    @NotNull(message = "Không được để trống")
+    @Column(name = "gia_tri_giam")
     private Integer giaTriGiam;
 
-    @DecimalMin(value = "0.0", inclusive = true, message = "Số tiền giảm tối đa phải lớn hơn hoặc bằng 0")
+    @NotNull(message = "Không được để trống")
+    @DecimalMin(value = "0.01", message = "Giá trị giảm phải lớn hơn 0")
+    @Column(name = "so_tien_giam_toi_da")
     private Double soTienGiamToiDa;
 
-    @NotNull(message = "Ngày bắt đầu không được để trống")
-    private LocalDate ngayBatDau;
+    @NotNull(message = "Không được để trống")
+    @Column(name = "ngay_bat_dau")
+    private Date ngayBatDau;
 
-    @NotNull(message = "Ngày kết thúc không được để trống")
-    private LocalDate ngayKetThuc;
+    @NotNull(message = "Không được để trống")
+    @Column(name = "ngay_ket_thuc")
+    private Date ngayKetThuc;
 
-    @NotNull(message = "Trạng thái không được để trống")
+    @Column(name = "trang_thai")
     private Boolean trangThai;
 }
