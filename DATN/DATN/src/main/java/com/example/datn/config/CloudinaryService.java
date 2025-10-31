@@ -1,4 +1,3 @@
-//cấu hình upload ảnh lên cloud
 package com.example.datn.config;
 
 import com.cloudinary.Cloudinary;
@@ -33,4 +32,15 @@ public class CloudinaryService {
                 ObjectUtils.asMap("resource_type", "auto"));
         return uploadResult.get("secure_url").toString();
     }
+
+    public boolean deleteFile(String publicId) {
+        try {
+            Map result = cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+            return "ok".equals(result.get("result"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
 }

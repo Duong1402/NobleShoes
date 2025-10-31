@@ -5,6 +5,7 @@ import TrangChu from "@/components/trangChu.vue";
 import NhanVien from "@/view/nhanVien/nhanVien.vue";
 import NhanVienAdd from "@/view/nhanVien/nhanVienAdd.vue";
 import TableData from "@/view/table/tableData.vue";
+import NhanVienDetail from "@/view/nhanVien/nhanVienDetail.vue";
 
 const listRouter = [
   {
@@ -34,6 +35,16 @@ const listRouter = [
         name: "nhanVienAdd",
         component: NhanVienAdd,
         meta: { title: "Thêm nhân viên", breadcrumbParent: "/admin/nhan-vien" },
+      },
+      {
+        path: "/admin/nhan-vien/:id",
+        name: "chiTietNhanVien",
+        component: NhanVienDetail,
+        props: true,
+        meta: {
+          title: "Chi tiết nhân viên",
+          breadcrumbParent: "/admin/nhan-vien",
+        },
       },
       { name: "banHang", path: "/ban-hang" },
       { name: "hoaDon", path: "/hoa-don" },

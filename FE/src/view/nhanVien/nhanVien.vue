@@ -79,12 +79,12 @@ onMounted(async () => {
   }
 
   // Khi modal đóng (bấm nút X hoặc ra ngoài) → xóa ?id trên URL
-  const modalEl = document.getElementById("detailModal");
-  if (modalEl) {
-    modalEl.addEventListener("hidden.bs.modal", () => {
-      window.history.pushState({}, "", "/admin/nhan-vien");
-    });
-  }
+  // const modalEl = document.getElementById("detailModal");
+  // if (modalEl) {
+  //   modalEl.addEventListener("hidden.bs.modal", () => {
+  //     window.history.pushState({}, "", "/admin/nhan-vien");
+  //   });
+  // }
 });
 
 // Hàm load danh sách nhân viên
@@ -481,15 +481,28 @@ const toggleTrangThai = async (nv) => {
                             "
                           />
                         </div>
+
                         <!-- Nút cập nhật -->
-                        <button
-                          type="button"
-                          class="btn btn-link btn-warning btn-lg p-0"
-                          @click="editNhanVien(nv)"
+                        <router-link
+                          v-if="nv.trangThai === 1"
+                          :to="{
+                            name: 'chiTietNhanVien',
+                            params: { id: nv.id },
+                          }"
+                          class="btn btn-link btn-lg p-0 text-decoration-none"
                           title="Cập nhật nhân viên"
                         >
-                          <i class="fa fa-edit"></i>
-                        </button>
+                          <i class="fa-solid fa-eye text-warning"></i>
+                        </router-link>
+                        <router-link
+                          v-else
+                          to="#"
+                          class="btn btn-link btn-lg p-0 text-decoration-none disabled-link"
+                          @click.prevent
+                          title="Nhân viên ngừng hoạt động"
+                        >
+                          <i class="fa-solid fa-eye-slash text-primary"></i>
+                        </router-link>
                       </div>
                     </td>
                   </tr>
@@ -911,5 +924,10 @@ const toggleTrangThai = async (nv) => {
   .pagination {
     justify-content: center;
   }
+}
+.disabled-link {
+  pointer-events: none; /* Ngăn click */
+  opacity: 0.5; /* Làm mờ nút */
+  cursor: not-allowed;
 }
 </style>

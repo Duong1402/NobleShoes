@@ -24,4 +24,19 @@ public class UploadNhanVienController {
             return ResponseEntity.badRequest().body("Upload failed: " + e.getMessage());
         }
     }
+
+    @DeleteMapping("/delete")
+    public ResponseEntity<?> deleteImage(@RequestParam("publicId") String publicId) {
+        try {
+            boolean deleted = cloudinaryService.deleteFile(publicId);
+            if (deleted) {
+                return ResponseEntity.ok("Đã xoá ảnh thành công!");
+            } else {
+                return ResponseEntity.badRequest().body("Không thể xoá ảnh!");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Lỗi xoá ảnh: " + e.getMessage());
+        }
+    }
+
 }

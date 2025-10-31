@@ -412,7 +412,7 @@
                   >
                 </div>
                 <div class="info-user ms-3">
-                  <div class="username">Hizrian</div>
+                  <div class="username">Thedd</div>
                   <div class="status">Web Designer</div>
                 </div>
                 <button class="btn btn-icon btn-link op-8 me-1">
