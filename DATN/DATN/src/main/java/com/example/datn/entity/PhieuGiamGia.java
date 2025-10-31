@@ -46,7 +46,6 @@ public class PhieuGiamGia {
     @Column(name = "gia_tri_giam")
     private BigDecimal giaTriGiam;
 
-    @NotNull(message = "Không được để trống")
     @Column(name = "gia_tri_giam_toi_thieu")
     private BigDecimal giaTriGiamToiThieu;
 

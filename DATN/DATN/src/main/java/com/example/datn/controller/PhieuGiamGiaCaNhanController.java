@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
@@ -38,4 +39,13 @@ public class PhieuGiamGiaCaNhanController {
 
     @DeleteMapping("/{id}")
     public void delete(@PathVariable UUID id) { service.deleteById(id); }
+
+    @PatchMapping("/{id}/trang-thai")
+    public PhieuGiamGiaCaNhan updateTrangThai(@PathVariable UUID id, @RequestBody Map<String, Boolean> body) {
+        PhieuGiamGiaCaNhan existing = service.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Không tìm thấy phiếu cá nhân"));
+        existing.setTrangThai(body.get("trangThai"));
+        return service.save(existing);
+    }
+
 }

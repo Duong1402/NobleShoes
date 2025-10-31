@@ -1,33 +1,35 @@
 <script setup>
 import Breadcrumb from "@/components/common/Breadcrumb.vue";
-import { ref, onMounted, reactive } from "vue";
+import { ref, onMounted, reactive, computed, watch } from "vue";
 import { Modal } from "bootstrap";
 import Swal from "sweetalert2";
 import {
   getAllPhieuGiamGia,
   // createphieuGiamGia,
   updatePhieuGiamGia,
+  updateTrangThaiPhieuGiamGia,
+  updateTrangThaiPhieuGiamGiaCaNhan,
+  updatePhieuGiamGiaCaNhan,
   // deletephieuGiamGia,
 } from "@/service/phieuGiamGiaService";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { useNotify } from "@/composables/useNotify";
 import Decimal from "decimal.js";
+import { get } from "jquery";
+import { all } from "axios";
 
 const phieuGiamGia = ref([]);
 const notify = useNotify();
 const selectedphieuGiamGia = ref({
-  ma: "",
-  ten: null,
-  ngayBatDau: null,
-  ngayKetThuc: null,
-  hinhThucGiamGia: false,
-  giaTriGiam: null,
-  giaTriGiamToiThieu: null,
-  giaTriGiamToiDa: null,
-  trangThai: true,
-  moTa: "",
 });
 const errors = reactive({});
+const totalPages = ref(0);
+const page = ref(0);
+const size = ref(10);
+const filterTrangThai = ref("all");
+const searchQuery = ref("");
+const filterNgayBatDau = ref("");
+const filterNgayKetThuc = ref("");
 
 // Hàm định dạng ngày tháng
 const formatDate = (dateStr) => {
@@ -60,16 +62,12 @@ onMounted(async () => {
   }
 });
 
-const totalPages = ref(0);
-const page = ref(0);
-const size = ref(10);
-
 // Hàm load danh sách phiếu giảm giá
 const loadphieuGiamGia = async () => {
   try {
     const res = await getAllPhieuGiamGia(page.value, size.value);
-    phieuGiamGia.value = res.data.content;
-    totalPages.value = res.data.totalPages;
+    phieuGiamGia.value = res.content;
+    totalPages.value = res.totalPages;
   } catch (err) {
     console.error("Lỗi khi tải danh sách phiếu giảm giá:", err);
   }
@@ -85,10 +83,28 @@ const gotoPage = (p) => {
 
 // Hàm mở modal chi tiết + update
 const editphieuGiamGia = (p) => {
-  // Deep copy để tránh ảnh hưởng đến list chính
-  selectedphieuGiamGia.value = JSON.parse(JSON.stringify(p));
-  window.history.pushState({}, "", `?id=${p.id}`);
+  // Chuyển định dạng ngày ISO sang yyyy-MM-dd để input date hiểu được
+  const toDateInputFormat = (dateStr) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
 
+  let normalized = {
+    ...p,
+    loaiPhieu: p.loaiPhieu || "Thông thường",
+    ngayBatDau: toDateInputFormat(p.ngayBatDau),
+    ngayKetThuc: toDateInputFormat(p.ngayKetThuc),
+  };
+
+  // ✅ Deep copy tránh làm thay đổi list chính
+  selectedphieuGiamGia.value = JSON.parse(JSON.stringify(normalized));
+console.log(selectedphieuGiamGia.value);
+  // ✅ Mở modal sửa
+  window.history.pushState({}, "", `?id=${p.id}`);
   const modalEl = document.getElementById("detailModal");
   if (!modalInstance) modalInstance = new Modal(modalEl);
   modalInstance.show();
@@ -97,21 +113,33 @@ const editphieuGiamGia = (p) => {
 // Hàm lưu cập nhật phiếu giảm giá
 const savephieuGiamGia = async () => {
   try {
-    // Chuẩn dữ liệu gửi về BE (chỉ cần ID chức vụ)
-    const payload = {
-      ...selectedphieuGiamGia.value,
-    };
+    let payload = { ...selectedphieuGiamGia.value };
 
-    await updatePhieuGiamGia(payload.id, payload);
+    if (selectedphieuGiamGia.value.loaiPhieu === "Cá nhân") {
+      payload = {
+        ...payload,
+        ngayNhan: payload.ngayBatDau, // map từ ngày bắt đầu trong form
+        ngayHetHan: payload.ngayKetThuc, // map sang ngày hết hạn
+      };
+      await updatePhieuGiamGiaCaNhan(payload.id, payload);
+    } else {
+      await updatePhieuGiamGia(payload.id, payload);
+    }
+
     notify.success("Cập nhật thành công!");
     modalInstance.hide();
     await loadphieuGiamGia();
   } catch (err) {
-    Object.assign(errors, err.response.data);
-    console.error("❌ Lỗi khi cập nhật phiếu giảm giá:", err);
+    if (err.response && err.response.data) {
+      Object.assign(errors, err.response.data);
+      console.error("❌ Lỗi xác thực từ BE:", err.response.data);
+    } else {
+      console.error("❌ Lỗi không xác định:", err);
+    }
     notify.error("Có lỗi khi cập nhật!");
   }
 };
+
 
 // Tạo hàm confirm
 const confirmSave = async () => {
@@ -132,18 +160,16 @@ const confirmSave = async () => {
   }
 };
 
-//Toggle trạng thái
 const toggleTrangThai = async (p) => {
   const oldValue = p.trangThai;
-  p.trangThai = !p.trangThai; // Đổi 1↔0 thay vì true/false
+  p.trangThai = !p.trangThai;
 
   try {
-    // Tạo payload đầy đủ, tránh làm mất các field khác
-    const payload = {
-      ...p,
-    };
-
-    await updatePhieuGiamGia(p.id, payload);
+    if (p.loaiPhieu === "Thông thường") {
+      await updateTrangThaiPhieuGiamGia(p.id, p.trangThai);
+    } else {
+      await updateTrangThaiPhieuGiamGiaCaNhan(p.id, p.trangThai);
+    }
 
     notify.success(
       `Đã chuyển sang trạng thái: ${
@@ -151,10 +177,49 @@ const toggleTrangThai = async (p) => {
       }`
     );
   } catch (err) {
-    p.trangThai = oldValue; // revert lại nếu lỗi
+    p.trangThai = oldValue;
     console.error("❌ Lỗi khi cập nhật trạng thái:", err);
     notify.error("Cập nhật trạng thái thất bại!");
   }
+};
+
+const filterPhieuGiamGia = computed(() => {
+  // Hàm lọc phiếu giảm giá (chưa triển khai)
+  return phieuGiamGia.value.filter((p) => {
+    const matchesStatus =
+      filterTrangThai.value === "all" ||
+      (filterTrangThai.value === "active" && p.trangThai) ||
+      (filterTrangThai.value === "inactive" && !p.trangThai);
+
+    const matchesSearch =
+      !searchQuery.value ||
+      p.ma.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      p.ten.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      (p.email &&
+        p.email.toLowerCase().includes(searchQuery.value.toLowerCase()));
+
+    const matchesDate =
+      (!filterNgayBatDau.value ||
+        new Date(p.ngayBatDau) >= new Date(filterNgayBatDau.value)) &&
+      (!filterNgayKetThuc.value ||
+        new Date(p.ngayKetThuc) <= new Date(filterNgayKetThuc.value));
+
+    return matchesStatus && matchesSearch && matchesDate;
+  });
+});
+
+watch(
+  [filterTrangThai, searchQuery, filterNgayBatDau, filterNgayKetThuc],
+  () => {
+    page.value = 0;
+  }
+);
+
+const resetFilters = () => {
+  filterTrangThai.value = "all";
+  searchQuery.value = "";
+  filterNgayBatDau.value = "";
+  filterNgayKetThuc.value = "";
 };
 </script>
 <template>
@@ -187,6 +252,7 @@ const toggleTrangThai = async (p) => {
                 type="text"
                 class="form-control"
                 placeholder="Mã, tên, email..."
+                v-model="searchQuery"
                 required
               />
             </div>
@@ -199,16 +265,30 @@ const toggleTrangThai = async (p) => {
                     class="form-check-input"
                     type="radio"
                     name="status"
+                    value="all"
+                    v-model="filterTrangThai"
                     checked
                   />
                   <label class="form-check-label">Tất cả</label>
                 </div>
                 <div class="form-check me-3 custom-radio d-flex">
-                  <input class="form-check-input" type="radio" name="status" />
+                  <input
+                    class="form-check-input"
+                    type="radio"
+                    name="status"
+                    value="active"
+                    v-model="filterTrangThai"
+                  />
                   <label class="form-check-label">Còn hoạt động</label>
                 </div>
                 <div class="form-check custom-radio d-flex">
-                  <input class="form-check-input" type="radio" name="status" />
+                  <input
+                    class="form-check-input"
+                    type="radio"
+                    name="status"
+                    value="inactive"
+                    v-model="filterTrangThai"
+                  />
                   <label class="form-check-label">Ngừng hoạt động</label>
                 </div>
               </div>
@@ -217,11 +297,19 @@ const toggleTrangThai = async (p) => {
           <div class="row g-3">
             <div class="col-md-4">
               <label class="form-label fw-bold">Ngày bắt đầu</label>
-              <input type="date" class="form-control" />
+              <input
+                type="date"
+                class="form-control"
+                v-model="filterNgayBatDau"
+              />
             </div>
             <div class="col-md-4">
               <label class="form-label fw-bold">Ngày kết thúc</label>
-              <input type="date" class="form-control" />
+              <input
+                type="date"
+                class="form-control"
+                v-model="filterNgayKetThuc"
+              />
             </div>
           </div>
 
@@ -231,7 +319,9 @@ const toggleTrangThai = async (p) => {
           >
             <p class="mb-2 mb-md-0"></p>
             <div class="d-flex align-items-center gap-2">
-              <button type="reset" class="btn btn-dark">Đặt lại bộ lọc</button>
+              <button type="reset" class="btn btn-dark" @click="resetFilters">
+                Đặt lại bộ lọc
+              </button>
               <router-link
                 to="/admin/phieu-giam-gia/add"
                 class="btn btn-warning text-white"
@@ -263,24 +353,27 @@ const toggleTrangThai = async (p) => {
                     <th>Họ tên</th>
                     <th>Ngày bắt đầu</th>
                     <th>Ngày kết thúc</th>
+                    <th>Loại phiếu</th>
                     <th>Giá trị giảm</th>
+                    <th>Giá trị giảm tối đa</th>
                     <th>Trạng thái</th>
                     <th style="width: 10%">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(p, index) in phieuGiamGia" :key="p.id">
-                    <td>{{ index + 1 }}</td>
+                  <tr v-for="(p, index) in filterPhieuGiamGia" :key="p.id">
+                    <td>{{ index + 1 + page * size }}</td>
                     <td>
                       {{ p.ma }}
                     </td>
                     <td>{{ p.ten }}</td>
                     <td>{{ formatDate(p.ngayBatDau) }}</td>
                     <td>{{ formatDate(p.ngayKetThuc) }}</td>
+                    <td>{{ p.loaiPhieu }}</td>
                     <td>
                       {{ p.giaTriGiam }} {{ p.hinhThucGiamGia ? "%" : "VNĐ" }}
                     </td>
-
+                    <td>{{ p.giaTriGiamToiDa }}VNĐ</td>
                     <td>
                       <span
                         class="badge rounded-pill fs-6 px-3 status-badge"
@@ -488,11 +581,8 @@ const toggleTrangThai = async (p) => {
                         type="number"
                         class="form-control"
                         v-model="selectedphieuGiamGia.giaTriGiamToiThieu"
-                        :class="{ 'is-invalid': errors.giaTriGiamToiThieu }"
                       />
-                      <div class="invalid-feedback">
-                        {{ errors.giaTriGiamToiThieu }}
-                      </div>
+                      <div class="invalid-feedback">                      </div>
                     </div>
 
                     <div class="col-md-6">
@@ -506,6 +596,19 @@ const toggleTrangThai = async (p) => {
                       <div class="invalid-feedback">
                         {{ errors.giaTriGiamToiDa }}
                       </div>
+                    </div>
+
+                    <div
+                      v-if="selectedphieuGiamGia.loaiPhieu === 'Cá nhân'"
+                      class="col-md-6"
+                    >
+                      <label class="form-label">Khách hàng</label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        v-model="selectedphieuGiamGia.tenKhachHang"
+                        disabled
+                      />
                     </div>
 
                     <div class="col-md-12">

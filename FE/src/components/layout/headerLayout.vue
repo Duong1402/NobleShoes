@@ -1,158 +1,12 @@
 <script setup>
 import { RouterLink, RouterView } from "vue-router";
 import FooterLayout from "./footerLayout.vue";
+import Sidebar from "./sidebar.vue";
 </script>
 <template>
   <div class="wrapper">
     <!-- Sidebar -->
-    <div class="sidebar" data-background-color="yellow">
-      <div class="sidebar-logo">
-        <!-- Logo Header -->
-        <div class="logo-header" data-background-color="yellow">
-          <router-link to="/admin/trang-chu" class="logo">
-            <img
-              src="/src/assets/img/logoo-Photoroom.png"
-              alt="navbar brand"
-              class="navbar-brand"
-              height="140"
-            />
-          </router-link>
-        </div>
-        <!-- End Logo Header -->
-      </div>
-      <div class="sidebar-wrapper scrollbar scrollbar-inner">
-        <div class="sidebar-content">
-          <ul class="nav nav-secondary">
-            <li class="nav-item active">
-              <router-link to="/admin/trang-chu" class="nav-link">
-                <i class="fas fa-home"></i>
-                <p>Trang chủ</p>
-              </router-link>
-            </li>
-            <li class="nav-section">
-              <span class="sidebar-mini-icon">
-                <i class="fa fa-ellipsis-h"></i>
-              </span>
-              <h4 class="text-section">Components</h4>
-            </li>
-            <li class="nav-item">
-              <a
-                class="collapsed"
-                data-bs-toggle="collapse"
-                data-bs-target="#banHang"
-                href="#"
-                aria-expanded="false"
-              >
-                <i class="fas fa-shopping-cart"></i>
-                <p>Bán hàng</p>
-                <span class="caret"></span>
-              </a>
-              <div class="collapse" id="banHang">
-                <ul class="nav nav-collapse">
-                  <li>
-                    <a href="#">
-                      <span class="sub-item">Avatars</span>
-                    </a>
-                  </li>
-                </ul>
-              </div>
-            </li>
-
-            <li class="nav-item">
-              <a data-bs-toggle="collapse" href="#sidebarLayouts">
-                <i class="fas fa-file"></i>
-                <p>Quản lý hóa đơn</p>
-                <span class="caret"></span>
-              </a>
-              <div class="collapse" id="sidebarLayouts">
-                <ul class="nav nav-collapse">
-                  <li>
-                    <a href="sidebar-style-2.html">
-                      <span class="sub-item">Sidebar Style 2</span>
-                    </a>
-                  </li>
-                  <li>
-                    <a href="icon-menu.html">
-                      <span class="sub-item">Icon Menu</span>
-                    </a>
-                  </li>
-                </ul>
-              </div>
-            </li>
-            <!-- Giam gia -->
-            <li class="nav-item">
-              <a data-bs-toggle="collapse" href="#forms">
-                <i class="fas fa-tag"></i>
-                <p>Quản lý giảm giá</p>
-                <span class="caret"></span>
-              </a>
-              <div class="collapse" id="forms">
-                <ul class="nav nav-collapse">
-                  <li>
-                    <router-link to="/admin/phieu-giam-gia">
-                      <span class="sub-item">Phiếu giảm giá</span>
-                    </router-link>
-                    </li>
-                    <li>
-                    <router-link to="/admin/phieu-giam-gia-ca-nhan">
-                      <span class="sub-item">Phiếu giảm giá cá nhân</span>
-                    </router-link>
-                  </li>
-                    <li>
-                    <router-link to="/admin/dot-giam-gia">
-                      <span class="sub-item">Đợt giảm giá</span>
-                    </router-link>
-                  </li>
-                </ul>
-              </div>
-            </li>
-            <li class="nav-item">
-              <a data-bs-toggle="collapse" href="#tables">
-                <i class="fas fa-cube"></i>
-                <p>Quản lý sản phẩm</p>
-                <span class="caret"></span>
-              </a>
-              <div class="collapse" id="tables">
-                <ul class="nav nav-collapse">
-                  <li>
-                    <router-link to="/admin/san-pham">
-                      <span class="sub-item">Sản phẩm</span>
-                    </router-link>
-                  </li>
-                </ul>
-              </div>
-            </li>
-            <li class="nav-item">
-              <a data-bs-toggle="collapse" href="#charts">
-                <i class="far fa-chart-bar"></i>
-                <p>Thống kê</p>
-                <span class="caret"></span>
-              </a>
-              <div class="collapse" id="charts">
-                <ul class="nav nav-collapse">
-                  <li>
-                    <a href="charts/charts.html">
-                      <span class="sub-item">Chart Js</span>
-                    </a>
-                  </li>
-                  <li>
-                    <a href="charts/sparkline.html">
-                      <span class="sub-item">Sparkline</span>
-                    </a>
-                  </li>
-                </ul>
-              </div>
-            </li>
-            <li class="nav-item">
-              <router-link to="/admin/nhan-vien">
-                <i class="fas fa-user-alt"></i>
-                <p>Quản lý nhân viên</p>
-              </router-link>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </div>
+    <Sidebar/>
     <!-- End Sidebar -->
 
     <div class="main-panel">
@@ -438,7 +292,7 @@ import FooterLayout from "./footerLayout.vue";
                   </div>
                   <span class="profile-username">
                     <span class="op-7">Hi,</span>
-                    <span class="fw-bold">Hizrian</span>
+                    <span class="fw-bold">Thedd</span>
                   </span>
                 </a>
                 <ul class="dropdown-menu dropdown-user animated fadeIn">

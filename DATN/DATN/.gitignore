@@ -31,3 +31,20 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Logs & OS ###
+*.log
+.DS_Store
+Thumbs.db
+
+### Maven ###
+dependency-reduced-pom.xml
+
+### Environment / Config ###
+.env
+src/main/resources/application.properties
+src/main/resources/application.yml
+
+### Temporary files ###
+*.tmp
+*.bak

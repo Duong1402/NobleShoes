@@ -1,14 +1,10 @@
 <script setup>
 import Breadcrumb from "@/components/common/Breadcrumb.vue";
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { Modal } from "bootstrap";
 import Swal from "sweetalert2";
-import {
-  getAllNhanVien,
-  // createNhanVien,
-  updateNhanVien,
-  // deleteNhanVien,
-} from "@/service/NhanVienService";
+import axios from "axios";
+import { getAllNhanVien, updateNhanVien } from "@/service/NhanVienService";
 import { getAllChucVu } from "@/service/ChucVuService";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { useNotify } from "@/composables/useNotify";
@@ -16,6 +12,7 @@ import { useNotify } from "@/composables/useNotify";
 const nhanVien = ref([]);
 const chucVuList = ref([]);
 const notify = useNotify();
+
 const selectedNhanVien = ref({
   id: "",
   ma: "",
@@ -40,10 +37,29 @@ const selectedNhanVien = ref({
   trangThai: 1, // 1 = hoạt động, 0 = ngừng
 });
 
-const formatDate = (dateStr) => {
-  if (!dateStr) return "";
-  return new Date(dateStr).toLocaleDateString("vi-VN");
+// Thêm ảnh lên cloud
+const previewUrl = ref("");
+const uploading = ref(false);
+
+// Từ khóa tìm kiếm
+const searchTerm = ref("");
+
+// Trạng thái lọc
+const filterStatus = ref("all");
+
+// Đặt lại bộ lọc
+const resetFilter = () => {
+  searchTerm.value = "";
+  filterStatus.value = "all";
+  currentPage.value = 1;
 };
+watch([searchTerm, filterStatus], () => {
+  currentPage.value = 1;
+});
+
+// Phân trang
+const currentPage = ref(1);
+const itemsPerPage = ref(5); // mặc định hiển thị 10 dòng
 
 let modalInstance = null;
 
@@ -63,12 +79,12 @@ onMounted(async () => {
   }
 
   // Khi modal đóng (bấm nút X hoặc ra ngoài) → xóa ?id trên URL
-  const modalEl = document.getElementById("detailModal");
-  if (modalEl) {
-    modalEl.addEventListener("hidden.bs.modal", () => {
-      window.history.pushState({}, "", "/admin/nhan-vien");
-    });
-  }
+  // const modalEl = document.getElementById("detailModal");
+  // if (modalEl) {
+  //   modalEl.addEventListener("hidden.bs.modal", () => {
+  //     window.history.pushState({}, "", "/admin/nhan-vien");
+  //   });
+  // }
 });
 
 // Hàm load danh sách nhân viên
@@ -81,7 +97,7 @@ const loadNhanVien = async () => {
   }
 };
 
-// ✅ Hàm load danh sách chức vụ
+// Hàm load danh sách chức vụ
 const loadChucVu = async () => {
   try {
     const res = await getAllChucVu();
@@ -97,6 +113,7 @@ const loadChucVu = async () => {
 const editNhanVien = (nv) => {
   // Deep copy để tránh ảnh hưởng đến list chính
   selectedNhanVien.value = JSON.parse(JSON.stringify(nv));
+  previewUrl.value = nv.urlAnh || "";
   window.history.pushState({}, "", `?id=${nv.id}`);
 
   // Chuẩn hóa dữ liệu giới tính sang kiểu số (0/1)
@@ -118,6 +135,60 @@ const editNhanVien = (nv) => {
   modalInstance.show();
 };
 
+// Upload ảnh lên Cloudinary
+const handleImageChange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", "nobleshoes_preset");
+  try {
+    uploading.value = true;
+    const res = await axios.post(
+      "https://api.cloudinary.com/v1_1/dppzg4tin/image/upload",
+      formData
+    );
+    selectedNhanVien.value.urlAnh = res.data.secure_url;
+    previewUrl.value = res.data.secure_url;
+    uploading.value = false;
+    notify.success("Tải ảnh lên thành công!");
+  } catch (err) {
+    console.error("Lỗi upload ảnh:", err);
+    uploading.value = false;
+    notify.error("Tải ảnh lên thất bại!");
+  }
+};
+
+// Danh sách nhân viên sau khi lọc theo keyword + trạng thái
+const filteredNhanVien = computed(() => {
+  const keyword = searchTerm.value.toLowerCase().trim();
+
+  return nhanVien.value.filter((nv) => {
+    // 1️⃣ Lọc theo từ khóa
+    const matchKeyword =
+      !keyword ||
+      nv.ma?.toLowerCase().includes(keyword) ||
+      nv.hoTen?.toLowerCase().includes(keyword) ||
+      nv.sdt?.toLowerCase().includes(keyword) ||
+      nv.email?.toLowerCase().includes(keyword) ||
+      nv.diaChi?.toLowerCase().includes(keyword) ||
+      nv.cccd?.toLowerCase().includes(keyword) ||
+      nv.taiKhoan?.toLowerCase().includes(keyword) ||
+      nv.chucVu?.ten?.toLowerCase().includes(keyword);
+
+    // 2️⃣ Lọc theo trạng thái
+    const matchStatus =
+      filterStatus.value === "all"
+        ? true
+        : filterStatus.value === "active"
+        ? nv.trangThai === 1
+        : nv.trangThai === 0;
+
+    return matchKeyword && matchStatus;
+  });
+});
+
 // Hàm lưu cập nhật nhân viên
 const saveNhanVien = async () => {
   try {
@@ -125,6 +196,7 @@ const saveNhanVien = async () => {
     const payload = {
       ...selectedNhanVien.value,
       chucVu: { id: selectedNhanVien.value.chucVu.id },
+      urlAnh: selectedNhanVien.value.urlAnh,
     };
 
     await updateNhanVien(payload.id, payload);
@@ -135,6 +207,24 @@ const saveNhanVien = async () => {
     console.error("❌ Lỗi khi cập nhật nhân viên:", err);
     notify.error("Có lỗi khi cập nhật!");
   }
+};
+
+// Danh sách sau khi lọc, cắt theo trang
+const paginatedNhanVien = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value;
+  const end = start + itemsPerPage.value;
+  return filteredNhanVien.value.slice(start, end);
+});
+
+// Tổng số trang
+const totalPages = computed(() => {
+  return Math.ceil(filteredNhanVien.value.length / itemsPerPage.value) || 1;
+});
+
+// Chuyển trang
+const changePage = (page) => {
+  if (page < 1 || page > totalPages.value) return;
+  currentPage.value = page;
 };
 
 // Tạo hàm confirm
@@ -148,14 +238,13 @@ const confirmSave = async () => {
     cancelButtonText: "Hủy",
     reverseButtons: true,
     confirmButtonColor: "#ffc107", // màu vàng giống btn
-    cancelButtonColor: "#6c757d"
+    cancelButtonColor: "#6c757d",
   });
 
   if (result.isConfirmed) {
     saveNhanVien(); // gọi hàm lưu
   }
 };
-
 
 const toggleTrangThai = async (nv) => {
   const oldValue = nv.trangThai;
@@ -225,10 +314,11 @@ const toggleTrangThai = async (nv) => {
             <div class="col-md-4">
               <label class="form-label fw-bold">Tìm kiếm</label>
               <input
+                v-model="searchTerm"
                 type="text"
-                class="form-control"
+                class="form-control border-warning"
                 placeholder="Mã, tên, email..."
-                required
+                style="border-width: 2px"
               />
             </div>
 
@@ -239,18 +329,37 @@ const toggleTrangThai = async (nv) => {
                   <input
                     class="form-check-input"
                     type="radio"
-                    name="status"
-                    checked
+                    id="statusAll"
+                    value="all"
+                    v-model="filterStatus"
                   />
-                  <label class="form-check-label">Tất cả</label>
+                  <label class="form-check-label" for="statusAll">Tất cả</label>
                 </div>
+
                 <div class="form-check me-3 custom-radio">
-                  <input class="form-check-input" type="radio" name="status" />
-                  <label class="form-check-label">Còn hoạt động</label>
+                  <input
+                    class="form-check-input"
+                    type="radio"
+                    id="statusActive"
+                    value="active"
+                    v-model="filterStatus"
+                  />
+                  <label class="form-check-label" for="statusActive"
+                    >Còn hoạt động</label
+                  >
                 </div>
+
                 <div class="form-check custom-radio">
-                  <input class="form-check-input" type="radio" name="status" />
-                  <label class="form-check-label">Ngừng hoạt động</label>
+                  <input
+                    class="form-check-input"
+                    type="radio"
+                    id="statusInactive"
+                    value="inactive"
+                    v-model="filterStatus"
+                  />
+                  <label class="form-check-label" for="statusInactive"
+                    >Ngừng hoạt động</label
+                  >
                 </div>
               </div>
             </div>
@@ -262,12 +371,16 @@ const toggleTrangThai = async (nv) => {
           >
             <p class="mb-2 mb-md-0">
               Tổng số nhân viên:
-              <span class="text-warning fw-bold">{{ nhanVien.length }}</span>
+              <span class="text-warning fw-bold">{{
+                filteredNhanVien.length
+              }}</span>
             </p>
             <div class="d-flex align-items-center gap-2">
-              <button type="reset" class="btn btn-dark">Đặt lại bộ lọc</button>
+              <button type="button" class="btn btn-dark" @click="resetFilter">
+                Đặt lại bộ lọc
+              </button>
               <router-link
-                to="/admin/nhan-vien/them"
+                :to="{ name: 'nhanVienAdd' }"
                 class="btn btn-warning text-white"
               >
                 Thêm nhân viên
@@ -283,7 +396,9 @@ const toggleTrangThai = async (nv) => {
         <div class="card">
           <div class="card-header">
             <div class="d-flex align-items-center justify-content-between">
-              <h4 class="card-title mb-0">Danh Sách Nhân Viên</h4>
+              <h4 class="card-title mb-0">
+                <i class="fa fa-table me-2"></i>Danh Sách Nhân Viên
+              </h4>
             </div>
           </div>
 
@@ -294,6 +409,7 @@ const toggleTrangThai = async (nv) => {
                   <tr style="text-align: center">
                     <th>STT</th>
                     <th>Mã</th>
+                    <th>Ảnh</th>
                     <th>Họ tên</th>
                     <th>SĐT</th>
                     <th>Email</th>
@@ -304,18 +420,31 @@ const toggleTrangThai = async (nv) => {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(nv, index) in nhanVien" :key="nv.id">
-                    <td>{{ index + 1 }}</td>
+                  <tr v-for="(nv, index) in paginatedNhanVien" :key="nv.id">
+                    <td class="text-center">
+                      {{ (currentPage - 1) * itemsPerPage + index + 1 }}
+                    </td>
                     <td class="text-warning">{{ nv.ma }}</td>
+                    <td class="text-center">
+                      <img
+                        :src="nv.urlAnh || '/src/assets/img/default-avatar.png'"
+                        alt="Ảnh nhân viên"
+                        class="rounded-circle shadow-sm"
+                        style="
+                          width: 65px;
+                          height: 65px;
+                          object-fit: cover;
+                          border: 2px solid #ffc107;
+                        "
+                      />
+                    </td>
+
                     <td>{{ nv.hoTen }}</td>
                     <td>{{ nv.sdt }}</td>
                     <td>{{ nv.email }}</td>
                     <td>{{ nv.diaChi }}</td>
                     <td>
-                      <span
-                        v-if="nv.chucVu"
-                        class="fs-6 px-3 py-2 text-black"
-                      >
+                      <span v-if="nv.chucVu" class="fs-6 px-3 py-2 text-black">
                         {{ nv.chucVu.ten }}
                       </span>
                       <span v-else class="text-muted">-</span>
@@ -352,20 +481,97 @@ const toggleTrangThai = async (nv) => {
                             "
                           />
                         </div>
+
                         <!-- Nút cập nhật -->
-                        <button
-                          type="button"
-                          class="btn btn-link btn-warning btn-lg p-0"
-                          @click="editNhanVien(nv)"
+                        <router-link
+                          v-if="nv.trangThai === 1"
+                          :to="{
+                            name: 'chiTietNhanVien',
+                            params: { id: nv.id },
+                          }"
+                          class="btn btn-link btn-lg p-0 text-decoration-none"
                           title="Cập nhật nhân viên"
                         >
-                          <i class="fa fa-edit"></i>
-                        </button>
+                          <i class="fa-solid fa-eye text-warning"></i>
+                        </router-link>
+                        <router-link
+                          v-else
+                          to="#"
+                          class="btn btn-link btn-lg p-0 text-decoration-none disabled-link"
+                          @click.prevent
+                          title="Nhân viên ngừng hoạt động"
+                        >
+                          <i class="fa-solid fa-eye-slash text-primary"></i>
+                        </router-link>
                       </div>
                     </td>
                   </tr>
                 </tbody>
               </table>
+            </div>
+            <!-- 🔹 Phân trang & hiển thị số phần tử -->
+            <div
+              class="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-3"
+            >
+              <!-- Bên trái: chọn số phần tử hiển thị -->
+              <div class="d-flex align-items-center">
+                <label class="me-2 mb-0 text-dark small">Hiển thị:</label>
+                <select
+                  v-model="itemsPerPage"
+                  class="form-select form-select-sm w-auto"
+                >
+                  <option :value="5">5</option>
+                  <option :value="10">10</option>
+                  <option :value="50">50</option>
+                  <option :value="filteredNhanVien.length">Tất cả</option>
+                </select>
+              </div>
+
+              <!-- Giữa: hiển thị tổng số -->
+              <div class="text-muted small text-center flex-grow-1">
+                Hiển thị
+                <span class="fw-bold">
+                  {{ (currentPage - 1) * itemsPerPage + 1 }} -
+                  {{
+                    Math.min(
+                      currentPage * itemsPerPage,
+                      filteredNhanVien.length
+                    )
+                  }}
+                </span>
+                / {{ filteredNhanVien.length }} mục
+              </div>
+
+              <!-- Bên phải: pagination -->
+              <nav>
+                <ul class="pagination pagination-sm mb-0">
+                  <li
+                    class="page-item"
+                    :class="{ disabled: currentPage === 1 }"
+                    @click="changePage(currentPage - 1)"
+                  >
+                    <a class="page-link" href="#">Trước</a>
+                  </li>
+
+                  <li
+                    v-for="page in totalPages"
+                    :key="page"
+                    class="page-item"
+                    :class="{ active: page === currentPage }"
+                    @click="changePage(page)"
+                  >
+                    <a class="page-link" href="#">{{ page }}</a>
+                  </li>
+
+                  <li
+                    class="page-item"
+                    :class="{ disabled: currentPage === totalPages }"
+                    @click="changePage(currentPage + 1)"
+                  >
+                    <a class="page-link" href="#">Sau</a>
+                  </li>
+                </ul>
+              </nav>
             </div>
           </div>
 
@@ -393,6 +599,41 @@ const toggleTrangThai = async (nv) => {
 
                 <div class="modal-body">
                   <div class="row g-3">
+                    <!-- Ảnh -->
+                    <div class="text-center mb-3">
+                      <img
+                        :src="
+                          previewUrl ||
+                          selectedNhanVien.urlAnh ||
+                          '/src/assets/img/default-avatar.png'
+                        "
+                        alt="Avatar"
+                        class="rounded-circle shadow-sm mb-2"
+                        style="width: 100px; height: 100px; object-fit: cover"
+                      />
+                      <div>
+                        <label
+                          for="uploadInput"
+                          class="btn btn-outline-warning btn-sm"
+                        >
+                          <i class="fa-solid fa-camera me-1"></i> Chọn ảnh
+                        </label>
+                        <input
+                          id="uploadInput"
+                          type="file"
+                          accept="image/*"
+                          hidden
+                          @change="handleImageChange"
+                        />
+                      </div>
+                      <small
+                        v-if="uploading"
+                        class="text-secondary d-block mt-1"
+                      >
+                        Đang tải ảnh lên...
+                      </small>
+                    </div>
+
                     <!-- Mã nhân viên -->
                     <div class="col-md-6">
                       <label class="form-label">Mã nhân viên</label>
@@ -658,5 +899,35 @@ const toggleTrangThai = async (nv) => {
 .custom-radio .form-check-input:checked {
   background-color: #ffc107 !important; /* màu cam */
   border-color: #ffc107 !important;
+}
+.btn:hover {
+  transform: scale(1.03);
+  transition: 0.15s ease-in-out;
+}
+.pagination .page-link {
+  color: #ff7b00;
+  border-radius: 6px;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #ff7b00;
+  border-color: #ff7b00;
+  color: #fff;
+}
+
+.pagination .page-link:hover {
+  color: #d66500;
+}
+
+@media (max-width: 768px) {
+  /* Khi màn nhỏ thì các phần tự xuống hàng */
+  .pagination {
+    justify-content: center;
+  }
+}
+.disabled-link {
+  pointer-events: none; /* Ngăn click */
+  opacity: 0.5; /* Làm mờ nút */
+  cursor: not-allowed;
 }
 </style>
