@@ -1,30 +1,46 @@
 <script setup>
-import { reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import Breadcrumb from "@/components/common/Breadcrumb.vue";
 import { useNotify } from "@/composables/useNotify";
 import Swal from "sweetalert2";
-import { createDotGiamGia } from "@/service/dotGiamGiaService";
+import { createDotGiamGia, getAllSanPham } from "@/service/dotGiamGiaService";
 
 const router = useRouter();
 const notify = useNotify();
 const errors = reactive({});
-
+const currentPage = ref(1);
+const pageSize = ref(5);
+const totalSanPham = ref([]);
 const form = reactive({
   ma: "",
   ten: null,
-  giaTriGiam: null,
+  giaTriGiam: 0,
   soTienGiamToiDa: null,
   ngayBatDau: "",
   ngayKetThuc: "",
   trangThai: true,
 });
+const selectedSanPham = ref([]);
+
+// Lưu sản phẩm (GIỮ NGUYÊN)
+const saveSanPham = async () => {
+  try {
+    const payload = { ...selectedSanPham.value, dotGiamGia: { id: dotGiamGiaId } };
+    await updateSanPham(payload.id, payload);
+    notify.success("Cập nhật thành công!");
+
+  } catch (err) {
+    console.error("❌ Lỗi khi cập nhật sản phẩm:", err);
+  }
+};
 
 const addDotGiamGia = async () => {
   try {
     // Xóa lỗi cũ trước khi submit
     Object.keys(errors).forEach((key) => (errors[key] = ""));
 
+    saveSanPham();
     const res = await createDotGiamGia(form);
     if (!res) throw new Error("Lỗi khi thêm đợt giảm giá");
 
@@ -60,6 +76,20 @@ const confirmSave = async () => {
     await addDotGiamGia();
   }
 };
+
+const loadSanPham = async () => {
+  try {
+    const res = await getAllSanPham();
+    totalSanPham.value = res;
+    console.log("Danh sách đợt giảm giá:", totalSanPham);
+  } catch (err) {
+    console.error("Lỗi khi tải danh sách đợt giảm giá:", err);
+  }
+};
+
+onMounted(async () => {
+ await loadSanPham();
+});
 </script>
 
 <template>
@@ -156,6 +186,70 @@ const confirmSave = async () => {
           </button>
         </div>
       </form>
+    </div>
+
+    <!-- Danh sách sản phẩm -->
+    <div class="card shadow p-4 mt-3">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle text-center">
+          <thead class="table-light">
+            <tr>
+              <th><input type="checkbox" /></th>
+              <th>STT</th>
+              <th>Mã</th>
+              <th>Tên sản phẩm</th>
+              <th>Thương hiệu</th>
+              <th>Ngày tạo</th>
+              <th>Số lượng</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(sp, index) in totalSanPham" :key="sp.id">
+              <td><input type="checkbox" :value="sp" v-model="sanPhamSelected"></td>
+              <td>{{  index }}</td>
+              <td>{{  sp.ma }}</td>
+              <td>{{ sp.ten }}</td>
+              <td>{{ sp.thuongHieu || "-" }}</td>
+              <td>{{ new Date(sp.ngayTao).toLocaleDateString("vi-VN") }}</td>
+              <td>{{ sp.soLuongChiTiet }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <nav v-if="totalPages >= 1" aria-label="Page navigation">
+        <ul class="pagination justify-content-end mt-3 mb-0">
+          <li class="page-item" :class="{ disabled: currentPage === 1 }">
+            <a
+              class="page-link"
+              href="#"
+              @click.prevent="goToPage(currentPage - 1)"
+              >Trước</a
+            >
+          </li>
+          <li
+            class="page-item"
+            v-for="page in totalPages"
+            :key="page"
+            :class="{ active: currentPage === page }"
+          >
+            <a class="page-link" href="#" @click.prevent="goToPage(page)">{{
+              page
+            }}</a>
+          </li>
+          <li
+            class="page-item"
+            :class="{ disabled: currentPage === totalPages }"
+          >
+            <a
+              class="page-link"
+              href="#"
+              @click.prevent="goToPage(currentPage + 1)"
+              >Sau</a
+            >
+          </li>
+        </ul>
+      </nav>
     </div>
   </div>
 </template>

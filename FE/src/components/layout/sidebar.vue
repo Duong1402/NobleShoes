@@ -84,7 +84,7 @@
           </li>
 
           <!-- Quản lý nhân viên -->
-          <li class="nav-item" :class="{ active: activeRoute === 'nhanVien' }">
+          <!-- <li class="nav-item" :class="{ active: activeRoute === 'nhanVien' }">
             <router-link
               :to="{ name: 'nhanVien' }"
               class="nav-link link-with-icon"
@@ -94,7 +94,7 @@
                 <p class="mb-0">Quản lý nhân viên</p>
               </div>
             </router-link>
-          </li>
+          </li> -->
         </ul>
       </div>
     </div>
@@ -135,8 +135,8 @@ const menus = [
     key: "hoaDon",
     title: "Quản lý hóa đơn",
     icon: "fas fa-file",
-    routeName: "hoaDon",
-    children: [{ text: "Tất cả hóa đơn" }, { text: "Hóa đơn chờ xử lý" }],
+    routeName: "HoaDon",
+    children: [{ text: "Hóa Đơn",route: "HoaDon" }],
   },
   {
     key: "giamGia",
@@ -164,12 +164,15 @@ const menus = [
     ],
   },
   {
-    key: "thongKe",
-    title: "Thống kê",
-    icon: "far fa-chart-bar",
-    routeName: "thongKe",
-    children: [{ text: "Doanh thu" }, { text: "Sản phẩm bán chạy" }],
+    key: "taiKhoan",
+    title: "Tài khoản",
+    icon: "fa-solid fa-users",
+    routeName: "taiKhoan",
+    children: [
+      { text: "Nhân viên",  route: "nhanVien"}, 
+      { text: "Khách hàng" , route: "khachHang"}],
   },
+  
 ];
 </script>
 
