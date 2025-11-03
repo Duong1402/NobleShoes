@@ -93,7 +93,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="container-fluid mt-4 px-5">
+  <div class="container-fluid mt-4 px-1s">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
         <div

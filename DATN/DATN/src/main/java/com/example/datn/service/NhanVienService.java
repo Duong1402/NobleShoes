@@ -4,6 +4,7 @@ import com.example.datn.entity.NhanVien;
 import com.example.datn.repository.NhanVienRepository;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -21,9 +22,11 @@ public class NhanVienService {
     @Autowired
     private NhanVienRepository nhanVienRepository;
 
+    private final Object maLock = new Object();
+
     @Autowired
     private JavaMailSender mailSender;
-    //
+
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     public List<NhanVien> getAll() {
@@ -35,11 +38,18 @@ public class NhanVienService {
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy nhân viên có ID: " + id));
     }
 
+    @Transactional
     public NhanVien create(NhanVien nv) {
         // Sinh mã tự động
-        String latestMa = nhanVienRepository.findLatestMa();
-        String newMa = generateNextMa(latestMa);
-        nv.setMa(newMa);
+        synchronized (maLock) {
+            String newMa = nhanVienRepository.getNextMaNhanVien();
+            nv.setMa(newMa);
+
+            if (nhanVienRepository.existsByMa(newMa)) {
+                throw new RuntimeException("Mã nhân viên đã tồn tại" + newMa);
+            }
+        }
+
 
         // Tự động sinh tài khoản và mật khẩu
         String taiKhoan = generateUsernameFromName(nv.getHoTen());
@@ -62,14 +72,6 @@ public class NhanVienService {
         }
 
         return saved;
-    }
-
-    private String generateNextMa(String latestMa) {
-        if (latestMa == null || latestMa.isEmpty()) {
-            return "NV00001";
-        }
-        int number = Integer.parseInt(latestMa.substring(2));
-        return String.format("NV%05d", number + 1);
     }
 
     private String generateUsernameFromName(String hoTen) {

@@ -20,6 +20,7 @@
     "axios": "^1.12.2",
     "bootstrap": "^5.3.8",
     "decimal.js": "^10.6.0",
+    "file-saver": "^2.0.5",
     "jquery": "^3.7.1",
     "jquery-sparkline": "^2.4.0",
     "qrcode": "^1.5.4",

@@ -35,6 +35,17 @@
           </li>
 
           <!-- Mẫu menu có submenu -->
+           <li class="nav-item" :class="{ active: activeRoute === 'BanHang' }">
+            <router-link
+              :to="{ name: 'BanHang' }"
+              class="nav-link link-with-icon"
+            >
+              <div class="icon-title">
+                <i class="fas fa-shopping-cart"></i>
+                <p class="mb-0">Bán hàng</p>
+              </div>
+            </router-link>
+          </li>
           <li
             v-for="item in menus"
             :key="item.key"
@@ -125,13 +136,6 @@ watch(
 
 const menus = [
   {
-    key: "banHang",
-    title: "Bán hàng",
-    icon: "fas fa-shopping-cart",
-    routeName: "banHang",
-    children: [{ text: "Đơn hàng" }, { text: "Khách hàng" }],
-  },
-  {
     key: "hoaDon",
     title: "Quản lý hóa đơn",
     icon: "fas fa-file",
@@ -142,7 +146,7 @@ const menus = [
     key: "giamGia",
     title: "Quản lý giảm giá",
     icon: "fas fa-tag",
-    routeName: "giamGia",
+    routeName: "PhieuGiamGia",
     children: [
       { text: "Phiếu giảm giá", route: "PhieuGiamGia" },
       { text: "Đợt giảm giá", route: "DotGiamGia" },
@@ -167,7 +171,7 @@ const menus = [
     key: "taiKhoan",
     title: "Tài khoản",
     icon: "fa-solid fa-users",
-    routeName: "taiKhoan",
+    routeName: "nhanVien",
     children: [
       { text: "Nhân viên",  route: "nhanVien"}, 
       { text: "Khách hàng" , route: "khachHang"}],

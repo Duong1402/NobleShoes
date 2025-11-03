@@ -47,7 +47,7 @@ const handleSave = async () => {
 </script>
 
 <template>
-  <div class="container mt-4 px-5" v-if="hoaDon">
+  <div class="container mt-4 px-1" v-if="hoaDon">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h3 class="fw-bold text-warning">
         Hóa đơn: {{ hoaDon.ma }}
