@@ -1,5 +1,5 @@
 <!-- Setup đường dẫn điều hướng -->
- 
+
 <script setup>
 import { useRoute, useRouter } from "vue-router";
 import { computed } from "vue";
@@ -7,17 +7,35 @@ import { computed } from "vue";
 const route = useRoute();
 const router = useRouter();
 
-// 🧠 Lấy danh sách route cha/con có meta.title để hiển thị breadcrumb
+//Lấy danh sách route cha/con có meta.title để hiển thị breadcrumb
 const breadcrumbs = computed(() => {
   const matched = route.matched.filter((r) => r.meta && r.meta.title);
-  return matched.map((r) => ({
-    name: r.meta.title,
-    path: r.path.startsWith("/") ? r.path : "/" + r.path,
-  }));
+  const breadcrumbList = [];
+
+  // build full path
+  let fullPath = "";
+  for (const m of matched) {
+    fullPath += m.path.startsWith("/") ? m.path : "/" + m.path;
+    breadcrumbList.push({
+      name: m.meta.title,
+      path: fullPath,
+    });
+  }
+
+  // Nếu có breadcrumbParent, thêm thủ công route cha
+  const current = route.meta;
+  if (current.breadcrumbParent) {
+    breadcrumbList.splice(breadcrumbList.length - 1, 0, {
+      name: "Nhân viên",
+      path: current.breadcrumbParent,
+    });
+  }
+
+  return breadcrumbList;
 });
 
 // 🏠 Khi click Admin, quay về trang chính admin
-const goHome = () => router.push("/admin");
+const goHome = () => router.push({ name: "home"});
 </script>
 
 <template>
@@ -27,7 +45,7 @@ const goHome = () => router.push("/admin");
         <a
           href="#"
           @click.prevent="goHome"
-          class="text-decoration-none text-secondary"
+          class="text-decoration-none text-warning"
         >
           <i class="fa fa-home me-1"></i> Trang chủ
         </a>
@@ -43,7 +61,7 @@ const goHome = () => router.push("/admin");
         <template v-if="index !== breadcrumbs.length - 1">
           <router-link
             :to="item.path"
-            class="text-decoration-none text-secondary"
+            class="text-decoration-none text-warning"
           >
             {{ item.name }}
           </router-link>

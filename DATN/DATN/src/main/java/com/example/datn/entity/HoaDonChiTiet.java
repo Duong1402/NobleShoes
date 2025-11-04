@@ -1,30 +1,40 @@
 package com.example.datn.entity;
 
+
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
-@Entity @Table(name = "hoa_don_chi_tiet")
+@Entity
+@Table(name = "hoa_don_chi_tiet")
+@Getter
+@Setter
 public class HoaDonChiTiet {
-    @Id @GeneratedValue
-    @Column(name="id", columnDefinition="uniqueidentifier")
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne @JoinColumn(name="id_hd")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_hoa_don")
     private HoaDon hoaDon;
 
-    @ManyToOne @JoinColumn(name="id_ctsp")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_chi_tiet_san_pham")
     private ChiTietSanPham chiTietSanPham;
 
-    @Column(name="so_luong")
+    @Column(name = "so_luong")
     private Integer soLuong;
 
-    @Column(name="don_gia", precision=18, scale=2)
+    @Column(name = "don_gia")
     private BigDecimal donGia;
+
+    @Column(name = "thanh_tien")
+    private BigDecimal thanhTien;
+
+    @Column(name = "trang_thai")
+    private Integer trangThai;
 }

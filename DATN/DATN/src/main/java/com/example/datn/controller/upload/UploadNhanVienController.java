@@ -1,3 +1,4 @@
+//điều khiển upload ảnh lên cloud
 package com.example.datn.controller.Upload;
 
 import com.example.datn.Config.CloudinaryService;
@@ -9,7 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 @CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api/upload")
-public class UploadController {
+public class UploadNhanVienController {
 
     @Autowired
     private CloudinaryService cloudinaryService;
@@ -23,4 +24,19 @@ public class UploadController {
             return ResponseEntity.badRequest().body("Upload failed: " + e.getMessage());
         }
     }
+
+    @DeleteMapping("/delete")
+    public ResponseEntity<?> deleteImage(@RequestParam("publicId") String publicId) {
+        try {
+            boolean deleted = cloudinaryService.deleteFile(publicId);
+            if (deleted) {
+                return ResponseEntity.ok("Đã xoá ảnh thành công!");
+            } else {
+                return ResponseEntity.badRequest().body("Không thể xoá ảnh!");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Lỗi xoá ảnh: " + e.getMessage());
+        }
+    }
+
 }
