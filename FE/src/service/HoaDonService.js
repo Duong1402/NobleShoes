@@ -13,3 +13,4 @@ export const getHoaDonById = (id) => {
 export const updateHoaDon = (id, data) => {
   return axios.put(`${API_BASE_URL}/${id}`, data);
 };
+export const getLichSuHoaDon = (id) => api.get(`/hoa-don/${id}/lich-su`);
