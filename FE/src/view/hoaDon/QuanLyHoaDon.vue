@@ -10,6 +10,10 @@ import { useNotify } from "@/composables/useNotify";
 // import { Modal } from "bootstrap";
 import Swal from "sweetalert2";
 import { useRouter } from "vue-router";
+import QRCode from "qrcode";
+import * as XLSX from "xlsx";
+import { Html5Qrcode } from "html5-qrcode";
+
 const router = useRouter();
 const hoaDonList = ref([]);
 const filter = reactive({
@@ -76,9 +80,10 @@ onMounted(() => {
 const loadHoaDon = async (page = 0) => {
   try {
     const params = {
-      page: page,
+      page,
       size: pagination.value.size,
     };
+
     if (filter.ma) params.ma = filter.ma.trim();
     if (filter.sdt) params.sdt = filter.sdt.trim();
     if (filter.tenKhachOrNhanVien)
@@ -90,15 +95,26 @@ const loadHoaDon = async (page = 0) => {
 
     const res = await searchHoaDon(params);
     const data = res.data;
-    hoaDonList.value = data.content;
-    pagination.value.page = data.number;
-    pagination.value.totalPages = data.totalPages;
-    pagination.value.totalElements = data.totalElements;
+
+    // ✅ Đảm bảo có dữ liệu để hiển thị
+    hoaDonList.value = Array.isArray(data.content) ? data.content : [];
+
+    // ✅ Cập nhật thông tin phân trang
+    pagination.value.page = data.number ?? 0;
+    pagination.value.totalElements = data.totalElements ?? hoaDonList.value.length;
+
+    // ✅ Đảm bảo totalPages luôn >= 1
+    let totalPages =
+      data.totalPages ??
+      Math.ceil(pagination.value.totalElements / pagination.value.size);
+    pagination.value.totalPages = totalPages > 0 ? totalPages : 1;
+
   } catch (err) {
-    console.error("Lỗi khi tải danh sách hóa đơn:", err);
+    console.error("❌ Lỗi khi tải danh sách hóa đơn:", err);
     notify.error("Tải dữ liệu hóa đơn thất bại!");
   }
 };
+
 const handleViewDetail = (id) => {
   router.push({ name: "ChiTietHD", params: { id } });
 };
@@ -201,28 +217,86 @@ const getTrangThai = (status) => {
 
 const handleScanQRCode = () => {
   Swal.fire({
-    title: "Đang mở chức năng quét mã...",
-    text: "Tính năng này đang làm .",
-    icon: "info",
-    confirmButtonText: "Đã hiểu",
-    confirmButtonColor: "#007bff",
+    title: "Quét mã QR hóa đơn",
+    html: `
+      <div id="qr-reader" style="width: 300px; margin: auto;"></div>
+      <div id="qr-reader-results" style="margin-top: 10px; font-weight: bold;"></div>
+    `,
+    showConfirmButton: false,
+    didOpen: () => {
+      const qrCodeRegionId = "qr-reader";
+      const html5QrCode = new Html5Qrcode(qrCodeRegionId);
+
+      html5QrCode
+        .start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+          },
+          (decodedText) => {
+            document.getElementById("qr-reader-results").innerText = `Kết quả: ${decodedText}`;
+            
+            // 👉 Ví dụ: nếu mã QR chứa mã hóa đơn
+            Swal.fire({
+              title: "Đã quét thành công!",
+              text: `Mã hóa đơn: ${decodedText}`,
+              icon: "success",
+              confirmButtonText: "Xem chi tiết",
+            }).then(() => {
+              // Gọi API hoặc mở chi tiết hóa đơn ở đây
+              // ví dụ: getHoaDonByMa(decodedText)
+            });
+
+            html5QrCode.stop().catch((err) => console.error("Dừng camera lỗi:", err));
+          },
+          (errorMessage) => {
+            // Bỏ qua lỗi khi chưa nhận dạng được
+          }
+        )
+        .catch((err) => {
+          console.error("Không thể khởi tạo camera:", err);
+          Swal.fire("Lỗi", "Không thể truy cập camera!", "error");
+        });
+    },
+    willClose: () => {
+      Html5Qrcode.getCameras().then((cameras) => {
+        // Dừng tất cả camera khi đóng modal
+        if (cameras.length) {
+          const html5QrCode = new Html5Qrcode("qr-reader");
+          html5QrCode.stop().catch(() => {});
+        }
+      });
+    },
   });
 };
 
+
 const handleExportExcel = async () => {
   try {
-    if (hoaDonList.value.length === 0) {
+    if (!hoaDonList.value || hoaDonList.value.length === 0) {
       notify.warning("Không có dữ liệu để xuất Excel!");
       return;
     }
-    const header = ["Mã hóa đơn", "Khách hàng", "Nhân viên", "Ngày tạo", "Tổng tiền", "Loại đơn", "Trạng thái"];
+
+    const header = [
+      "Mã hóa đơn",
+      "Khách hàng",
+      "SĐT",
+      "Nhân viên",
+      "Ngày tạo",
+      "Tổng tiền",
+      "Loại đơn",
+      "Trạng thái"
+    ];
+
     const rows = hoaDonList.value.map((hd) => [
       hd.ma,
       hd.tenKhachHang,
-      hd.sdt,
+      hd.sdt || "",
       hd.tenNhanVien,
       formatDate(hd.ngayTao),
-      hd.tongTien,
+      hd.tongTien.toLocaleString() + " ₫",
       hd.loaiHoaDon,
       getTrangThai(hd.trangThai).text,
     ]);
@@ -230,6 +304,7 @@ const handleExportExcel = async () => {
     const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Danh sách hóa đơn");
+
     XLSX.writeFile(wb, "hoa_don.xlsx");
 
     notify.success("Xuất file Excel thành công!");
@@ -238,6 +313,7 @@ const handleExportExcel = async () => {
     notify.error("Xuất file Excel thất bại!");
   }
 };
+
 
 const handlePrintPDF = async (id) => {
   try {
@@ -254,6 +330,11 @@ const handlePrintPDF = async (id) => {
     const printWindow = window.open("", "_blank");
 
     // Chuẩn bị nội dung HTML để in
+    // Sinh link mã QR từ mã hóa đơn
+    const qrUrl = `https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl=${encodeURIComponent(
+      hd.ma
+    )}&choe=UTF-8`;
+
     printWindow.document.write(`
       <html>
         <head>
@@ -266,6 +347,8 @@ const handlePrintPDF = async (id) => {
             th { background-color: #f2f2f2; }
             .total { text-align: right; font-weight: bold; }
             .footer { text-align: center; margin-top: 30px; font-size: 13px; color: gray; }
+            .qr-container { text-align: center; margin-top: 20px; }
+            .qr-container img { width: 150px; height: 150px; }
           </style>
         </head>
         <body>
@@ -309,12 +392,19 @@ const handlePrintPDF = async (id) => {
             </tbody>
           </table>
 
+          <div class="qr-container">
+            <p><strong>Mã QR hóa đơn:</strong></p>
+            <img src="${qrUrl}" alt="QR Hóa đơn ${hd.ma}" />
+            <p style="font-size: 12px; color: gray;">Quét để tra cứu thông tin hóa đơn</p>
+          </div>
+
           <div class="footer">
             <p>Cảm ơn quý khách đã mua hàng tại <strong>Noble Shoes</strong>!</p>
           </div>
         </body>
       </html>
     `);
+
 
     printWindow.document.close();
     printWindow.focus();
@@ -537,7 +627,6 @@ const handlePrintPDF = async (id) => {
                   ›
                 </button>
               </div>
-
             </div>
           </div>
         </div>
