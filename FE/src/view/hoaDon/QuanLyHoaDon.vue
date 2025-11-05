@@ -238,6 +238,96 @@ const handleExportExcel = async () => {
     notify.error("Xuất file Excel thất bại!");
   }
 };
+
+const handlePrintPDF = async (id) => {
+  try {
+    // Gọi API lấy thông tin hóa đơn theo id
+    const res = await getHoaDonById(id);
+    const hd = res.data;
+
+    if (!hd) {
+      notify.warning("Không tìm thấy dữ liệu hóa đơn!");
+      return;
+    }
+
+    // Tạo cửa sổ mới để in
+    const printWindow = window.open("", "_blank");
+
+    // Chuẩn bị nội dung HTML để in
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Hóa đơn ${hd.ma}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h2 { text-align: center; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            .total { text-align: right; font-weight: bold; }
+            .footer { text-align: center; margin-top: 30px; font-size: 13px; color: gray; }
+          </style>
+        </head>
+        <body>
+          <h2>HÓA ĐƠN THANH TOÁN</h2>
+          <p><strong>Mã hóa đơn:</strong> ${hd.ma}</p>
+          <p><strong>Khách hàng:</strong> ${hd.tenKhachHang}</p>
+          <p><strong>Số điện thoại:</strong> ${hd.sdt || ""}</p>
+          <p><strong>Nhân viên:</strong> ${hd.tenNhanVien}</p>
+          <p><strong>Ngày tạo:</strong> ${formatDate(hd.ngayTao)}</p>
+          <p><strong>Loại đơn:</strong> ${hd.loaiHoaDon}</p>
+          <p><strong>Trạng thái:</strong> ${getTrangThai(hd.trangThai).text}</p>
+
+          <table>
+            <thead>
+              <tr>
+                <th>STT</th>
+                <th>Tên sản phẩm</th>
+                <th>Số lượng</th>
+                <th>Đơn giá</th>
+                <th>Thành tiền</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(hd.chiTietSanPham || [])
+                .map(
+                  (sp, i) => `
+                    <tr>
+                      <td>${i + 1}</td>
+                      <td>${sp.tenSanPham}</td>
+                      <td>${sp.soLuong}</td>
+                      <td>${formatCurrency(sp.donGia)}</td>
+                      <td>${formatCurrency(sp.soLuong * sp.donGia)}</td>
+                    </tr>
+                  `
+                )
+                .join("")}
+              <tr>
+                <td colspan="4" class="total">Tổng tiền:</td>
+                <td class="total">${formatCurrency(hd.tongTien)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="footer">
+            <p>Cảm ơn quý khách đã mua hàng tại <strong>Noble Shoes</strong>!</p>
+          </div>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+
+    // Gọi hộp thoại in
+    printWindow.print();
+
+    notify.success("In hóa đơn thành công!");
+  } catch (err) {
+    console.error("Lỗi khi in hóa đơn:", err);
+    notify.error("Không thể in hóa đơn!");
+  }
+};
 </script>
 
 <template>
@@ -340,72 +430,72 @@ const handleExportExcel = async () => {
               </button>
             </div>
             <div class="table-container">
-  <div class="table-responsive">
-    <table id="hoa-don-table" class="table table-bordered align-middle text-center custom-table">
-      <thead class="table-light">
-        <tr>
-          <th>STT</th>
-          <th>Mã</th>
-          <th>Khách hàng</th>
-          <th>SDT</th>
-          <th>Nhân viên</th>
-          <th>Ngày tạo</th>
-          <th>Tổng tiền</th>
-          <th>Loại đơn</th>
-          <th>Trạng thái</th>
-          <th>Hành động</th>
-        </tr>
-      </thead>
+              <div class="table-responsive">
+                <table id="hoa-don-table" class="table table-bordered align-middle text-center custom-table">
+                  <thead class="table-light">
+                    <tr>
+                      <th>STT</th>
+                      <th>Mã</th>
+                      <th>Khách hàng</th>
+                      <th>SDT</th>
+                      <th>Nhân viên</th>
+                      <th>Ngày tạo</th>
+                      <th>Tổng tiền</th>
+                      <th>Loại đơn</th>
+                      <th>Trạng thái</th>
+                      <th>Hành động</th>
+                    </tr>
+                  </thead>
 
-      <tbody>
-        <tr v-for="(hd, index) in hoaDonList" :key="hd.id">
-          <td>{{ pagination.page * pagination.size + index + 1 }}</td>
-          <td class="text-warning fw-bold">{{ hd.ma }}</td>
-          <td>{{ hd.tenKhachHang }}</td>
-          <td>{{ hd.sdt }}</td>
-          <td>{{ hd.tenNhanVien }}</td>
-          <td>{{ formatDate(hd.ngayTao) }}</td>
-          <td class="text-danger fw-bold">{{ formatCurrency(hd.tongTien) }}</td>
-          <td>{{ hd.loaiHoaDon }}</td>
-          <td>
-            <span
-              class="badge rounded-pill fs-6 px-3 py-2 text-white"
-              :class="getTrangThai(hd.trangThai).class"
-            >
-              {{ getTrangThai(hd.trangThai).text }}
-            </span>
-          </td>
-          <td>
-            <div class="d-flex justify-content-center gap-2">
-              <button
-                type="button"
-                class="btn btn-link text-primary btn-lg p-0"
-                title="Xem chi tiết"
-                @click="handleViewDetail(hd.id)"
-              >
-                <i class="fa fa-eye"></i>
-              </button>
-              <button
-                type="button"
-                class="btn btn-link text-success btn-lg p-0"
-                title="In hóa đơn"
-                @click="handlePrintPDF(hd.id)"
-              >
-                <i class="fa fa-print"></i>
-              </button>
+                  <tbody>
+                    <tr v-for="(hd, index) in hoaDonList" :key="hd.id">
+                      <td>{{ pagination.page * pagination.size + index + 1 }}</td>
+                      <td class="text-warning fw-bold">{{ hd.ma }}</td>
+                      <td>{{ hd.tenKhachHang }}</td>
+                      <td>{{ hd.sdt }}</td>
+                      <td>{{ hd.tenNhanVien }}</td>
+                      <td>{{ formatDate(hd.ngayTao) }}</td>
+                      <td class="text-danger fw-bold">{{ formatCurrency(hd.tongTien) }}</td>
+                      <td>{{ hd.loaiHoaDon }}</td>
+                      <td>
+                        <span
+                          class="badge rounded-pill fs-6 px-3 py-2 text-white"
+                          :class="getTrangThai(hd.trangThai).class"
+                        >
+                          {{ getTrangThai(hd.trangThai).text }}
+                        </span>
+                      </td>
+                      <td>
+                        <div class="d-flex justify-content-center gap-2">
+                          <button
+                            type="button"
+                            class="btn btn-link text-primary btn-lg p-0"
+                            title="Xem chi tiết"
+                            @click="handleViewDetail(hd.id)"
+                          >
+                            <i class="fa fa-eye"></i>
+                          </button>
+                          <button
+                            type="button"
+                            class="btn btn-link text-success btn-lg p-0"
+                            title="In hóa đơn"
+                            @click="handlePrintPDF(hd.id)"
+                          >
+                            <i class="fa fa-print"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <tr v-if="hoaDonList.length === 0">
+                      <td :colspan="10" class="text-center text-muted py-4">
+                        Không tìm thấy dữ liệu
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </td>
-        </tr>
-
-        <tr v-if="hoaDonList.length === 0">
-          <td :colspan="10" class="text-center text-muted py-4">
-            Không tìm thấy dữ liệu
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</div>
 
 
 
@@ -792,10 +882,10 @@ const handleExportExcel = async () => {
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
-  white-space: nowrap; /* vẫn giữ nguyên nếu không muốn xuống dòng */
-  font-size: 0.9rem; /* giảm toàn bộ cỡ chữ trong bảng */
+  font-size: 0.9rem; /* cỡ mặc định toàn bảng */
 }
 
+/* Căn giữa, không xuống dòng, ẩn tràn */
 .custom-table th,
 .custom-table td {
   text-align: center;
@@ -803,15 +893,24 @@ const handleExportExcel = async () => {
   padding: 10px 6px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Nếu chỉ muốn giảm riêng cỡ chữ ở cột dễ tràn */
+/* Giảm cỡ chữ ở cột dễ tràn */
 .custom-table td:nth-child(3), /* Khách hàng */
 .custom-table td:nth-child(9) { /* Trạng thái */
-  font-size: 0.85rem; /* nhỏ hơn chút */
+  font-size: 0.85rem;
 }
 
-/* Giảm kích thước badge để vừa trong ô */
+/* 👇 Giảm riêng cỡ chữ ở cột SĐT và Ngày tạo */
+.custom-table td:nth-child(4), /* SĐT */
+.custom-table td:nth-child(6) { /* Ngày tạo */
+  font-size: 0.8rem;  /* nhỏ hơn để vừa cột */
+  white-space: nowrap;
+  width: 110px;       /* bạn có thể tăng thành 120px nếu thấy chật */
+}
+
+/* Badge nhỏ gọn hơn */
 .custom-table .badge {
   font-size: 0.8rem;
   padding: 4px 8px;

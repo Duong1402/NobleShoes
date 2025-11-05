@@ -79,7 +79,7 @@ if (lichSuThayDoi.value.length > 0) {
 } else {
   const steps = [];
 
-  // Nếu có lịch sử thay đổi
+  // Nếu có lịch sử thay đổi trạng thái
   if (lichSuThayDoi.value.length > 0) {
     lichSuHienThi.value = lichSuThayDoi.value.map((item, idx) => {
       const text =
@@ -87,32 +87,41 @@ if (lichSuThayDoi.value.length > 0) {
         TRANG_THAI_HOA_DON[item.trangThaiMoi] ||
         item.trangThaiMoi ||
         `Bước ${idx + 1}`;
-      const thoiGian = item.thoiGian || item.ngayTao || item.thoiGianCapNhat || null;
-      
-      // Nếu trạng thái là hủy, chỉ giữ bước hủy
+
+      // Dùng thời gian thực tế ưu tiên theo thứ tự sau:
+      const thoiGian =
+        item.thoiGianCapNhat ||
+        item.thoiGian ||
+        item.ngayTao ||
+        null;
+
+      // Nếu trạng thái là "Hủy" thì chỉ hiển thị riêng bước hủy
       if (item.trangThaiMoi === 0) {
-        return [{
-          id: 1,
-          text: TRANG_THAI_HOA_DON[0],
-          thoiGian,
-          isCanceled: true
-        }];
+        return [
+          {
+            id: idx + 1,
+            text: TRANG_THAI_HOA_DON[0],
+            thoiGian,
+            isCanceled: true
+          }
+        ];
       }
 
       return {
         id: idx + 1,
         text,
         thoiGian,
-        isCanceled: item.trangThaiMoi === 0,
-        isDone: item.trangThaiMoi && item.trangThaiMoi !== 0,
+        isCanceled: false,
+        isDone: item.trangThaiMoi && item.trangThaiMoi !== 0
       };
-    }).flat(); // flat để chỉ còn bước hủy khi hủy
+    }).flat();
+
     return;
   }
 
-  // Nếu hóa đơn chưa có lịch sử
+  // Nếu hóa đơn chưa có lịch sử (chưa đổi trạng thái)
   if (hoaDon.value.trangThai === 0) {
-    // Trường hợp hóa đơn bị hủy, chỉ hiển thị hủy
+    // Trường hợp hóa đơn bị hủy, chỉ hiển thị 1 bước "Hủy"
     lichSuHienThi.value = [{
       id: 1,
       text: TRANG_THAI_HOA_DON[0],
@@ -120,18 +129,30 @@ if (lichSuThayDoi.value.length > 0) {
       isCanceled: true
     }];
   } else {
-    // Hóa đơn bình thường
+    // Hóa đơn bình thường, tạo các bước đến trạng thái hiện tại
     const currentStep = Number(hoaDon.value.trangThai);
+
     for (let s = 1; s <= currentStep; s++) {
+      // 🔥 Nếu có lịch sử, tìm thời gian tương ứng theo trạng thái
+      const lichSuStep = lichSuThayDoi.value.find(
+        (i) => i.trangThaiMoi === s
+      );
+
       steps.push({
         id: s,
         text: TRANG_THAI_HOA_DON[s],
-        isDone: s < currentStep,
+        thoiGian:
+          (lichSuStep && (lichSuStep.thoiGianCapNhat || lichSuStep.thoiGian || lichSuStep.ngayTao)) ||
+          hoaDon.value.ngayCapNhat ||
+          hoaDon.value.ngayTao,
+        isDone: s < currentStep
       });
     }
+
     lichSuHienThi.value = steps;
   }
 }
+
 
 };
 
@@ -260,8 +281,8 @@ const confirmChange = async (newStatus) => {
           <div
             class="timeline-circle mx-auto"
             :class="{
-              done: index < lichSuHienThi.length - 1,
-              current: index === lichSuHienThi.length - 1,
+              done: index < lichSuHienThi.length - 1 || step.text === 'Hoàn thành',
+              current: index === lichSuHienThi.length - 1 && step.text !== 'Hoàn thành',
             }"
           >
             <span class="circle-number">{{ index + 1 }}</span>
@@ -352,7 +373,10 @@ const confirmChange = async (newStatus) => {
             <button v-if="hoaDon.trangThai == 4" class="btn btn-outline-danger btn-sm" @click="confirmChange(0)">
               ❌ Hủy
             </button>
-
+            <!-- Hoàn thành -->
+             <button v-if="hoaDon.trangThai == 5" class="btn btn-outline-secondary btn-sm" @click="confirmChange(4)">
+              🔙 Quay lại
+            </button>
             <!-- Đã hủy -->
             <button v-if="hoaDon.trangThai == 0" class="btn btn-outline-primary btn-sm" @click="confirmChange(1)">
               ↩️ Khôi phục (Chờ xác nhận)
@@ -488,6 +512,61 @@ const confirmChange = async (newStatus) => {
 </template>
 
 <style scoped>
+/* Modal */
+.modal {
+  overflow-y: auto;
+  z-index: 1050;
+}
+.modal-content {
+  border-radius: 12px;
+}
+.modal-footer {
+  padding-top: 0;
+  padding-bottom: 20px;
+}
+
+/* layout tweaks preserved from original file */
+.table-card,
+.total-card {
+  width: 100%;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.table {
+  width: 100%;
+}
+.table th,
+.table td {
+  vertical-align: middle;
+}
+.text-end {
+  text-align: right;
+}
+.text-center {
+  text-align: center;
+}
+.container {
+  max-width: 1500px !important;
+}
+.total-card {
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  background-color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+.outer-total-card {
+  background-color: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+.inner-card {
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  background-color: #fff;
+}
+
 /* Timeline */
 .timeline-container {
   position: relative;
@@ -567,61 +646,6 @@ const confirmChange = async (newStatus) => {
   width: 100%;
   height: 4px;
   background-color: transparent;
-}
-
-/* Modal */
-.modal {
-  overflow-y: auto;
-  z-index: 1050;
-}
-.modal-content {
-  border-radius: 12px;
-}
-.modal-footer {
-  padding-top: 0;
-  padding-bottom: 20px;
-}
-
-/* layout tweaks preserved from original file */
-.table-card,
-.total-card {
-  width: 100%;
-  max-width: 1400px;
-  margin-left: auto;
-  margin-right: auto;
-}
-.table {
-  width: 100%;
-}
-.table th,
-.table td {
-  vertical-align: middle;
-}
-.text-end {
-  text-align: right;
-}
-.text-center {
-  text-align: center;
-}
-.container {
-  max-width: 1500px !important;
-}
-.total-card {
-  border: 1px solid #dee2e6;
-  border-radius: 10px;
-  background-color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-.outer-total-card {
-  background-color: #fff;
-  border: 1px solid #dee2e6;
-  border-radius: 0.5rem;
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-}
-.inner-card {
-  border: 1px solid #dee2e6;
-  border-radius: 0.5rem;
-  background-color: #fff;
 }
 
 .timeline-circle.done {
