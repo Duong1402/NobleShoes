@@ -65,4 +65,20 @@ public class KhachHang {
 
     @Column(name = "trang_thai")
     private Byte trangThai;
+
+    @PrePersist
+    protected void onCreate() {
+        // Chỉ set ngày tạo nếu chưa có
+        if (this.ngayTao == null) {
+            this.ngayTao = new Date();
+        }
+
+        if (this.ma == null || this.ma.trim().isEmpty()) {
+            this.ma = "TEMP_KH" + UUID.randomUUID().toString().substring(0, 5);
+        }
+
+        if (this.trangThai == null) {
+            this.trangThai = 1;
+        }
+    }
 }

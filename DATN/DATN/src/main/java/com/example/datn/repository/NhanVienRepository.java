@@ -24,4 +24,7 @@ public interface NhanVienRepository extends JpaRepository<NhanVien, UUID> {
                 FROM nhan_vien
             """, nativeQuery = true)
     String getNextMaNhanVien();
+
+    NhanVien findByTaiKhoan(String taiKhoan);
+
 }

@@ -1,6 +1,7 @@
 package com.example.datn.controller;
 
 import com.example.datn.dto.ChiTietSanPhamDTO;
+import com.example.datn.dto.ChiTietSanPhamResponse;
 import com.example.datn.dto.ChiTietSanPhamUpdateDTO;
 import com.example.datn.entity.ChiTietSanPham;
 import com.example.datn.service.ChiTietSanPhamService;
@@ -20,10 +21,11 @@ public class ChiTietSanPhamController {
 
     // 1️⃣ Lấy tất cả chi tiết sản phẩm
     @GetMapping
-    public ResponseEntity<List<ChiTietSanPham>> getAllChiTietSanPham() {
-        List<ChiTietSanPham> list = chiTietSanPhamService.getAllChiTietSanPham();
+    public ResponseEntity<List<ChiTietSanPhamResponse>> getAllChiTietSanPham() {
+        List<ChiTietSanPhamResponse> list = chiTietSanPhamService.getAll();
         return ResponseEntity.ok(list);
     }
+
 
     // 2️⃣ Lấy chi tiết sản phẩm theo ID chi tiết
 //    @GetMapping("/{id}")
@@ -53,7 +55,6 @@ public class ChiTietSanPhamController {
             return ResponseEntity.status(500).body(e.getMessage());
         }
     }
-
 
 
 }

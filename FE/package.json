@@ -24,6 +24,7 @@
     "jquery": "^3.7.1",
     "jquery-sparkline": "^2.4.0",
     "qrcode": "^1.5.4",
+    "sub-vn": "^0.0.2",
     "sweetalert2": "^11.26.2",
     "vietnam-provinces": "^0.0.4",
     "vue": "^3.5.22",
