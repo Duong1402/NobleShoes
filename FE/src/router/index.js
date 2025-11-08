@@ -19,12 +19,24 @@ import ThuongHieu from "@/view/thuongHieu/thuongHieu.vue";
 import NhanVien from "@/view/nhanVien/nhanVien.vue";
 import NhanVienAdd from "@/view/nhanVien/nhanVienAdd.vue";
 
+// Nhân viên
+import KhachHang from "@/view/khachHang/khachHang.vue";
+import KhachHangAdd from "@/view/khachHang/khachHangAdd.vue";
+import KhachHangDetail from "@/view/khachHang/khachHangDetail.vue";
+
+
+//Giảm Giá
 import PhieuGiamGia from "@/view/phieuGiamGia/phieuGiamGia.vue";
 import PhieuGiamGiaAdd from "@/view/phieuGiamGia/phieuGiamGiaAdd.vue";
 import DotGiamGia from "@/view/dotGiamGia/dotGiamGia.vue";
 import DotGiamGiaAdd from "@/view/dotGiamGia/dotGiamGiaAdd.vue";
 import NhanVienDetail from "@/view/nhanVien/nhanVienDetail.vue";
+
+//Hóa Đơn
+
 import TrangChu from "@/components/trangChu.vue";
+import QuanLyHoaDon from "@/view/hoaDon/QuanLyHoaDon.vue";
+import ChiTietHD from "@/view/hoaDon/ChiTietHD.vue";
 
 const listRouter = [
   {
@@ -120,6 +132,28 @@ const listRouter = [
           breadcrumbParent: "/admin/nhan-vien",
         },
       },
+
+      //Khách hàng
+      {
+        path: "khach-hang",
+        name: "khachHang",
+        component: KhachHang,
+        meta: { title: "Khách hàng" },
+      },
+      {
+        path: "khach-hang/them",
+        name: "KhachHangAdd",
+        component: KhachHangAdd,
+        meta: { title: "Thêm khách hàng" },
+      },
+      {
+        path: "khach-hang/sua/:id",
+        name: "KhachHangDetail",
+        component: KhachHangDetail,
+        props: true,
+        meta: { title: "Sửa khách hàng" },
+      },
+
       {
         path: "phieu-giam-gia",
         name: "PhieuGiamGia",
@@ -144,6 +178,20 @@ const listRouter = [
         component: DotGiamGiaAdd,
         meta: { title: "Thêm đợt giảm giá" },
       },
+
+      //Hóa Đơn
+            {
+        path: "hoa-don",
+        name: "HoaDon",
+        component: QuanLyHoaDon, 
+        meta: { title: "Quản lý Hóa đơn" },
+      },
+      {
+        path: "hoa-don/:id",
+        name: "ChiTietHD",
+        component: ChiTietHD,
+        meta: {title: "Chi tiết hóa đơn"}
+      }
     ],
   },
   { path: "/", redirect: "/admin" },

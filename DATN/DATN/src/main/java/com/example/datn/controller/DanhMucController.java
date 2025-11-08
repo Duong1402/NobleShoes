@@ -33,7 +33,7 @@ public class DanhMucController {
     // ✅ Thêm mới danh mục: BỎ @Valid để cho phép 'ma' rỗng.
     // Logic sinh 'ma' sẽ nằm trong service.create(dm).
     @PostMapping
-    public DanhMuc create( @RequestBody DanhMuc dm) {
+    public DanhMuc create(@RequestBody DanhMuc dm) {
         return service.create(dm);
     }
 

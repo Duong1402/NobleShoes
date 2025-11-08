@@ -3,9 +3,10 @@ package com.example.datn.service;
 import com.example.datn.entity.DeGiay;
 import com.example.datn.repository.DeGiayRepository;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
-import java.util.UUID;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class DeGiayService {
@@ -19,6 +20,7 @@ public class DeGiayService {
     // ----------------------------------------------------
     // 1. CREATE: Thêm logic tự động sinh mã 'ma' và đồng bộ hóa
     // ----------------------------------------------------
+
     /**
      * Thêm mới Đế Giày, tự động sinh mã và đảm bảo đồng bộ hóa
      * bằng 'synchronized' để tránh Race Condition khi sinh mã.

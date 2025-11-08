@@ -1,14 +1,12 @@
 package com.example.datn.controller;
 
 import com.example.datn.dto.SanPhamRequest;
-import com.example.datn.entity.SanPham;
 import com.example.datn.service.SanPhamService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 

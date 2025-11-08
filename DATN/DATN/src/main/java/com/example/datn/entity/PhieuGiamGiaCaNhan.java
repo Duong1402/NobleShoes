@@ -8,9 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
 import java.util.Date;
-import java.util.Set;
 import java.util.UUID;
 
 @Getter
@@ -41,7 +39,7 @@ public class PhieuGiamGiaCaNhan {
     private Date ngayHetHan;
 
     @Column(name = "trang_thai")
-    private Boolean trangThai; //0 la false, 1 la true
+    private Boolean trangThai ; //0 la false, 1 la true
 
     @ManyToOne
     @JoinColumn(name = "id_phieu_giam_gia")

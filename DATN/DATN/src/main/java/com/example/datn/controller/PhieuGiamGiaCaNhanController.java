@@ -29,16 +29,20 @@ public class PhieuGiamGiaCaNhanController {
     }
 
     @PostMapping
-    public PhieuGiamGiaCaNhan create(@Valid @RequestBody PhieuGiamGiaCaNhan obj) { return service.save(obj); }
+    public PhieuGiamGiaCaNhan create(@Valid @RequestBody PhieuGiamGiaCaNhan obj) {
+        return service.save(obj);
+    }
 
     @PutMapping("/{id}")
-    public PhieuGiamGiaCaNhan update(@PathVariable UUID id,@Valid @RequestBody PhieuGiamGiaCaNhan obj) {
+    public PhieuGiamGiaCaNhan update(@PathVariable UUID id, @Valid @RequestBody PhieuGiamGiaCaNhan obj) {
         obj.setId(id);
         return service.save(obj);
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable UUID id) { service.deleteById(id); }
+    public void delete(@PathVariable UUID id) {
+        service.deleteById(id);
+    }
 
     @PatchMapping("/{id}/trang-thai")
     public PhieuGiamGiaCaNhan updateTrangThai(@PathVariable UUID id, @RequestBody Map<String, Boolean> body) {

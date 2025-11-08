@@ -24,7 +24,7 @@ public class NhanVienService {
     @Autowired
     private JavaMailSender mailSender;
     //
-    private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     public List<NhanVien> getAll() {
         return nhanVienRepository.findAllOrderByMaDesc();

@@ -2,14 +2,14 @@ package com.example.datn.controller;
 
 import com.example.datn.entity.DayGiay;
 import com.example.datn.service.DayGiayService;
-import jakarta.validation.Valid; // Thêm import cho @Valid
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity; // Thêm import cho ResponseEntity
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
-import java.util.Optional; // Có thể không cần nhưng giúp code rõ ràng hơn
 
 @RestController
 @RequestMapping("/admin/day-giay")
@@ -46,7 +46,7 @@ public class DayGiayController {
     // 3. CREATE (201 CREATED)
     // ----------------------------------------------------
     @PostMapping
-    public ResponseEntity<DayGiay> create( @RequestBody DayGiay dg) { // THÊM @Valid
+    public ResponseEntity<DayGiay> create(@RequestBody DayGiay dg) { // THÊM @Valid
         DayGiay createdDg = service.create(dg);
         // Trả về 201 Created là chuẩn RESTful
         return ResponseEntity.status(HttpStatus.CREATED).body(createdDg);

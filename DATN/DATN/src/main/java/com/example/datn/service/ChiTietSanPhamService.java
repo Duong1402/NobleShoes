@@ -41,23 +41,23 @@ public class ChiTietSanPhamService {
                 .orElseThrow(() -> new RuntimeException("Chi tiết sản phẩm không tồn tại!"));
 
         // Cập nhật tên SP và liên kết
-        if(dto.getTenSP() != null) existing.getSanPham().setTen(dto.getTenSP());
-        if(dto.getDanhMucId() != null) {
+        if (dto.getTenSP() != null) existing.getSanPham().setTen(dto.getTenSP());
+        if (dto.getDanhMucId() != null) {
             DanhMuc dm = danhMucRepository.findById(dto.getDanhMucId())
                     .orElseThrow(() -> new RuntimeException("Danh mục không tồn tại!"));
             existing.getSanPham().setDanhMuc(dm);
         }
-        if(dto.getThuongHieuId() != null) {
+        if (dto.getThuongHieuId() != null) {
             ThuongHieu th = thuongHieuRepository.findById(dto.getThuongHieuId())
                     .orElseThrow(() -> new RuntimeException("Thương hiệu không tồn tại!"));
             existing.getSanPham().setThuongHieu(th);
         }
-        if(dto.getXuatXuId() != null) {
+        if (dto.getXuatXuId() != null) {
             XuatXu xx = xuatXuRepository.findById(dto.getXuatXuId())
                     .orElseThrow(() -> new RuntimeException("Xuất xứ không tồn tại!"));
             existing.getSanPham().setXuatXu(xx);
         }
-        if(dto.getMucDichSuDungId() != null) {
+        if (dto.getMucDichSuDungId() != null) {
             MucDichSuDung md = mucDichSuDungRepository.findById(dto.getMucDichSuDungId())
                     .orElseThrow(() -> new RuntimeException("Mục đích sử dụng không tồn tại!"));
             existing.getSanPham().setMucDichSuDung(md);
@@ -78,14 +78,14 @@ public class ChiTietSanPhamService {
         // Hình ảnh như cũ
         if (dto.getHinhAnhUrl() != null && !dto.getHinhAnhUrl().isEmpty()) {
             HinhAnh ha = existing.getSanPham().getHinhAnh();
-            if(ha == null){
+            if (ha == null) {
                 ha = new HinhAnh();
                 ha.setMa("HA-" + UUID.randomUUID().toString().substring(0, 8));
                 ha = hinhAnhRepository.save(ha);
                 existing.getSanPham().setHinhAnh(ha);
             }
-            if(ha.getUrlAnh1() == null || ha.getUrlAnh1().isEmpty()) ha.setUrlAnh1(dto.getHinhAnhUrl());
-            else if(ha.getUrlAnh2() == null || ha.getUrlAnh2().isEmpty()) ha.setUrlAnh2(dto.getHinhAnhUrl());
+            if (ha.getUrlAnh1() == null || ha.getUrlAnh1().isEmpty()) ha.setUrlAnh1(dto.getHinhAnhUrl());
+            else if (ha.getUrlAnh2() == null || ha.getUrlAnh2().isEmpty()) ha.setUrlAnh2(dto.getHinhAnhUrl());
             else ha.setUrlAnh3(dto.getHinhAnhUrl());
             hinhAnhRepository.save(ha);
         }

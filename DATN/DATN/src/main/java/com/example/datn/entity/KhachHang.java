@@ -65,4 +65,8 @@ public class KhachHang {
 
     @Column(name = "trang_thai")
     private Byte trangThai;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_chuc_vu")
+    private ChucVu chucVu;
 }

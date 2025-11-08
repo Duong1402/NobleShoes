@@ -5,7 +5,6 @@ import com.example.datn.service.DotGiamGiaService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.NoSuchElementException;
@@ -29,12 +28,12 @@ public class DotGiamGiaController {
     }
 
     @PostMapping
-    public DotGiamGia create( @Valid @RequestBody DotGiamGia obj) {
+    public DotGiamGia create(@Valid @RequestBody DotGiamGia obj) {
         return service.save(obj);
     }
 
     @PutMapping("/{id}")
-    public DotGiamGia update(@PathVariable UUID id,@Valid @RequestBody DotGiamGia obj) {
+    public DotGiamGia update(@PathVariable UUID id, @Valid @RequestBody DotGiamGia obj) {
         obj.setId(id);
         return service.save(obj);
     }

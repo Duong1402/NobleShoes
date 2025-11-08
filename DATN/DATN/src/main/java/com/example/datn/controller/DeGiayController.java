@@ -8,8 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/admin/de-giay")
@@ -46,7 +46,7 @@ public class DeGiayController {
     // 3. CREATE (201 CREATED)
     // ----------------------------------------------------
     @PostMapping
-    public ResponseEntity<DeGiay> create( @RequestBody DeGiay dg) { // THÊM @Valid
+    public ResponseEntity<DeGiay> create(@RequestBody DeGiay dg) { // THÊM @Valid
         DeGiay createdDg = service.create(dg);
         // Trả về 201 Created là chuẩn RESTful
         return ResponseEntity.status(HttpStatus.CREATED).body(createdDg);

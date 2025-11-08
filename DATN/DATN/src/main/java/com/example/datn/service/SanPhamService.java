@@ -2,7 +2,9 @@ package com.example.datn.service;
 
 import com.example.datn.dto.ChiTietSanPhamRequest;
 import com.example.datn.dto.SanPhamRequest;
-import com.example.datn.entity.*;
+import com.example.datn.entity.ChiTietSanPham;
+import com.example.datn.entity.HinhAnh;
+import com.example.datn.entity.SanPham;
 import com.example.datn.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -100,9 +102,11 @@ public class SanPhamService {
         }
         return sanPhamRepository.save(sp); // cascade sẽ lưu cả HinhAnh
     }
+
     public List<Map<String, Object>> getAll() {
         return sanPhamRepository.getDanhSachSanPhamVaChiTiet();
     }
+
     @Transactional
     public void updateSanPham(UUID id, SanPhamRequest req) {
         SanPham sp = sanPhamRepository.findById(id)
@@ -123,14 +127,13 @@ public class SanPhamService {
 
         sanPhamRepository.save(sp);
     }
+
     public void updateTrangThai(UUID id, boolean newValue) {
         SanPham sp = sanPhamRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm!"));
         sp.setTrangThai(newValue);
         sanPhamRepository.save(sp);
     }
-
-
 
 
 }
