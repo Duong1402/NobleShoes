@@ -136,8 +136,10 @@ const menus = [
     title: "Quản lý hóa đơn",
     icon: "fas fa-file",
     routeName: "HoaDon",
-    children: [{ text: "Hóa Đơn",route: "HoaDon" }],
+    // children: [{ text: "Hóa Đơn",route: "HoaDon" }],
   },
+
+  
   {
     key: "giamGia",
     title: "Quản lý giảm giá",

@@ -24,7 +24,6 @@ import KhachHang from "@/view/khachHang/khachHang.vue";
 import KhachHangAdd from "@/view/khachHang/khachHangAdd.vue";
 import KhachHangDetail from "@/view/khachHang/khachHangDetail.vue";
 
-
 //Giảm Giá
 import PhieuGiamGia from "@/view/phieuGiamGia/phieuGiamGia.vue";
 import PhieuGiamGiaAdd from "@/view/phieuGiamGia/phieuGiamGiaAdd.vue";
@@ -37,6 +36,10 @@ import NhanVienDetail from "@/view/nhanVien/nhanVienDetail.vue";
 import TrangChu from "@/components/trangChu.vue";
 import QuanLyHoaDon from "@/view/hoaDon/QuanLyHoaDon.vue";
 import ChiTietHD from "@/view/hoaDon/ChiTietHD.vue";
+
+// Trang client (người mua)
+import ClientLayout from "@/components/layout/ClientLayout.vue";
+import TrangChuClient from "@/view/client/TrangChuClient.vue";
 
 const listRouter = [
   {
@@ -180,26 +183,39 @@ const listRouter = [
       },
 
       //Hóa Đơn
-            {
+      {
         path: "hoa-don",
         name: "HoaDon",
-        component: QuanLyHoaDon, 
+        component: QuanLyHoaDon,
         meta: { title: "Quản lý Hóa đơn" },
       },
       {
         path: "hoa-don/:id",
         name: "ChiTietHD",
         component: ChiTietHD,
-        meta: {title: "Chi tiết hóa đơn"}
-      }
-    ],
-  },
-  { path: "/", redirect: "/admin" },
-];
+        meta: { title: "Chi tiết hóa đơn" },
+      },
+      {
+  path: "/shop",
+  component: ClientLayout,
+  children: [
+    {
+      path: "",
+      name: "TrangChuClient",
+      component: TrangChuClient,
+      meta: { title: "Trang chủ khách hàng" },
+    },
+  ],
+},
+      
+    ], // ✅ đóng children ở đây
+  }, // ✅ đóng route /admin ở đây
+  { path: "/", redirect: "/admin" }, // route mặc định
+]; // ✅ đóng mảng listRouter hoàn chỉnh
 
 const router = createRouter({
   history: createWebHistory(),
-  routes: listRouter,
+  routes: listRouter, // ✅ giờ không lỗi
 });
 
 export default router;
