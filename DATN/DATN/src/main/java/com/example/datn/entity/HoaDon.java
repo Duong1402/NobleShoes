@@ -1,5 +1,8 @@
 package com.example.datn.entity;
 
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,6 +15,7 @@ import java.util.UUID;
 @Table(name = "hoa_don")
 @Getter
 @Setter
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class HoaDon {
 
     @Id
@@ -24,6 +28,7 @@ public class HoaDon {
     private NhanVien nhanVien;
 
     // 🔹 Liên kết với bảng khách hàng
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_khach_hang")
     private KhachHang khachHang;
@@ -80,4 +85,15 @@ public class HoaDon {
 
     @Column(name = "ghi_chu", length = 100)
     private String ghiChu;
+
+    // Phương thức tính toán giá trị giảm thực tế của Hóa đơn
+    @JsonGetter
+    public BigDecimal getGiamGiaThucTeHoaDon() {
+//        Quy ước: tongTien = tiền sau khi đã giảm SP
+//        Quy ước: tongTienSauGiam = tổng tiền cuối cùng sau khi giảm giá SP và HoaDon
+        if (this.tongTien != null && this.tongTienSauGiam != null) {
+            return this.tongTien.subtract(this.tongTienSauGiam);
+        }
+        return BigDecimal.ZERO;
+    }
 }

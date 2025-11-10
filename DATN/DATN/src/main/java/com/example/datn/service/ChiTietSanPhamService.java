@@ -98,15 +98,33 @@ public class ChiTietSanPhamService {
     public List<ChiTietSanPhamResponse> getAll() {
         List<ChiTietSanPham> entities = chiTietSanPhamRepository.findAll();
 
-        return entities.stream().map(ct -> new ChiTietSanPhamResponse(
-                ct.getId(),
-                ct.getMa(),
-                ct.getSanPham() != null ? ct.getSanPham().getTen() : null,
-                ct.getMauSac() != null ? ct.getMauSac().getTen() : null,
-                ct.getKichThuoc() != null ? ct.getKichThuoc().getTen() : null,
-                ct.getGiaBan(),
-                ct.getSoLuongTon()
-        )).collect(Collectors.toList());
+        return entities.stream().map(ct -> {
+            // Lấy thông tin Hình Ảnh (HinhAnh Entity) từ SanPham
+            HinhAnh hinhAnh = ct.getSanPham() != null ? ct.getSanPham().getHinhAnh() : null;
+
+            // Lấy các URL ảnh (hoặc trả về null nếu không có Entity HinhAnh)
+            String urlAnh1 = hinhAnh != null ? hinhAnh.getUrlAnh1() : null;
+            String urlAnh2 = hinhAnh != null ? hinhAnh.getUrlAnh2() : null;
+            String urlAnh3 = hinhAnh != null ? hinhAnh.getUrlAnh3() : null;
+
+            XuatXu xuatXuEntity = ct.getSanPham() != null ? ct.getSanPham().getXuatXu() : null;
+            String tenXuatXu = xuatXuEntity != null ? xuatXuEntity.getTen() : null;
+
+            return new ChiTietSanPhamResponse(
+                    ct.getId(),
+                    ct.getMa(),
+                    ct.getSanPham() != null ? ct.getSanPham().getTen() : null,
+                    ct.getMauSac() != null ? ct.getMauSac().getTen() : null, // Hiện đang trả về tên màu
+                    ct.getKichThuoc() != null ? ct.getKichThuoc().getTen() : null,
+                    ct.getGiaBan(),
+                    ct.getSoLuongTon(),
+                    tenXuatXu,
+
+                    urlAnh1,
+                    urlAnh2,
+                    urlAnh3
+            );
+        }).collect(Collectors.toList());
     }
 
 

@@ -5,11 +5,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface KhachHangRepository extends JpaRepository<KhachHang, UUID> {
-    Optional<KhachHang> findByHoTenOrSdt(String sdt, String hoTen);
+    @Query("SELECT kh FROM KhachHang kh " +
+            "WHERE kh.sdt LIKE CONCAT('%', :keyword, '%') OR LOWER(kh.hoTen) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    List<KhachHang> timDanhSachKhachHang(@Param("keyword") String keyword);
 
     Optional<KhachHang> findBySdt(String sdt);
 

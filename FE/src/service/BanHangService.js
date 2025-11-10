@@ -19,8 +19,7 @@ export const themSanPhamVaoHoaDon = (idHoaDon, idChiTietSanPham, soLuong) => {
 export const capNhatKhachHang = (idHoaDon, idKhachHang) => {
   return axios.put(
     `${API_URL}/hoa-don/${idHoaDon}/cap-nhat-khach-hang/${idKhachHang}`,
-    null,
-    { params: { idHoaDon, idKhachHang } }
+    null
   );
 };
 
@@ -33,9 +32,9 @@ export const apDungGiamGia = (idHoaDon, idPhieuGiamGia) => {
 };
 
 export const thanhToan = (idHoaDon, idPhuongThucThanhToan) => {
-  return axios.post(`${API_URL}/thanh-toan`, null, {
-    params: { idHoaDon, idPhuongThucThanhToan },
-  });
+  return axios.put(
+    `${API_URL}/hoa-don/${idHoaDon}/thanh-toan/${idPhuongThucThanhToan}`
+  );
 };
 
 export const getChiTietHoaDon = (idHoaDon) => {
@@ -69,5 +68,5 @@ export const themKhachHangMoi = (khachHangData) => {
 };
 
 export const timKhachHangDaDangKy = (keyword) => {
-    return axios.get(`${API_URL}/khach-hang/tim-kiem/${keyword}`);
+  return axios.get(`${API_URL}/khach-hang/tim-kiem/${keyword}`);
 };

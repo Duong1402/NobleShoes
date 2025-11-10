@@ -605,7 +605,7 @@ const handleFileUpload = async (event) => {
   uploading.value = true;
 
   try {
-    const res = await axios.post("http://localhost:8080/api/upload", formData, {
+    const res = await axios.post("http://localhost:8080/admin/upload", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     form.urlAnh = res.data;

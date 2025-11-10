@@ -10,10 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -32,9 +29,9 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
         DA_HUY(0),
         CHO_XAC_NHAN(1),
         DA_XAC_NHAN(2),
-        DANG_GIAO(3),
-        HOAN_THANH(4),
-        CHO_THANH_TOAN(5);
+        DANG_GIAO(4),
+        HOAN_THANH(5),
+        CHO_THANH_TOAN(3);
 
         private final int value;
 
@@ -92,7 +89,7 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
         HoaDon hd = new HoaDon();
         hd.setNhanVien(nv);
         hd.setMa(hoaDonRepository.getNextMaHoaDon());
-        hd.setLoaiHoaDon("Tại quầy");
+        hd.setLoaiHoaDon("Tại cửa hàng");
         hd.setTrangThai(trangThaiHoaDon.CHO_THANH_TOAN.getValue());
         hd.setNgayTao(LocalDate.now());
         hd.setTongTien(BigDecimal.ZERO);
@@ -236,24 +233,28 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
         hoaDonChiTietRepository.save(hdct);
     }
 
-    public Optional<KhachHang> timKhachHangByHotenOrSdt(String keyword) {
+    public List<KhachHang> timKhachHangByHotenOrSdt(String keyword) {
         if (keyword == null || keyword.trim().isEmpty()) {
-            System.out.println("🔍 Từ khóa tìm kiếm rỗng.");
-            return Optional.empty();
+            System.out.println("🔍 Từ khóa tìm kiếm rỗng. Trả về danh sách rỗng.");
+            // Trả về danh sách rỗng thay vì Optional.empty()
+            return Collections.emptyList();
         }
 
         String searchKeyword = keyword.trim();
-        System.out.println("🔍 Tìm kiếm Khách hàng theo Tên hoặc SĐT: " + searchKeyword);
+        System.out.println("🔍 Tìm kiếm DANH SÁCH Khách hàng theo Tên hoặc SĐT: " + searchKeyword);
 
-        Optional<KhachHang> optionalKhachHang = khachHangRepository.timTheoTenHoacSdt(searchKeyword);
+        // 💡 THAY ĐỔI: Gọi hàm Repository mới trả về List
+        // (Giả sử bạn đã định nghĩa hàm này là timDanhSachKhachHang)
+        List<KhachHang> khachHangList = khachHangRepository.timDanhSachKhachHang(searchKeyword);
 
-        if (optionalKhachHang.isPresent()) {
-            System.out.println("✅ Tìm thấy Khách hàng: " + optionalKhachHang.get().getHoTen());
+        if (!khachHangList.isEmpty()) {
+            System.out.println("✅ Tìm thấy " + khachHangList.size() + " Khách hàng.");
         } else {
             System.out.println("⚠️ Không tìm thấy Khách hàng với từ khóa: " + searchKeyword);
         }
 
-        return optionalKhachHang;
+        // 💡 THAY ĐỔI: Trả về danh sách
+        return khachHangList;
     }
 
     @Transactional
@@ -276,7 +277,7 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
         }
 
 //         Thiết lập các giá trị mặc định (tùy thuộc vào Entity KhachHang của bạn)
-        if (khachHangMoi.getMa() == null|| khachHangMoi.getMa().trim().isEmpty()) {
+        if (khachHangMoi.getMa() == null || khachHangMoi.getMa().trim().isEmpty()) {
             String newMa = generateNewMaKhachHang();
             khachHangMoi.setMa(newMa); // Tự sinh mã trên Server
             System.out.println("DEBUG: Mã đã sinh: " + newMa);

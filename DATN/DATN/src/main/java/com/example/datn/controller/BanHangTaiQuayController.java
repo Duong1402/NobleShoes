@@ -57,7 +57,7 @@ public class BanHangTaiQuayController {
 
     // 3. Cập nhật khách hàng cho hóa đơn
     @PutMapping("/hoa-don/{idHoaDon}/cap-nhat-khach-hang/{idKhachHang}")
-    public ResponseEntity<HoaDon> capNhatKhachHang(@RequestParam UUID idHoaDon, @RequestParam UUID idKhachHang) {
+    public ResponseEntity<HoaDon> capNhatKhachHang(@PathVariable UUID idHoaDon, @PathVariable UUID idKhachHang) {
         HoaDon hoaDon = banHangTaiQuayService.capNhatKhachHang(idHoaDon, idKhachHang);
         return ResponseEntity.ok(hoaDon);
     }
@@ -65,14 +65,8 @@ public class BanHangTaiQuayController {
     // Tìm kiếm Khách hàng theo SĐT
     @GetMapping("/khach-hang/tim-kiem/{keyword}")
     public ResponseEntity<?> timKhachHang(@PathVariable String keyword) {
-        Optional<KhachHang> khachHang = banHangTaiQuayService.timKhachHangByHotenOrSdt(keyword);
-        if (khachHang.isPresent()) {
-            return ResponseEntity.ok(khachHang.get());
-        } else {
-            // Trả về 204 No Content hoặc 404 Not Found tùy theo quy ước,
-            // nhưng thường trả về 200 kèm body rỗng/null nếu không tìm thấy để Vue.js dễ xử lý.
-            return ResponseEntity.ok(null);
-        }
+        List<KhachHang> khachHang = banHangTaiQuayService.timKhachHangByHotenOrSdt(keyword);
+        return ResponseEntity.ok(khachHang);
     }
 
     // Thêm nhanh Khách hàng mới
@@ -87,19 +81,23 @@ public class BanHangTaiQuayController {
     }
 
     // 4. Áp dụng phiếu giảm giá
-    @PutMapping("/hoa-don/{idHoaDon}/giam-gia/{idPhieuGiamGia}")
-    public HoaDon apGiamGia(@RequestParam UUID idHoaDon, @RequestParam UUID idPhieuGiamGia) {
-        return banHangTaiQuayService.apDungPhieuGiamGia(idHoaDon, idPhieuGiamGia);
+    @PutMapping("/hoa-don/{idHoaDon}/giam-gia/{idPhieuGiamGiaCaNhan}")
+    public ResponseEntity<HoaDon> apGiamGia(@PathVariable UUID idHoaDon, @PathVariable("idPhieuGiamGiaCaNhan") UUID idPhieuGiamGiaCaNhan) {
+        HoaDon hd = banHangTaiQuayService.apDungPhieuGiamGia(idHoaDon, idPhieuGiamGiaCaNhan);
+        return ResponseEntity.ok(hd);
     }
 
     // 5. Thanh toán
-    @PostMapping("/thanh-toan")
+    @PutMapping("/hoa-don/{idHoaDon}/thanh-toan/{idPhuongThucThanhToan}")
     public ResponseEntity<HoaDon> thanhToan(
-            @RequestParam UUID idHoaDon,
-            @RequestParam UUID idPhuongThucThanhToan) {
-        HoaDon hoaDon = banHangTaiQuayService.thanhToan(idHoaDon, idPhuongThucThanhToan);
-        return ResponseEntity.ok(hoaDon);
-
+            @PathVariable UUID idHoaDon,
+            @PathVariable UUID idPhuongThucThanhToan
+    ) {
+        HoaDon hoaDonDaThanhToan = banHangTaiQuayService.thanhToan(
+                idHoaDon,
+                idPhuongThucThanhToan
+        );
+        return ResponseEntity.ok(hoaDonDaThanhToan);
     }
 
     // 6. Lấy chi tiết hóa đơn
@@ -108,4 +106,5 @@ public class BanHangTaiQuayController {
         List<HoaDonChiTiet> chiTiet = banHangTaiQuayService.getChiTietHoaDon(idHoaDon);
         return ResponseEntity.ok(chiTiet);
     }
+
 }

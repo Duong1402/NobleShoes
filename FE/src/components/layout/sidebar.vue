@@ -26,14 +26,6 @@
             </router-link>
           </li>
 
-          <!-- Tiêu đề nhóm -->
-          <li class="nav-section">
-            <span class="sidebar-mini-icon">
-              <i class="fa fa-ellipsis-h"></i>
-            </span>
-            <h4 class="text-section">Components</h4>
-          </li>
-
           <!-- Mẫu menu có submenu -->
            <li class="nav-item" :class="{ active: activeRoute === 'BanHang' }">
             <router-link

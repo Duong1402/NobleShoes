@@ -1,7 +1,11 @@
 <script setup>
 import { ref, onMounted, watch, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { getHoaDonById, updateHoaDon, getLichSuHoaDon } from "@/service/HoaDonService";
+import {
+  getHoaDonById,
+  updateHoaDon,
+  getLichSuHoaDon,
+} from "@/service/HoaDonService";
 import { useNotify } from "@/composables/useNotify";
 import Swal from "sweetalert2";
 
@@ -58,102 +62,104 @@ const loadData = async (id) => {
   }
 
   // Xây lichSuHienThi
-if (lichSuThayDoi.value.length > 0) {
-  // Có lịch sử từ backend
-  lichSuHienThi.value = lichSuThayDoi.value.map((item, idx) => {
-    const text =
-      item.tenTrangThai ||
-      TRANG_THAI_HOA_DON[item.trangThaiMoi] ||
-      item.trangThaiMoi ||
-      `Bước ${idx + 1}`;
-    const thoiGian =
-      item.thoiGian || item.ngayTao || item.thoiGianCapNhat || null;
-    return {
-      id: idx + 1,
-      text,
-      thoiGian,
-      raw: item,
-      isCanceled: item.trangThaiMoi === 0,
-    };
-  });
-} else {
-  const steps = [];
-
-  // Nếu có lịch sử thay đổi trạng thái
   if (lichSuThayDoi.value.length > 0) {
+    // Có lịch sử từ backend
     lichSuHienThi.value = lichSuThayDoi.value.map((item, idx) => {
       const text =
         item.tenTrangThai ||
         TRANG_THAI_HOA_DON[item.trangThaiMoi] ||
         item.trangThaiMoi ||
         `Bước ${idx + 1}`;
-
-      // Dùng thời gian thực tế ưu tiên theo thứ tự sau:
       const thoiGian =
-        item.thoiGianCapNhat ||
-        item.thoiGian ||
-        item.ngayTao ||
-        null;
-
-      // Nếu trạng thái là "Hủy" thì chỉ hiển thị riêng bước hủy
-      if (item.trangThaiMoi === 0) {
-        return [
-          {
-            id: idx + 1,
-            text: TRANG_THAI_HOA_DON[0],
-            thoiGian,
-            isCanceled: true
-          }
-        ];
-      }
-
+        item.thoiGian || item.ngayTao || item.thoiGianCapNhat || null;
       return {
         id: idx + 1,
         text,
         thoiGian,
-        isCanceled: false,
-        isDone: item.trangThaiMoi && item.trangThaiMoi !== 0
+        raw: item,
+        isCanceled: item.trangThaiMoi === 0,
       };
-    }).flat();
-
-    return;
-  }
-
-  // Nếu hóa đơn chưa có lịch sử (chưa đổi trạng thái)
-  if (hoaDon.value.trangThai === 0) {
-    // Trường hợp hóa đơn bị hủy, chỉ hiển thị 1 bước "Hủy"
-    lichSuHienThi.value = [{
-      id: 1,
-      text: TRANG_THAI_HOA_DON[0],
-      thoiGian: hoaDon.value.thoiGianHuy || hoaDon.value.ngayTao,
-      isCanceled: true
-    }];
+    });
   } else {
-    // Hóa đơn bình thường, tạo các bước đến trạng thái hiện tại
-    const currentStep = Number(hoaDon.value.trangThai);
+    const steps = [];
 
-    for (let s = 1; s <= currentStep; s++) {
-      // 🔥 Nếu có lịch sử, tìm thời gian tương ứng theo trạng thái
-      const lichSuStep = lichSuThayDoi.value.find(
-        (i) => i.trangThaiMoi === s
-      );
+    // Nếu có lịch sử thay đổi trạng thái
+    if (lichSuThayDoi.value.length > 0) {
+      lichSuHienThi.value = lichSuThayDoi.value
+        .map((item, idx) => {
+          const text =
+            item.tenTrangThai ||
+            TRANG_THAI_HOA_DON[item.trangThaiMoi] ||
+            item.trangThaiMoi ||
+            `Bước ${idx + 1}`;
 
-      steps.push({
-        id: s,
-        text: TRANG_THAI_HOA_DON[s],
-        thoiGian:
-          (lichSuStep && (lichSuStep.thoiGianCapNhat || lichSuStep.thoiGian || lichSuStep.ngayTao)) ||
-          hoaDon.value.ngayCapNhat ||
-          hoaDon.value.ngayTao,
-        isDone: s < currentStep
-      });
+          // Dùng thời gian thực tế ưu tiên theo thứ tự sau:
+          const thoiGian =
+            item.thoiGianCapNhat || item.thoiGian || item.ngayTao || null;
+
+          // Nếu trạng thái là "Hủy" thì chỉ hiển thị riêng bước hủy
+          if (item.trangThaiMoi === 0) {
+            return [
+              {
+                id: idx + 1,
+                text: TRANG_THAI_HOA_DON[0],
+                thoiGian,
+                isCanceled: true,
+              },
+            ];
+          }
+
+          return {
+            id: idx + 1,
+            text,
+            thoiGian,
+            isCanceled: false,
+            isDone: item.trangThaiMoi && item.trangThaiMoi !== 0,
+          };
+        })
+        .flat();
+
+      return;
     }
 
-    lichSuHienThi.value = steps;
+    // Nếu hóa đơn chưa có lịch sử (chưa đổi trạng thái)
+    if (hoaDon.value.trangThai === 0) {
+      // Trường hợp hóa đơn bị hủy, chỉ hiển thị 1 bước "Hủy"
+      lichSuHienThi.value = [
+        {
+          id: 1,
+          text: TRANG_THAI_HOA_DON[0],
+          thoiGian: hoaDon.value.thoiGianHuy || hoaDon.value.ngayTao,
+          isCanceled: true,
+        },
+      ];
+    } else {
+      // Hóa đơn bình thường, tạo các bước đến trạng thái hiện tại
+      const currentStep = Number(hoaDon.value.trangThai);
+
+      for (let s = 1; s <= currentStep; s++) {
+        // 🔥 Nếu có lịch sử, tìm thời gian tương ứng theo trạng thái
+        const lichSuStep = lichSuThayDoi.value.find(
+          (i) => i.trangThaiMoi === s
+        );
+
+        steps.push({
+          id: s,
+          text: TRANG_THAI_HOA_DON[s],
+          thoiGian:
+            (lichSuStep &&
+              (lichSuStep.thoiGianCapNhat ||
+                lichSuStep.thoiGian ||
+                lichSuStep.ngayTao)) ||
+            hoaDon.value.ngayCapNhat ||
+            hoaDon.value.ngayTao,
+          isDone: s < currentStep,
+        });
+      }
+
+      lichSuHienThi.value = steps;
+    }
   }
-}
-
-
 };
 
 // load lần đầu
@@ -252,15 +258,17 @@ const confirmChange = async (newStatus) => {
     }
   }
 };
-
 </script>
 
 <template>
-  <div class="container mt-4 px-5" v-if="hoaDon">
+  <div class="container mt-4 px-1" v-if="hoaDon">
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h3 class="fw-bold text-warning">Hóa đơn: {{ hoaDon.ma }}</h3>
-      <button class="btn btn-secondary" @click="router.push({ name: 'HoaDon' })">
+      <button
+        class="btn btn-secondary"
+        @click="router.push({ name: 'HoaDon' })"
+      >
         ← Quay lại
       </button>
     </div>
@@ -281,23 +289,34 @@ const confirmChange = async (newStatus) => {
           <div
             class="timeline-circle mx-auto"
             :class="{
-              done: index < lichSuHienThi.length - 1 || step.text === 'Hoàn thành',
-              current: index === lichSuHienThi.length - 1 && step.text !== 'Hoàn thành',
+              done:
+                index < lichSuHienThi.length - 1 || step.text === 'Hoàn thành',
+              current:
+                index === lichSuHienThi.length - 1 &&
+                step.text !== 'Hoàn thành',
             }"
           >
             <span class="circle-number">{{ index + 1 }}</span>
           </div>
 
           <div class="timeline-label mt-2">{{ step.text }}</div>
-          <div v-if="step.thoiGian" class="text-muted small mt-1">{{ formatDateTime(step.thoiGian) }}</div>
+          <div v-if="step.thoiGian" class="text-muted small mt-1">
+            {{ formatDateTime(step.thoiGian) }}
+          </div>
 
           <!-- connector line (we keep it visual): use pseudo element via CSS, but keep fallback div for compatibility -->
-          <div v-if="index < lichSuHienThi.length - 1" class="timeline-line"></div>
+          <div
+            v-if="index < lichSuHienThi.length - 1"
+            class="timeline-line"
+          ></div>
         </div>
       </div>
 
       <div class="text-start mt-3">
-        <button class="btn btn-outline-warning btn-sm" @click="showHistory = true">
+        <button
+          class="btn btn-outline-warning btn-sm"
+          @click="showHistory = true"
+        >
           Chi tiết lịch sử
         </button>
       </div>
@@ -319,66 +338,120 @@ const confirmChange = async (newStatus) => {
         <div class="col-md-6">
           <label>Trạng thái hiện tại</label>
           <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
-            <span class="badge fs-6"
-                  :class="{
-                    'bg-secondary': hoaDon.trangThai == 1,
-                    'bg-info': hoaDon.trangThai == 2,
-                    'bg-primary': hoaDon.trangThai == 3,
-                    'bg-warning text-dark': hoaDon.trangThai == 4,
-                    'bg-success': hoaDon.trangThai == 5,
-                    'bg-danger': hoaDon.trangThai == 0,
-                  }">
+            <span
+              class="badge fs-6"
+              :class="{
+                'bg-secondary': hoaDon.trangThai == 1,
+                'bg-info': hoaDon.trangThai == 2,
+                'bg-primary': hoaDon.trangThai == 3,
+                'bg-warning text-dark': hoaDon.trangThai == 4,
+                'bg-success': hoaDon.trangThai == 5,
+                'bg-danger': hoaDon.trangThai == 0,
+              }"
+            >
               {{ TRANG_THAI_HOA_DON[hoaDon.trangThai] }}
             </span>
           </div>
 
           <div class="mt-3 d-flex flex-wrap gap-2">
             <!-- Chờ xác nhận -->
-            <button v-if="hoaDon.trangThai == 1" class="btn btn-success btn-sm" @click="confirmChange(2)">
+            <button
+              v-if="hoaDon.trangThai == 1"
+              class="btn btn-success btn-sm"
+              @click="confirmChange(2)"
+            >
               ✅ Xác nhận
             </button>
-            <button v-if="hoaDon.trangThai == 1" class="btn btn-outline-danger btn-sm" @click="confirmChange(0)">
+            <button
+              v-if="hoaDon.trangThai == 1"
+              class="btn btn-outline-danger btn-sm"
+              @click="confirmChange(0)"
+            >
               ❌ Hủy
             </button>
 
             <!-- Đã xác nhận -->
-            <button v-if="hoaDon.trangThai == 2" class="btn btn-primary btn-sm" @click="confirmChange(3)">
+            <button
+              v-if="hoaDon.trangThai == 2"
+              class="btn btn-primary btn-sm"
+              @click="confirmChange(3)"
+            >
               ➡️ Chờ thanh toán
             </button>
-            <button v-if="hoaDon.trangThai == 2" class="btn btn-outline-secondary btn-sm" @click="confirmChange(1)">
+            <button
+              v-if="hoaDon.trangThai == 2"
+              class="btn btn-outline-secondary btn-sm"
+              @click="confirmChange(1)"
+            >
               🔙 Quay lại
             </button>
-            <button v-if="hoaDon.trangThai == 2" class="btn btn-outline-danger btn-sm" @click="confirmChange(0)">
+            <button
+              v-if="hoaDon.trangThai == 2"
+              class="btn btn-outline-danger btn-sm"
+              @click="confirmChange(0)"
+            >
               ❌ Hủy
             </button>
 
             <!-- Chờ thanh toán -->
-            <button v-if="hoaDon.trangThai == 3" class="btn btn-warning btn-sm" @click="confirmChange(4)">
+            <button
+              v-if="hoaDon.trangThai == 3"
+              class="btn btn-warning btn-sm"
+              @click="confirmChange(4)"
+            >
               🚚 Giao hàng
             </button>
-            <button v-if="hoaDon.trangThai == 3" class="btn btn-outline-secondary btn-sm" @click="confirmChange(2)">
+            <button
+              v-if="hoaDon.trangThai == 3"
+              class="btn btn-outline-secondary btn-sm"
+              @click="confirmChange(2)"
+            >
               🔙 Quay lại
             </button>
-            <button v-if="hoaDon.trangThai == 3" class="btn btn-outline-danger btn-sm" @click="confirmChange(0)">
+            <button
+              v-if="hoaDon.trangThai == 3"
+              class="btn btn-outline-danger btn-sm"
+              @click="confirmChange(0)"
+            >
               ❌ Hủy
             </button>
 
             <!-- Đang giao -->
-            <button v-if="hoaDon.trangThai == 4" class="btn btn-success btn-sm" @click="confirmChange(5)">
+            <button
+              v-if="hoaDon.trangThai == 4"
+              class="btn btn-success btn-sm"
+              @click="confirmChange(5)"
+            >
               🎉 Hoàn thành
             </button>
-            <button v-if="hoaDon.trangThai == 4" class="btn btn-outline-secondary btn-sm" @click="confirmChange(3)">
+            <button
+              v-if="hoaDon.trangThai == 4"
+              class="btn btn-outline-secondary btn-sm"
+              @click="confirmChange(3)"
+            >
               🔙 Quay lại
             </button>
-            <button v-if="hoaDon.trangThai == 4" class="btn btn-outline-danger btn-sm" @click="confirmChange(0)">
+            <button
+              v-if="hoaDon.trangThai == 4"
+              class="btn btn-outline-danger btn-sm"
+              @click="confirmChange(0)"
+            >
               ❌ Hủy
             </button>
             <!-- Hoàn thành -->
-             <button v-if="hoaDon.trangThai == 5" class="btn btn-outline-secondary btn-sm" @click="confirmChange(4)">
+            <button
+              v-if="hoaDon.trangThai == 5"
+              class="btn btn-outline-secondary btn-sm"
+              @click="confirmChange(4)"
+            >
               🔙 Quay lại
             </button>
             <!-- Đã hủy -->
-            <button v-if="hoaDon.trangThai == 0" class="btn btn-outline-primary btn-sm" @click="confirmChange(1)">
+            <button
+              v-if="hoaDon.trangThai == 0"
+              class="btn btn-outline-primary btn-sm"
+              @click="confirmChange(1)"
+            >
               ↩️ Khôi phục (Chờ xác nhận)
             </button>
           </div>
@@ -391,7 +464,11 @@ const confirmChange = async (newStatus) => {
 
         <div class="col-12">
           <label>Địa chỉ giao hàng</label>
-          <textarea class="form-control" rows="2" v-model="hoaDon.diaChiGiaoHang" />
+          <textarea
+            class="form-control"
+            rows="2"
+            v-model="hoaDon.diaChiGiaoHang"
+          />
         </div>
       </div>
     </div>
@@ -416,9 +493,9 @@ const confirmChange = async (newStatus) => {
             <tr v-for="(sp, i) in hoaDon.chiTietSanPham" :key="i">
               <td class="text-center">
                 <img
-                  :src="sp.hinhAnh"
+                  :src="sp.hinhAnhUrl"
                   class="img-thumbnail"
-                  style="width: 70px; height: 70px; object-fit: cover;"
+                  style="width: 70px; height: 70px; object-fit: cover"
                 />
               </td>
               <td>{{ sp.tenSanPham }}</td>
@@ -449,7 +526,9 @@ const confirmChange = async (newStatus) => {
         <!-- Tổng tiền -->
         <div class="col-md-6">
           <div class="card p-3 text-end inner-card">
-            <p class="mb-1">Tổng tiền hàng: {{ hoaDon.tongTien.toLocaleString() }} ₫</p>
+            <p class="mb-1">
+              Tổng tiền hàng: {{ hoaDon.tongTien.toLocaleString() }} ₫
+            </p>
             <p class="mb-1">Phí vận chuyển: Miễn phí (0 ₫)</p>
             <h5 class="fw-bold text-danger mb-0">
               Tổng tiền: {{ hoaDon.tongTien.toLocaleString() }} ₫
@@ -461,22 +540,33 @@ const confirmChange = async (newStatus) => {
 
     <!-- Nút hành động -->
     <div class="d-flex justify-content-end gap-2">
-      <button class="btn btn-secondary" @click="router.push({ name: 'HoaDon' })">Hủy</button>
-      <button class="btn btn-warning text-white" @click="handleSave">💾 Lưu thay đổi</button>
+      <button
+        class="btn btn-secondary"
+        @click="router.push({ name: 'HoaDon' })"
+      >
+        Hủy
+      </button>
+      <button class="btn btn-warning text-white" @click="handleSave">
+        💾 Lưu thay đổi
+      </button>
     </div>
 
     <!-- Modal lịch sử -->
     <div
       class="modal fade show d-block"
       tabindex="-1"
-      style="background: rgba(0,0,0,0.4);"
+      style="background: rgba(0, 0, 0, 0.4)"
       v-if="showHistory"
     >
       <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content shadow-lg">
           <div class="modal-header">
             <h5 class="modal-title fw-bold">Lịch sử đơn hàng</h5>
-            <button type="button" class="btn-close" @click="showHistory = false"></button>
+            <button
+              type="button"
+              class="btn-close"
+              @click="showHistory = false"
+            ></button>
           </div>
           <div class="modal-body">
             <table class="table table-striped align-middle text-center">
@@ -494,16 +584,25 @@ const confirmChange = async (newStatus) => {
                 </tr>
                 <tr v-for="(item, i) in lichSuThayDoi" :key="i">
                   <td>{{ formatDateTime(item.thoiGian || item.ngayTao) }}</td>
-                  <td>{{ item.nguoiCapNhat || item.nguoiThucHien || '-' }}</td>
-                  <td>{{ TRANG_THAI_HOA_DON[item.trangThaiMoi] || item.tenTrangThai || item.trangThaiMoi || '-' }}</td>
-                  <td>{{ item.ghiChu || '-' }}</td>
+                  <td>{{ item.nguoiCapNhat || item.nguoiThucHien || "-" }}</td>
+                  <td>
+                    {{
+                      TRANG_THAI_HOA_DON[item.trangThaiMoi] ||
+                      item.tenTrangThai ||
+                      item.trangThaiMoi ||
+                      "-"
+                    }}
+                  </td>
+                  <td>{{ item.ghiChu || "-" }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
           <div class="modal-footer justify-content-center border-0">
-            <button class="btn btn-secondary px-5" @click="showHistory = false">OK</button>
+            <button class="btn btn-secondary px-5" @click="showHistory = false">
+              OK
+            </button>
           </div>
         </div>
       </div>
@@ -595,7 +694,7 @@ const confirmChange = async (newStatus) => {
   margin: 0 auto;
   position: relative;
   transition: all 0.25s ease;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 .timeline-circle .circle-number {
   font-weight: 700;
@@ -672,7 +771,4 @@ const confirmChange = async (newStatus) => {
 .timeline-step.canceled::after {
   background-color: #dc3545;
 }
-
 </style>
-
-

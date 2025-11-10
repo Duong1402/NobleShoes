@@ -26,6 +26,5 @@ public interface BanHangTaiQuayServiceImpl {
 
     void xoaSanPhamKhoiHoaDon(UUID idHoaDon, UUID idChiTietSanPham);
 
-    Optional<KhachHang> timKhachHangByHotenOrSdt(String keyword);
-
+    List<KhachHang> timKhachHangByHotenOrSdt(String keyword);
 }

@@ -33,7 +33,6 @@ const tabs = ref([
   { label: "Chờ thanh toán", value: 3 },
   { label: "Đang giao", value: 4 },
   { label: "Hoàn thành", value: 5 },
-  
 ]);
 const activeTab = ref("");
 const handleTabClick = (tab) => {
@@ -64,7 +63,6 @@ const TRANG_THAI_HOA_DON = {
   3: { text: "Chờ thanh toán", class: "bg-secondary" },
   4: { text: "Đang giao", class: "bg-primary" },
   5: { text: "Hoàn thành", class: "bg-success" },
-  
 };
 const LOAI_HOA_DON = ["Online", "Tại cửa hàng"];
 
@@ -101,14 +99,14 @@ const loadHoaDon = async (page = 0) => {
 
     // ✅ Cập nhật thông tin phân trang
     pagination.value.page = data.number ?? 0;
-    pagination.value.totalElements = data.totalElements ?? hoaDonList.value.length;
+    pagination.value.totalElements =
+      data.totalElements ?? hoaDonList.value.length;
 
     // ✅ Đảm bảo totalPages luôn >= 1
     let totalPages =
       data.totalPages ??
       Math.ceil(pagination.value.totalElements / pagination.value.size);
     pagination.value.totalPages = totalPages > 0 ? totalPages : 1;
-
   } catch (err) {
     console.error("❌ Lỗi khi tải danh sách hóa đơn:", err);
     notify.error("Tải dữ liệu hóa đơn thất bại!");
@@ -235,8 +233,10 @@ const handleScanQRCode = () => {
             qrbox: { width: 250, height: 250 },
           },
           (decodedText) => {
-            document.getElementById("qr-reader-results").innerText = `Kết quả: ${decodedText}`;
-            
+            document.getElementById(
+              "qr-reader-results"
+            ).innerText = `Kết quả: ${decodedText}`;
+
             // 👉 Ví dụ: nếu mã QR chứa mã hóa đơn
             Swal.fire({
               title: "Đã quét thành công!",
@@ -248,7 +248,9 @@ const handleScanQRCode = () => {
               // ví dụ: getHoaDonByMa(decodedText)
             });
 
-            html5QrCode.stop().catch((err) => console.error("Dừng camera lỗi:", err));
+            html5QrCode
+              .stop()
+              .catch((err) => console.error("Dừng camera lỗi:", err));
           },
           (errorMessage) => {
             // Bỏ qua lỗi khi chưa nhận dạng được
@@ -271,7 +273,6 @@ const handleScanQRCode = () => {
   });
 };
 
-
 const handleExportExcel = async () => {
   try {
     if (!hoaDonList.value || hoaDonList.value.length === 0) {
@@ -287,7 +288,7 @@ const handleExportExcel = async () => {
       "Ngày tạo",
       "Tổng tiền",
       "Loại đơn",
-      "Trạng thái"
+      "Trạng thái",
     ];
 
     const rows = hoaDonList.value.map((hd) => [
@@ -313,7 +314,6 @@ const handleExportExcel = async () => {
     notify.error("Xuất file Excel thất bại!");
   }
 };
-
 
 const handlePrintPDF = async (id) => {
   try {
@@ -405,7 +405,6 @@ const handlePrintPDF = async (id) => {
       </html>
     `);
 
-
     printWindow.document.close();
     printWindow.focus();
 
@@ -421,7 +420,7 @@ const handlePrintPDF = async (id) => {
 </script>
 
 <template>
-  <div class="container-fluid mt-4 px-5">
+  <div class="container-fluid mt-4 px-1">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
         <div
@@ -485,10 +484,20 @@ const handlePrintPDF = async (id) => {
             </p>
 
             <div class="d-flex align-items-center gap-2">
-              <button type="button" class="btn btn-success" @click="handleScanQRCode">
-                <i class="fa fa-qrcode me-1"></i> Quét Mã </button>
-              <button type="button" class="btn btn-primary" @click="handleExportExcel">
-                <i class="fa fa-file-excel me-1"></i> Xuất Excel</button>
+              <button
+                type="button"
+                class="btn btn-success"
+                @click="handleScanQRCode"
+              >
+                <i class="fa fa-qrcode me-1"></i> Quét Mã
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                @click="handleExportExcel"
+              >
+                <i class="fa fa-file-excel me-1"></i> Xuất Excel
+              </button>
               <button type="button" class="btn btn-dark" @click="handleReset">
                 Đặt lại bộ lọc
               </button>
@@ -521,7 +530,10 @@ const handlePrintPDF = async (id) => {
             </div>
             <div class="table-container">
               <div class="table-responsive">
-                <table id="hoa-don-table" class="table table-bordered align-middle text-center custom-table">
+                <table
+                  id="hoa-don-table"
+                  class="table table-bordered align-middle text-center custom-table"
+                >
                   <thead class="table-light">
                     <tr>
                       <th>STT</th>
@@ -539,13 +551,17 @@ const handlePrintPDF = async (id) => {
 
                   <tbody>
                     <tr v-for="(hd, index) in hoaDonList" :key="hd.id">
-                      <td>{{ pagination.page * pagination.size + index + 1 }}</td>
+                      <td>
+                        {{ pagination.page * pagination.size + index + 1 }}
+                      </td>
                       <td class="text-warning fw-bold">{{ hd.ma }}</td>
                       <td>{{ hd.tenKhachHang }}</td>
                       <td>{{ hd.sdt }}</td>
                       <td>{{ hd.tenNhanVien }}</td>
                       <td>{{ formatDate(hd.ngayTao) }}</td>
-                      <td class="text-danger fw-bold">{{ formatCurrency(hd.tongTien) }}</td>
+                      <td class="text-danger fw-bold">
+                        {{ formatCurrency(hd.tongTien) }}
+                      </td>
                       <td>{{ hd.loaiHoaDon }}</td>
                       <td>
                         <span
@@ -587,8 +603,6 @@ const handlePrintPDF = async (id) => {
               </div>
             </div>
 
-
-
             <!-- Phân trang -->
             <div class="pagination">
               <div class="pagination-left">
@@ -621,7 +635,9 @@ const handlePrintPDF = async (id) => {
 
                 <button
                   class="page-btn"
-                  :class="{ disabled: pagination.page + 1 === pagination.totalPages }"
+                  :class="{
+                    disabled: pagination.page + 1 === pagination.totalPages,
+                  }"
                   @click="handlePageChange(pagination.page + 1)"
                 >
                   ›
@@ -816,7 +832,6 @@ const handlePrintPDF = async (id) => {
   white-space: normal;
 }
 
-
 /* Giữ chiều cao hàng đồng đều, trông đẹp hơn */
 #hoa-don-table tr {
   height: 55px;
@@ -987,16 +1002,18 @@ const handlePrintPDF = async (id) => {
 
 /* Giảm cỡ chữ ở cột dễ tràn */
 .custom-table td:nth-child(3), /* Khách hàng */
-.custom-table td:nth-child(9) { /* Trạng thái */
+.custom-table td:nth-child(9) {
+  /* Trạng thái */
   font-size: 0.85rem;
 }
 
 /* 👇 Giảm riêng cỡ chữ ở cột SĐT và Ngày tạo */
 .custom-table td:nth-child(4), /* SĐT */
-.custom-table td:nth-child(6) { /* Ngày tạo */
-  font-size: 0.8rem;  /* nhỏ hơn để vừa cột */
+.custom-table td:nth-child(6) {
+  /* Ngày tạo */
+  font-size: 0.8rem; /* nhỏ hơn để vừa cột */
   white-space: nowrap;
-  width: 110px;       /* bạn có thể tăng thành 120px nếu thấy chật */
+  width: 110px; /* bạn có thể tăng thành 120px nếu thấy chật */
 }
 
 /* Badge nhỏ gọn hơn */
@@ -1005,9 +1022,6 @@ const handlePrintPDF = async (id) => {
   padding: 4px 8px;
   min-width: 70px;
 }
-
-
-
 
 /* Màu trạng thái giống giao diện Noble Shoes */
 .badge[data-status="Hoàn Thành"],
@@ -1019,5 +1033,4 @@ const handlePrintPDF = async (id) => {
 .badge.da-huy {
   background-color: #dc3545 !important;
 }
-
 </style>

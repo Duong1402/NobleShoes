@@ -43,11 +43,11 @@ public class PhieuGiamGiaCaNhan {
     @Column(name = "trang_thai")
     private Boolean trangThai; //0 la false, 1 la true
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_phieu_giam_gia")
     private PhieuGiamGia phieuGiamGia;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_khach_hang")
     private KhachHang khachHang;
 }

@@ -9,7 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @CrossOrigin(origins = "http://localhost:5173")
 @RestController
-@RequestMapping("/api/upload")
+@RequestMapping("/admin/upload")
 public class UploadNhanVienController {
 
     @Autowired
