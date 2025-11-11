@@ -1,5 +1,6 @@
 package com.example.datn.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -45,9 +46,11 @@ public class PhieuGiamGiaCaNhan {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_phieu_giam_gia")
+    @JsonIgnore
     private PhieuGiamGia phieuGiamGia;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_khach_hang")
+    @JsonIgnore
     private KhachHang khachHang;
 }

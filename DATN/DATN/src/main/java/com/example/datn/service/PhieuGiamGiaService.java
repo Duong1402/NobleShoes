@@ -9,7 +9,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,7 +19,7 @@ public class PhieuGiamGiaService {
 
 
     public Page<PhieuGiamGia> findAll(int page, int size, String sortBy) {
-        Pageable pageable = (Pageable) PageRequest.of(page, size, Sort.by(sortBy).ascending());
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).ascending());
         return repo.findAll(pageable);
     }
 

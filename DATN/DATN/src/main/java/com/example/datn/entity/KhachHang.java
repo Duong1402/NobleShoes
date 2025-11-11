@@ -81,4 +81,8 @@ public class KhachHang {
             this.trangThai = 1;
         }
     }
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_chuc_vu")
+    private ChucVu chucVu;
 }

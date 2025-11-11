@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface NhanVienRepository extends JpaRepository<NhanVien, UUID> {
@@ -27,4 +28,8 @@ public interface NhanVienRepository extends JpaRepository<NhanVien, UUID> {
 
     NhanVien findByTaiKhoan(String taiKhoan);
 
+    @Query(value = "SELECT TOP 1 ma FROM nhan_vien ORDER BY ma DESC", nativeQuery = true)
+    String findLatestMa();
+
+    Optional<NhanVien> findNhanVienByTaiKhoanAndMatKhau(String taiKhoan, String matKhau);
 }

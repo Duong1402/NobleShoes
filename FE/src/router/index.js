@@ -48,12 +48,16 @@ const listRouter = [
         name: "home",
         component: TrangChu,
         meta: { title: "Trang chủ" },
+        meta: { title: "Trang chủ" },
       },
+
+      // Sản phẩm
 
       // Sản phẩm
       {
         path: "san-pham",
         name: "SanPham",
+        component: SanPham,
         component: SanPham,
         meta: { title: "Sản phẩm" },
       },
@@ -111,7 +115,61 @@ const listRouter = [
 
       // Nhân viên
       {
+        path: "san-pham/them",
+        name: "SanPhamAdd",
+        component: SanPhamAdd,
+        meta: { title: "Thêm sản phẩm" },
+      },
+      {
+        path: "san-pham/chi-tiet/:id",
+        name: "ChiTietSanPham",
+        component: ChiTietSanPham,
+        props: true,
+        meta: { title: "Chi tiết sản phẩm" },
+      },
+
+      // Các loại khác
+      {
+        path: "xuat-xu",
+        name: "XuatXu",
+        component: XuatXu,
+        meta: { title: "Xuất Xứ" },
+      },
+      {
+        path: "danh-muc",
+        name: "DanhMuc",
+        component: DanhMuc,
+        meta: { title: "Danh Mục" },
+      },
+      {
+        path: "day-giay",
+        name: "DayGiay",
+        component: DayGiay,
+        meta: { title: "Dây Giầy" },
+      },
+      {
+        path: "de-giay",
+        name: "DeGiay",
+        component: DeGiay,
+        meta: { title: "Đế Giầy" },
+      },
+      {
+        path: "muc-dich-su-dung",
+        name: "MucDichSuDung",
+        component: MucDichSuDung,
+        meta: { title: "Mục đích sử dụng" },
+      },
+      {
+        path: "thuong-hieu",
+        name: "ThuongHieu",
+        component: ThuongHieu,
+        meta: { title: "Thương hiệu" },
+      },
+
+      // Nhân viên
+      {
         path: "nhan-vien",
+        name: "nhanVien",
         name: "nhanVien",
         component: NhanVien,
         meta: { title: "Nhân viên" },
@@ -119,7 +177,10 @@ const listRouter = [
       {
         path: "nhan-vien/them-nhan-vien",
         name: "nhanVienAdd",
+        path: "nhan-vien/them-nhan-vien",
+        name: "nhanVienAdd",
         component: NhanVienAdd,
+        meta: { title: "Thêm nhân viên", breadcrumbParent: "/admin/nhan-vien" },
         meta: { title: "Thêm nhân viên", breadcrumbParent: "/admin/nhan-vien" },
       },
       {
@@ -182,6 +243,10 @@ const listRouter = [
         name: "DotGiamGia",
         component: DotGiamGia,
         meta: { title: "Thêm đợt giảm giá" },
+        path: "dot-giam-gia",
+        name: "DotGiamGia",
+        component: DotGiamGia,
+        meta: { title: "Thêm đợt giảm giá" },
       },
       {
         path: "dot-giam-gia/add",
@@ -205,7 +270,7 @@ const listRouter = [
         path: "ban-hang",
         name: "BanHang",
         component: BanHangTaiQuay,
-        meta: {title: "Bán hàng tại quầy"}
+        meta: { title: "Bán hàng tại quầy" },
       },
     ],
   },
@@ -214,6 +279,7 @@ const listRouter = [
 
 const router = createRouter({
   history: createWebHistory(),
+  routes: listRouter,
   routes: listRouter,
 });
 

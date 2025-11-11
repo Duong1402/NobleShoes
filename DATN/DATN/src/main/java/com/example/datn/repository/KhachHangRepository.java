@@ -23,4 +23,6 @@ public interface KhachHangRepository extends JpaRepository<KhachHang, UUID> {
     @Query(value = "SELECT TOP 1 kh.ma FROM khach_hang kh WHERE kh.ma LIKE 'KH%' ORDER BY kh.ma DESC",
             nativeQuery = true)
     String findMaxMaKhachHang();
+
+    Optional<KhachHang> findByTaiKhoanAndMatKhau(String taiKhoan, String matKhau);
 }
