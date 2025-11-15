@@ -297,7 +297,7 @@ const confirmChange = async (newStatus) => {
       </div>
 
       <div class="text-start mt-3">
-        <button class="btn btn-outline-warning btn-sm" @click="showHistory = true">
+        <button class="btn btn-primary btn-sm" style="background-color:#4b8cf7; border-color:#4b8cf7;" @click="showHistory = true">
           Chi tiết lịch sử
         </button>
       </div>

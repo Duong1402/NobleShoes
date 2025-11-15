@@ -317,7 +317,6 @@ const handleExportExcel = async () => {
 
 const handlePrintPDF = async (id) => {
   try {
-    // Gọi API lấy thông tin hóa đơn theo id
     const res = await getHoaDonById(id);
     const hd = res.data;
 
@@ -326,14 +325,10 @@ const handlePrintPDF = async (id) => {
       return;
     }
 
-    // Tạo cửa sổ mới để in
-    const printWindow = window.open("", "_blank");
+    // ✅ Sinh QR base64
+    const qrUrl = await QRCode.toDataURL(hd.ma);
 
-    // Chuẩn bị nội dung HTML để in
-    // Sinh link mã QR từ mã hóa đơn
-    const qrUrl = `https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl=${encodeURIComponent(
-      hd.ma
-    )}&choe=UTF-8`;
+    const printWindow = window.open("", "_blank");
 
     printWindow.document.write(`
       <html>
@@ -405,11 +400,8 @@ const handlePrintPDF = async (id) => {
       </html>
     `);
 
-
     printWindow.document.close();
     printWindow.focus();
-
-    // Gọi hộp thoại in
     printWindow.print();
 
     notify.success("In hóa đơn thành công!");
