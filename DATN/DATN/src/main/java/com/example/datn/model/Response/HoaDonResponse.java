@@ -3,6 +3,7 @@ package com.example.datn.model.Response;
 import com.example.datn.entity.HoaDon;
 import lombok.Getter;
 import lombok.Setter;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -13,6 +14,7 @@ public class HoaDonResponse {
     private UUID id;
     private String ma;
     private String tenKhachHang;
+    private String sdt;
     private String tenNhanVien;
     private LocalDate ngayTao;
     private BigDecimal tongTien;
@@ -30,9 +32,9 @@ public class HoaDonResponse {
         } else {
             this.tenKhachHang = "Không có";
         }
+        this.sdt = hd.getSdt();
 
-
-        this.tenNhanVien = (hd.getNhanVien() != null) ? hd.getNhanVien().getHoTen() : "N/A";
+        this.tenNhanVien = (hd.getNhanVien() != null) ? hd.getNhanVien().getMa() : "N/A";
 
         this.ngayTao = hd.getNgayTao();
         this.tongTien = hd.getTongTien();
