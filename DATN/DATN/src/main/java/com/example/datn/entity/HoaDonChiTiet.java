@@ -1,6 +1,7 @@
 package com.example.datn.entity;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -37,4 +38,6 @@ public class HoaDonChiTiet {
 
     @Column(name = "trang_thai")
     private Integer trangThai;
+
+
 }

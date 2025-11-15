@@ -12,13 +12,16 @@ public class HoaDonChiTietResponse {
     private String tenSanPham;
     private Integer soLuong;
     private BigDecimal donGia;
-
+    private String mauSac;
+    private String size;
     private BigDecimal thanhTien;
 
     public HoaDonChiTietResponse(HoaDonChiTiet hdct) {
 
         this.tenSanPham = hdct.getChiTietSanPham().getSanPham().getTen();
         this.soLuong = hdct.getSoLuong();
+        this.mauSac = hdct.getChiTietSanPham().getMauSac().getTen();
+        this.size = hdct.getChiTietSanPham().getKichThuoc().getTen();
         this.donGia = hdct.getDonGia();
         this.thanhTien = hdct.getThanhTien();
     }
