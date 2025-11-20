@@ -51,6 +51,8 @@ const loadData = async (id) => {
 
   try {
     const historyRes = await getLichSuHoaDon(id);
+    console.log("JSON lịch sử từ API:", historyRes.data);
+
     lichSuThayDoi.value = historyRes.data || [];
   } catch (err) {
     console.warn("Không có lịch sử hoặc lỗi gọi lịch sử:", err);
@@ -484,7 +486,6 @@ const confirmChange = async (newStatus) => {
                 <tr>
                   <th>Thời gian</th>
                   <th>Người chỉnh sửa</th>
-                  <th>Trạng thái HĐ</th>
                   <th>Ghi chú</th>
                 </tr>
               </thead>
@@ -494,8 +495,7 @@ const confirmChange = async (newStatus) => {
                 </tr>
                 <tr v-for="(item, i) in lichSuThayDoi" :key="i">
                   <td>{{ formatDateTime(item.thoiGian || item.ngayTao) }}</td>
-                  <td>{{ item.nguoiCapNhat || item.nguoiThucHien || '-' }}</td>
-                  <td>{{ TRANG_THAI_HOA_DON[item.trangThaiMoi] || item.tenTrangThai || item.trangThaiMoi || '-' }}</td>
+                  <td>{{ item.nguoiThucHien || '-' }}</td>
                   <td>{{ item.ghiChu || '-' }}</td>
                 </tr>
               </tbody>

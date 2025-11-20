@@ -1,7 +1,10 @@
 package com.example.datn.repository;
 
 import com.example.datn.dto.ChiTietSanPhamDTO;
+import com.example.datn.dto.thongke.SanPhamSapHetHangDto;
 import com.example.datn.entity.ChiTietSanPham;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -36,4 +39,11 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
 
     @Query("SELECT COUNT(ct) FROM ChiTietSanPham ct WHERE ct.sanPham.id = :sanPhamId")
     int countBySanPhamId(UUID sanPhamId);
+
+    @Query("SELECT new com.example.datn.dto.thongke.SanPhamSapHetHangDto(" +
+            "COALESCE(sp.hinhAnh.urlAnh1, ''), sp.ten, ctsp.soLuongTon, ctsp.giaBan) " +
+            "FROM ChiTietSanPham ctsp JOIN ctsp.sanPham sp " +
+            "WHERE ctsp.soLuongTon < 10 " +
+            "ORDER BY ctsp.soLuongTon ASC")
+    Page<SanPhamSapHetHangDto> findSanPhamSapHetHang(Pageable pageable);
 }

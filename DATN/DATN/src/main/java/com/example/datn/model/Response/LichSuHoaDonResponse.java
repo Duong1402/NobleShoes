@@ -12,16 +12,11 @@ public class LichSuHoaDonResponse {
 
     private LocalDateTime thoiGian;
     private String nguoiChinhSua;
-    private String trangThaiText;
     private String ghiChu;
 
     public LichSuHoaDonResponse(LichSuHoaDon ls) {
         this.thoiGian = ls.getThoiGian();
         this.nguoiChinhSua = ls.getNguoiThucHien();
-
-        this.trangThaiText = ls.getGhiChu();
-
-
-        this.ghiChu = "";
+        this.ghiChu = ls.getGhiChu();
     }
 }
