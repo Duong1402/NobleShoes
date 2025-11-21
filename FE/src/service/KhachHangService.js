@@ -1,18 +1,18 @@
-// src/service/KhachHangService.js
 import axios from "axios";
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/admin",
-  withCredentials: false,
-});
+// Định nghĩa URL gốc
+const BASE_URL = "http://localhost:8080/admin/khach-hang";
 
-const RESOURCE = "/khach-hang";
+// Sử dụng trực tiếp 'axios' để tận dụng Interceptor đã config bên main.js
+export const getAllKhachHang = (params) => axios.get(BASE_URL, { params });
 
-export const getAllKhachHang = (params) => api.get(RESOURCE, { params });
-export const getKhachHangById = (id) => api.get(`${RESOURCE}/${id}`);
-export const createKhachHang = (data) => api.post(RESOURCE, data);
-export const updateKhachHang = (id, data) => api.put(`${RESOURCE}/${id}`, data);
-export const deleteKhachHang = (id) => api.delete(`${RESOURCE}/${id}`);
+export const getKhachHangById = (id) => axios.get(`${BASE_URL}/${id}`);
+
+export const createKhachHang = (data) => axios.post(BASE_URL, data);
+
+export const updateKhachHang = (id, data) => axios.put(`${BASE_URL}/${id}`, data);
+
+export const deleteKhachHang = (id) => axios.delete(`${BASE_URL}/${id}`);
 
 export default {
   getAllKhachHang,

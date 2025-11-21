@@ -24,7 +24,6 @@ import KhachHang from "@/view/khachHang/khachHang.vue";
 import KhachHangAdd from "@/view/khachHang/khachHangAdd.vue";
 import KhachHangDetail from "@/view/khachHang/khachHangDetail.vue";
 
-
 //Giảm Giá
 import PhieuGiamGia from "@/view/phieuGiamGia/phieuGiamGia.vue";
 import PhieuGiamGiaAdd from "@/view/phieuGiamGia/phieuGiamGiaAdd.vue";
@@ -37,8 +36,20 @@ import NhanVienDetail from "@/view/nhanVien/nhanVienDetail.vue";
 import TrangChu from "@/components/trangChu.vue";
 import QuanLyHoaDon from "@/view/hoaDon/QuanLyHoaDon.vue";
 import ChiTietHD from "@/view/hoaDon/ChiTietHD.vue";
+import Test from "@/viewOnlineShop/test.vue";
+import { useAuthStore } from "@/components/login/authStore";
 
 const listRouter = [
+  {
+    path: "/login-customer",
+    name: "loginCustomer",
+    component: () => import("@/components/login/customerLogin.vue"),
+  },
+  {
+    path: "/login-employee",
+    name: "loginEmployee",
+    component: () => import("@/components/login/employeeLogin.vue"),
+  },
   {
     path: "/admin",
     component: HeaderLayout,
@@ -153,7 +164,7 @@ const listRouter = [
         props: true,
         meta: { title: "Sửa khách hàng" },
       },
-
+      //Giảm Giá
       {
         path: "phieu-giam-gia",
         name: "PhieuGiamGia",
@@ -180,26 +191,112 @@ const listRouter = [
       },
 
       //Hóa Đơn
-            {
+      {
         path: "hoa-don",
         name: "HoaDon",
-        component: QuanLyHoaDon, 
+        component: QuanLyHoaDon,
         meta: { title: "Quản lý Hóa đơn" },
       },
       {
         path: "hoa-don/:id",
         name: "ChiTietHD",
         component: ChiTietHD,
-        meta: {title: "Chi tiết hóa đơn"}
-      }
+        meta: { title: "Chi tiết hóa đơn" },
+      },
     ],
+    meta: { requiresAuth: true, role: "EMPLOYEE" },
   },
   { path: "/", redirect: "/admin" },
+  {
+    path: "/customer",
+    component: Test,
+    meta: { requiresAuth: true, role: "CUSTOMER" },
+  },
 ];
 
 const router = createRouter({
   history: createWebHistory(),
   routes: listRouter,
+});
+
+// TRONG FILE: src/router/index.js
+
+router.beforeEach((to, from, next) => {
+    const authStore = useAuthStore();
+    const isAuthenticated = authStore.isLoggedIn;
+    const isEmployee = authStore.isEmployee; // Bao gồm cả ROLE_ADMIN và ROLE_EMPLOYEE
+    const isCustomer = authStore.isCustomer;
+
+    // Debug: Bật lên nếu cần theo dõi luồng chạy
+    // console.log(`Navigating: ${from.path} -> ${to.path} | Auth: ${isAuthenticated} | Role: ${authStore.userType}`);
+
+    // ============================================================
+    // 1. XỬ LÝ LOGIC "ĐĂNG NHẬP CHÉO" (CROSS-LOGIN)
+    // ============================================================
+    
+    // Trường hợp A: Đang là ADMIN mà vào trang Login KHÁCH HÀNG
+    if (to.path === '/login-customer' && isAuthenticated && isEmployee) {
+        console.log("🛑 Admin muốn đăng nhập Khách hàng -> Auto Logout Admin");
+        authStore.logout(); 
+        return next(); // Cho phép vào trang login-customer
+    }
+
+    // Trường hợp B: Đang là KHÁCH HÀNG mà vào trang Login ADMIN
+    // (Giả sử đường dẫn login nhân viên là /login-employee hoặc /admin/login)
+    if ((to.path === '/login-employee' || to.path === '/admin/login') && isAuthenticated && isCustomer) {
+        console.log("🛑 Khách hàng muốn vào trang Admin -> Auto Logout Khách hàng");
+        authStore.logout();
+        return next(); // Cho phép vào trang login-employee
+    }
+
+    // ============================================================
+    // 2. CHẶN NGƯỜI DÙNG ĐÃ ĐĂNG NHẬP QUAY LẠI TRANG LOGIN CỦA CHÍNH MÌNH
+    // ============================================================
+    
+    if (to.path === '/login-customer' && isAuthenticated && isCustomer) {
+        return next('/'); // Khách đã login thì về trang chủ
+    }
+    if ((to.path === '/login-employee' || to.path === '/admin/login') && isAuthenticated && isEmployee) {
+        return next('/admin'); // Nhân viên đã login thì về Dashboard
+    }
+
+    // ============================================================
+    // 3. KIỂM TRA YÊU CẦU ĐĂNG NHẬP (REQUIRES AUTH)
+    // ============================================================
+    
+    if (to.meta.requiresAuth && !isAuthenticated) {
+        // Thông minh: Nếu người dùng đang cố vào link /admin/* -> Đẩy về Login Nhân Viên
+        if (to.path.startsWith('/admin')) {
+            return next('/login-employee'); // Hoặc '/admin/login'
+        }
+        // Mặc định: Đẩy về Login Khách Hàng
+        return next('/login-customer');
+    }
+
+    // ============================================================
+    // 4. KIỂM TRA QUYỀN HẠN (ROLES)
+    // ============================================================
+    
+    if (to.meta.role) {
+        const requiredRole = to.meta.role;
+
+        // 4.1. Trang yêu cầu CUSTOMER -> Nhưng lại là Employee
+        if (requiredRole === 'CUSTOMER' && !isCustomer) {
+            // Chuyển hướng về Admin Dashboard
+            return next('/admin');
+        }
+
+        // 4.2. Trang yêu cầu ADMIN/EMPLOYEE -> Nhưng lại là Customer
+        if ((requiredRole === 'ADMIN' || requiredRole === 'EMPLOYEE') && !isEmployee) {
+            // Chuyển hướng về Trang chủ
+            return next('/');
+        }
+    }
+
+    // ============================================================
+    // 5. CHO PHÉP ĐI TIẾP
+    // ============================================================
+    next();
 });
 
 export default router;

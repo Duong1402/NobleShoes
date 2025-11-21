@@ -75,11 +75,11 @@ const addPhieuGiamGia = async () => {
       };
 
       // 3️⃣ Gửi dữ liệu cá nhân
-       res = await createPhieuGiamGiaCaNhan(payloadCaNhan);
+       res.value = await createPhieuGiamGiaCaNhan(payloadCaNhan);
        if (!res) throw new Error("Lỗi khi thêm đợt giảm giá cá nhân");
     } else {
       // 🔹 Nếu là phiếu chung
-      res = await createPhieuGiamGia(JSON.parse(JSON.stringify(payload)));
+      res.value = await createPhieuGiamGia(JSON.parse(JSON.stringify(payload)));
       if (!res) throw new Error("Lỗi khi thêm đợt giảm giá");
     }
 

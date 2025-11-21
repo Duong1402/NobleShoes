@@ -2,6 +2,12 @@
 import { RouterLink, RouterView } from "vue-router";
 import FooterLayout from "./footerLayout.vue";
 import Sidebar from "./sidebar.vue";
+import AuthService from "../login/loginService";
+
+const Logout = () => {
+  AuthService.logout();
+  window.location.reload();
+}
 </script>
 <template>
   <div class="wrapper">
@@ -260,7 +266,7 @@ import Sidebar from "./sidebar.vue";
                       <div class="dropdown-divider"></div>
                       <a class="dropdown-item" href="#">Account Setting</a>
                       <div class="dropdown-divider"></div>
-                      <a class="dropdown-item" href="#">Logout</a>
+                      <button @click="Logout()"><a class="dropdown-item">Logout</a></button>
                     </li>
                   </div>
                 </ul>
