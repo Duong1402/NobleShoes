@@ -6,7 +6,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -85,4 +87,8 @@ public class KhachHang {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_chuc_vu")
     private ChucVu chucVu;
+
+    @OneToMany(mappedBy = "khachHang", fetch = FetchType.LAZY,
+            cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    private List<DiaChi> danhSachDiaChi = new ArrayList<>();
 }

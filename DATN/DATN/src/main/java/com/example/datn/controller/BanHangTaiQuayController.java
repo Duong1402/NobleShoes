@@ -3,6 +3,7 @@ package com.example.datn.controller;
 import com.example.datn.entity.HoaDon;
 import com.example.datn.entity.HoaDonChiTiet;
 import com.example.datn.entity.KhachHang;
+import com.example.datn.model.request.ThanhToanRequest;
 import com.example.datn.service.BanHangTaiQuayService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -10,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -88,16 +88,23 @@ public class BanHangTaiQuayController {
     }
 
     // 5. Thanh toán
-    @PutMapping("/hoa-don/{idHoaDon}/thanh-toan/{idPhuongThucThanhToan}")
-    public ResponseEntity<HoaDon> thanhToan(
+    @PostMapping("/hoa-don/{idHoaDon}/thanh-toan")
+    public ResponseEntity<?> thanhToan(
             @PathVariable UUID idHoaDon,
-            @PathVariable UUID idPhuongThucThanhToan
+            @RequestBody ThanhToanRequest request
     ) {
-        HoaDon hoaDonDaThanhToan = banHangTaiQuayService.thanhToan(
-                idHoaDon,
-                idPhuongThucThanhToan
-        );
-        return ResponseEntity.ok(hoaDonDaThanhToan);
+        try {
+            // Gọi Service với tham số mới
+            HoaDon hoaDonDaThanhToan = banHangTaiQuayService.thanhToan(
+                    idHoaDon,
+                    request
+            );
+            return ResponseEntity.ok(hoaDonDaThanhToan);
+
+        } catch (Exception e) {
+            // Trả về lỗi để Frontend hiển thị notify.error
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     // 6. Lấy chi tiết hóa đơn

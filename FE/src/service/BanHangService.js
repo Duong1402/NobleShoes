@@ -31,9 +31,15 @@ export const apDungGiamGia = (idHoaDon, idPhieuGiamGia) => {
   );
 };
 
-export const thanhToan = (idHoaDon, idPhuongThucThanhToan) => {
-  return axios.put(
-    `${API_URL}/hoa-don/${idHoaDon}/thanh-toan/${idPhuongThucThanhToan}`
+export const thanhToan = (idHoaDon, requestData) => {
+  return axios.post(
+    `${API_URL}/hoa-don/${idHoaDon}/thanh-toan`, 
+    requestData, 
+    {
+      headers: {
+        "Content-Type": "application/json"
+      }
+    }
   );
 };
 

@@ -1,9 +1,6 @@
 package com.example.datn.service;
 
-import com.example.datn.entity.ChiTietSanPham;
-import com.example.datn.entity.DotGiamGia;
-import com.example.datn.entity.HoaDon;
-import com.example.datn.entity.HoaDonChiTiet;
+import com.example.datn.entity.*;
 import com.example.datn.model.Response.HoaDonChiTietResponse;
 import com.example.datn.model.Response.HoaDonDetailResponse;
 import com.example.datn.model.Response.HoaDonResponse;
@@ -11,6 +8,7 @@ import com.example.datn.model.request.HoaDonFilterRequest;
 import com.example.datn.model.request.UpdateHoaDonRequest;
 import com.example.datn.repository.HoaDonChiTietRepository;
 import com.example.datn.repository.HoaDonRepository;
+import com.example.datn.repository.LichSuHoaDonRepository;
 import com.example.datn.specification.HoaDonSpecification;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -21,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -30,6 +29,9 @@ public class HoaDonService {
 
     @Autowired
     private HoaDonRepository hoaDonRepository;
+
+    @Autowired
+    private LichSuHoaDonRepository lichSuHoaDonRepository;
 
     @Autowired
     private HoaDonChiTietRepository hoaDonChiTietRepository;
@@ -49,6 +51,13 @@ public class HoaDonService {
         HoaDon hoaDon = hoaDonRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn"));
 
+        if (hoaDon.getKhachHang() != null) {
+            List<DiaChi> lst = hoaDon.getKhachHang().getDanhSachDiaChi();
+
+            if (lst != null) {
+                lst.size();
+            }
+        }
 
         List<HoaDonChiTiet> chiTiets = hoaDonChiTietRepository.findAllByHoaDonId(id);
 
@@ -57,21 +66,44 @@ public class HoaDonService {
                 .map(HoaDonChiTietResponse::new)
                 .collect(Collectors.toList());
 
+        List<LichSuHoaDon> lichSu = lichSuHoaDonRepository.findAllByHoaDonIdOrderByThoiGianAsc(id);
 
-        return new HoaDonDetailResponse(hoaDon, chiTietResponses);
+
+        return new HoaDonDetailResponse(hoaDon, chiTietResponses, lichSu);
     }
 
     @Transactional
     public HoaDonResponse updateHoaDon(UUID id, UpdateHoaDonRequest request) {
 
+        String sdt = request.getSdt(); // Lấy SĐT từ DTO/Request
+        if (sdt != null && sdt.trim().isEmpty()) {
+            sdt = null; // Chuyển chuỗi rỗng ("   ") thành NULL
+        }
+
         HoaDon hoaDon = hoaDonRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn"));
 
+        String loaiHD = hoaDon.getLoaiHoaDon();
+
+        if (loaiHD != null && "online".equalsIgnoreCase(loaiHD.trim())) {
+            if (request.getDiaChiGiaoHang() == null || request.getDiaChiGiaoHang().trim().isEmpty()) {
+                throw new RuntimeException("Đơn hàng Online bắt buộc phải có địa chỉ giao hàng!");
+            }
+        }
+
         hoaDon.setTrangThai(request.getTrangThai());
-        hoaDon.setSdt(request.getSdt());
+        hoaDon.setSdt(sdt);
         hoaDon.setDiaChiGiaoHang(request.getDiaChiGiaoHang());
 
         HoaDon updatedHoaDon = hoaDonRepository.save(hoaDon);
+
+        LichSuHoaDon lichSu = new LichSuHoaDon();
+        lichSu.setHoaDon(updatedHoaDon);
+        lichSu.setThoiGian(LocalDateTime.now());
+        lichSu.setNguoiThucHien("admin"); // mặc định
+        lichSu.setGhiChu("Cập nhật hóa đơn");
+
+        lichSuHoaDonRepository.save(lichSu);
 
         return new HoaDonResponse(updatedHoaDon);
     }

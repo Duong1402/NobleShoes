@@ -15,9 +15,11 @@ import java.util.UUID;
 @Service
 public class KhachHangService {
     private final KhachHangRepository repo;
+    private final DiaChiService diaChiService;
 
-    public KhachHangService(KhachHangRepository repo) {
+    public KhachHangService(KhachHangRepository repo, DiaChiService diaChiService) {
         this.repo = repo;
+        this.diaChiService = diaChiService;
     }
 
     public Page<KhachHang> findAllPage(int page, int size, String sortBy) {
@@ -34,10 +36,37 @@ public class KhachHangService {
     }
 
     public KhachHang save(KhachHang obj) {
-        return repo.save(obj);
+        boolean isNew = obj.getId() == null;
+
+        if (isNew && (obj.getMa() == null || obj.getMa().trim().isEmpty())) {
+            obj.setMa(generateNewMa());
+        }
+
+        KhachHang savedKhachHang = repo.save(obj);
+        return savedKhachHang;
     }
 
     public void deleteById(UUID id) {
         repo.deleteById(id);
+    }
+
+    public String generateNewMa() {
+        String maxMa = repo.findMaxMaKhachHang();
+        int nextNumber = 1;
+
+        if (maxMa != null && maxMa.startsWith("KH")) {
+            try {
+                // Lấy phần số sau "KH"
+                String numberPart = maxMa.substring(2);
+                // Chuyển thành số và tăng lên 1
+                nextNumber = Integer.parseInt(numberPart) + 1;
+            } catch (NumberFormatException e) {
+                // Xử lý nếu mã không đúng định dạng (ví dụ: KHabc)
+                System.err.println("Lỗi parse mã Khách Hàng: " + maxMa);
+                nextNumber = 1; // Khởi tạo lại từ KH01 nếu lỗi
+            }
+        }
+        // Format lại thành chuỗi có 2 chữ số (KH01, KH02, KH10, KH100)
+        return String.format("KH%02d", nextNumber);
     }
 }

@@ -1,15 +1,16 @@
 package com.example.datn.service;
 
 import com.example.datn.entity.*;
+import com.example.datn.model.request.ThanhToanRequest;
 import com.example.datn.repository.*;
 import com.example.datn.service.impl.BanHangTaiQuayServiceImpl;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -24,6 +25,7 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
     private final KhachHangRepository khachHangRepository;
     private final PhieuGiamGiaRepository phieuGiamGiaRepository;
     private final NhanVienRepository nhanVienRepository;
+    private final LichSuHoaDonRepository lichSuHoaDonRepository;
 
     public enum trangThaiHoaDon {
         DA_HUY(0),
@@ -82,7 +84,6 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
             nv = nhanVienRepository.save(nv);
         }
 
-
 //        NhanVien nv = nhanVienRepository.findById(idNhanVien)
 //                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
 
@@ -93,7 +94,20 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
         hd.setTrangThai(trangThaiHoaDon.CHO_THANH_TOAN.getValue());
         hd.setNgayTao(LocalDate.now());
         hd.setTongTien(BigDecimal.ZERO);
-        return hoaDonRepository.save(hd);
+
+        HoaDon savedHoaDon = hoaDonRepository.save(hd);
+
+        // --- Ghi lịch sử ngay sau khi tạo hóa đơn ---
+        LichSuHoaDon lichSu = new LichSuHoaDon();
+        lichSu.setHoaDon(savedHoaDon);
+        lichSu.setThoiGian(LocalDateTime.now());
+        lichSu.setNguoiThucHien("admin"); // mặc định
+        lichSu.setGhiChu("Tạo hóa đơn mới");
+        lichSu.setTrangThaiMoi(savedHoaDon.getTrangThai());
+
+        lichSuHoaDonRepository.save(lichSu);
+
+        return savedHoaDon;
     }
 
     @Override
@@ -138,6 +152,9 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
         KhachHang kh = khachHangRepository.findById(idKhachHang)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng"));
         hd.setKhachHang(kh);
+
+        hd.setSdt(kh.getSdt());
+        hd.setTenKhachHang(kh.getHoTen());
         return hoaDonRepository.save(hd);
     }
 
@@ -157,30 +174,73 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
 
     @Override
     @Transactional
-    public HoaDon thanhToan(UUID idHoaDon, UUID idPhuongThucThanhToan) {
-        BigDecimal tongTienTinhToan = tinhTongTien(idHoaDon);
+    public HoaDon thanhToan(UUID idHoaDon, ThanhToanRequest request) { // 🔥 Nhận DTO
 
+        // 1. Tìm hóa đơn
         HoaDon hd = hoaDonRepository.findById(idHoaDon)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn"));
 
-        PhuongThucThanhToan pttt = phuongThucThanhToanRepository.findById(idPhuongThucThanhToan)
+        // 2. Tìm phương thức thanh toán (Lấy ID từ request)
+        PhuongThucThanhToan pttt = phuongThucThanhToanRepository.findById(request.getIdPhuongThucThanhToan())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phương thức thanh toán"));
 
-        // Tạo bản ghi hình thức thanh toán
+        // 3. Tính tiền hàng
+        BigDecimal tongTienHang = tinhTongTien(idHoaDon);
+        BigDecimal phiShip = BigDecimal.ZERO;
+
+        // === 🔥 LOGIC MỚI: CẬP NHẬT THÔNG TIN GIAO HÀNG ===
+        hd.setLoaiHoaDon(request.getLoaiHoaDon());
+
+        if ("Online".equalsIgnoreCase(request.getLoaiHoaDon())) {
+            // Lưu thông tin người nhận
+            hd.setTenKhachHang(request.getTenKhachHang());
+            hd.setSdt(request.getSdt());
+            hd.setDiaChiGiaoHang(request.getDiaChiGiaoHang());
+
+            // Xử lý phí ship (Nếu null thì coi như 0)
+            phiShip = request.getDiaChiGiaoHang() != null ? request.getPhiVanChuyen() : BigDecimal.ZERO;
+            hd.setPhiVanChuyen(phiShip);
+
+            // 💡 Logic trạng thái:
+            // Nếu giao hàng, thường trạng thái không phải là HOAN_THANH ngay
+            // mà là CHO_GIAO_HANG (tùy nghiệp vụ của bạn).
+            // Tạm thời mình để HOAN_THANH theo code cũ của bạn, nhưng bạn nên cân nhắc.
+            hd.setTrangThai(trangThaiHoaDon.HOAN_THANH.getValue());
+
+        } else {
+            // Nếu bán tại quầy, set phí ship về 0 và xóa thông tin người nhận (để sạch data)
+            hd.setPhiVanChuyen(BigDecimal.ZERO);
+            hd.setTenKhachHang(null); // Hoặc giữ nguyên tên khách mua
+            hd.setSdt(null);
+            hd.setTrangThai(trangThaiHoaDon.HOAN_THANH.getValue());
+        }
+
+        // 4. Tính lại tổng tiền thanh toán = Tiền Hàng + Ship - Giảm Giá (nếu có)
+        // Giả sử tongTienSauGiam hiện tại đang lưu (Tiền hàng - Voucher)
+        // Thì giờ phải cộng thêm Ship vào
+
+        // Cách an toàn: Tính lại từ đầu
+        // BigDecimal tongThanhToan = tongTienHang.add(phiShip).subtract(hd.getGiamGia() != null ? hd.getGiamGia() : BigDecimal.ZERO);
+
+        // Hoặc đơn giản theo code của bạn (nếu chưa có giảm giá phức tạp):
+        BigDecimal tongThanhToan = tongTienHang.add(phiShip);
+
+        hd.setTongTien(tongTienHang); // Tổng tiền hàng chưa ship
+        hd.setTongTienSauGiam(tongThanhToan); // Tổng phải trả cuối cùng
+
+        // 5. Tạo lịch sử thanh toán
         HinhThucThanhToan httt = new HinhThucThanhToan();
         httt.setHoaDon(hd);
         httt.setPhuongThucThanhToan(pttt);
-        httt.setSoTien(tongTienTinhToan);
+        httt.setSoTien(tongThanhToan); // 🔥 Lưu số tiền thực trả (gồm ship)
+        httt.setGhiChu(request.getLoaiHoaDon()); // Ghi chú là thanh toán Online hay Tại quầy
         hinhThucThanhToanRepository.save(httt);
 
-        // Cập nhật hóa đơn
-        hd.setTongTien(tongTienTinhToan);
-        hd.setTongTienSauGiam(tongTienTinhToan);
-        hd.setTrangThai(trangThaiHoaDon.HOAN_THANH.getValue());
+        // 6. Cập nhật thông tin chung
         hd.setNgaySua(LocalDate.now());
         hd.setNguoiSua("nhân viên quầy");
 
-        // Cập nhật trạng thái chi tiết
+        // 7. Cập nhật trạng thái chi tiết sản phẩm
         List<HoaDonChiTiet> list = hoaDonChiTietRepository.findAllByHoaDonId(idHoaDon);
         for (HoaDonChiTiet hdct : list) {
             hdct.setTrangThai(trangThaiHoaDonChiTiet.DA_THANH_TOAN.getValue());
@@ -259,16 +319,23 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
 
     @Transactional
     public KhachHang themKhachHangMoi(KhachHang khachHangMoi) {
+        String sdt = khachHangMoi.getSdt();
+        if (sdt != null) {
+            sdt = sdt.trim(); // Loại bỏ khoảng trắng
+        }
+
+        khachHangMoi.setSdt(sdt);
+
         if (khachHangMoi.getHoTen() == null || khachHangMoi.getHoTen().trim().isEmpty()) {
             throw new IllegalArgumentException("Tên khách hàng không được để trống.");
         }
 
-        if (khachHangMoi.getSdt() == null || khachHangMoi.getSdt().trim().isEmpty()) {
+        if (sdt == null || sdt.isEmpty()) {
             throw new IllegalArgumentException("SĐT khách hàng không được để trống.");
         }
 
         // 1. Kiểm tra SĐT đã tồn tại chưa
-        if (khachHangRepository.findBySdt(khachHangMoi.getSdt()).isPresent()) {
+        if (khachHangRepository.findBySdt(sdt).isPresent()) {
             throw new RuntimeException("Số điện thoại này đã được sử dụng!");
         }
 

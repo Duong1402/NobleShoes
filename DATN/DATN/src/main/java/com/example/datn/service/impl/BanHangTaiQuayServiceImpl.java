@@ -3,9 +3,9 @@ package com.example.datn.service.impl;
 import com.example.datn.entity.HoaDon;
 import com.example.datn.entity.HoaDonChiTiet;
 import com.example.datn.entity.KhachHang;
+import com.example.datn.model.request.ThanhToanRequest;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 public interface BanHangTaiQuayServiceImpl {
@@ -18,7 +18,7 @@ public interface BanHangTaiQuayServiceImpl {
 
     HoaDon apDungPhieuGiamGia(UUID idHoaDon, UUID idPhieuGiamGia);
 
-    HoaDon thanhToan(UUID idHoaDon, UUID idPhuongThucThanhToan);
+    HoaDon thanhToan(UUID idHoaDon, ThanhToanRequest request);
 
     List<HoaDonChiTiet> getChiTietHoaDon(UUID idHoaDon);
 

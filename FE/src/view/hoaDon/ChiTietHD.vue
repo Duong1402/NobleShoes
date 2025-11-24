@@ -43,9 +43,11 @@ const formatDateTime = (str) => {
 
 // Hàm load dữ liệu (hoaDon + lich su)
 const loadData = async (id) => {
+  // 1. Tải Hóa đơn
   try {
     const res = await getHoaDonById(id);
     hoaDon.value = res.data;
+    console.log("Response data received:", res.data);
     currentStep.value = Number(hoaDon.value.trangThai);
   } catch (err) {
     console.error("Lỗi load hoa don:", err);
@@ -53,119 +55,104 @@ const loadData = async (id) => {
     return;
   }
 
+  // 2. Tải Lịch sử (Dữ liệu này dùng để hiển thị trong Modal)
   try {
     const historyRes = await getLichSuHoaDon(id);
+    // Lịch sử được gán vào lichSuThayDoi.value
     lichSuThayDoi.value = historyRes.data || [];
+    // Log để kiểm tra dữ liệu
+    console.log("Lịch sử thay đổi:", lichSuThayDoi.value);
   } catch (err) {
     console.warn("Không có lịch sử hoặc lỗi gọi lịch sử:", err);
     lichSuThayDoi.value = [];
   }
 
-  // Xây lichSuHienThi
+  // 3. --- Xây dựng lichSuHienThi (Timeline) ---
+  const trangThaiHienTai = Number(hoaDon.value.trangThai);
+  const steps = [];
+
+  // Yêu cầu: Nếu trạng thái là 5 (Hoàn thành) HOẶC 0 (Đã hủy), chỉ hiển thị 1 bước duy nhất
+  if (trangThaiHienTai === 5 || trangThaiHienTai === 0) {
+    lichSuHienThi.value = [
+      {
+        id: trangThaiHienTai,
+        text: TRANG_THAI_HOA_DON[trangThaiHienTai],
+        thoiGian: hoaDon.value.ngayCapNhat || hoaDon.value.ngayTao,
+        isDone: trangThaiHienTai === 5,
+        isCanceled: trangThaiHienTai === 0,
+      },
+    ];
+    return;
+  }
+
+  // Trường hợp còn lại (1, 2, 3, 4): Xây dựng timeline dựa trên lịch sử (ưu tiên) hoặc trạng thái hiện tại
+
   if (lichSuThayDoi.value.length > 0) {
-    // Có lịch sử từ backend
-    lichSuHienThi.value = lichSuThayDoi.value.map((item, idx) => {
-      const text =
-        item.tenTrangThai ||
-        TRANG_THAI_HOA_DON[item.trangThaiMoi] ||
-        item.trangThaiMoi ||
-        `Bước ${idx + 1}`;
-      const thoiGian =
-        item.thoiGian || item.ngayTao || item.thoiGianCapNhat || null;
-      return {
-        id: idx + 1,
-        text,
-        thoiGian,
-        raw: item,
-        isCanceled: item.trangThaiMoi === 0,
-      };
+    const statusSet = new Set();
+    // ⚠️ Sửa: Sắp xếp theo THỜI GIAN, không phải trạng thái mới
+    const sortedHistory = [...lichSuThayDoi.value].sort((a, b) => {
+      // Giả sử item.thoiGian là timestamp/ISO string mà new Date() có thể so sánh
+      const timeA = new Date(a.thoiGian || a.ngayTao || 0);
+      const timeB = new Date(b.thoiGian || b.ngayTao || 0);
+      return timeA.getTime() - timeB.getTime();
     });
-  } else {
-    const steps = [];
 
-    // Nếu có lịch sử thay đổi trạng thái
-    if (lichSuThayDoi.value.length > 0) {
-      lichSuHienThi.value = lichSuThayDoi.value
-        .map((item, idx) => {
-          const text =
-            item.tenTrangThai ||
-            TRANG_THAI_HOA_DON[item.trangThaiMoi] ||
-            item.trangThaiMoi ||
-            `Bước ${idx + 1}`;
+    // Tạo một map để lưu thời gian của lần chuyển đổi cuối cùng cho mỗi trạng thái
+    const statusTimes = {};
+    sortedHistory.forEach((item) => {
+      const statusId = item.trangThaiMoi;
+      if (statusId >= 1 && statusId <= 5) {
+        const thoiGian =
+          item.thoiGianCapNhat || item.thoiGian || item.ngayTao || null;
+        // Chỉ lưu lần chuyển đổi cuối cùng đến trạng thái này
+        statusTimes[statusId] = thoiGian;
+      }
+    });
 
-          // Dùng thời gian thực tế ưu tiên theo thứ tự sau:
-          const thoiGian =
-            item.thoiGianCapNhat || item.thoiGian || item.ngayTao || null;
-
-          // Nếu trạng thái là "Hủy" thì chỉ hiển thị riêng bước hủy
-          if (item.trangThaiMoi === 0) {
-            return [
-              {
-                id: idx + 1,
-                text: TRANG_THAI_HOA_DON[0],
-                thoiGian,
-                isCanceled: true,
-              },
-            ];
-          }
-
-          return {
-            id: idx + 1,
-            text,
-            thoiGian,
-            isCanceled: false,
-            isDone: item.trangThaiMoi && item.trangThaiMoi !== 0,
-          };
-        })
-        .flat();
-
-      return;
-    }
-
-    // Nếu hóa đơn chưa có lịch sử (chưa đổi trạng thái)
-    if (hoaDon.value.trangThai === 0) {
-      // Trường hợp hóa đơn bị hủy, chỉ hiển thị 1 bước "Hủy"
-      lichSuHienThi.value = [
-        {
-          id: 1,
-          text: TRANG_THAI_HOA_DON[0],
-          thoiGian: hoaDon.value.thoiGianHuy || hoaDon.value.ngayTao,
-          isCanceled: true,
-        },
-      ];
-    } else {
-      // Hóa đơn bình thường, tạo các bước đến trạng thái hiện tại
-      const currentStep = Number(hoaDon.value.trangThai);
-
-      for (let s = 1; s <= currentStep; s++) {
-        // 🔥 Nếu có lịch sử, tìm thời gian tương ứng theo trạng thái
-        const lichSuStep = lichSuThayDoi.value.find(
-          (i) => i.trangThaiMoi === s
-        );
-
+    // Xây dựng steps từ 1 đến trạng thái hiện tại, lấy thời gian từ statusTimes
+    for (let s = 1; s <= 5; s++) {
+      // Lặp qua tất cả 5 bước chính
+      if (s <= trangThaiHienTai) {
+        // Chỉ thêm các bước <= trạng thái hiện tại
         steps.push({
           id: s,
           text: TRANG_THAI_HOA_DON[s],
-          thoiGian:
-            (lichSuStep &&
-              (lichSuStep.thoiGianCapNhat ||
-                lichSuStep.thoiGian ||
-                lichSuStep.ngayTao)) ||
-            hoaDon.value.ngayCapNhat ||
-            hoaDon.value.ngayTao,
-          isDone: s < currentStep,
+          thoiGian: statusTimes[s] || hoaDon.value.ngayTao, // Lấy thời gian từ lịch sử hoặc ngày tạo
+          isDone: s < trangThaiHienTai,
+          isCurrent: s === trangThaiHienTai,
+          isCanceled: false,
         });
       }
-
-      lichSuHienThi.value = steps;
     }
+
+    lichSuHienThi.value = steps;
+  } else {
+    // Không có lịch sử (Có thể là hóa đơn mới vừa tạo), tạo các bước từ 1 đến trạng thái hiện tại
+    const steps = [];
+    for (let s = 1; s <= trangThaiHienTai; s++) {
+      steps.push({
+        id: s,
+        text: TRANG_THAI_HOA_DON[s],
+        thoiGian: hoaDon.value.ngayCapNhat || hoaDon.value.ngayTao,
+        isDone: s < trangThaiHienTai,
+        isCurrent: s === trangThaiHienTai,
+        isCanceled: false,
+      });
+    }
+    lichSuHienThi.value = steps;
   }
 };
 
+console.log("📌 HoaDon:", hoaDon.value);
+console.log("📌 Chi tiết SP:", hoaDon.value?.chiTietSanPham);
+
 // load lần đầu
-onMounted(() => {
+onMounted(async () => {
   const id = route.params.id;
-  if (id) loadData(id);
+  if (id) {
+    await loadData(id);
+    console.log("🌟 HoaDon raw data:", hoaDon.value);
+  }
 });
 
 // reload khi route.params.id thay đổi (khi click view detail từ list)
@@ -248,7 +235,10 @@ const confirmChange = async (newStatus) => {
 
     if (result.isConfirmed) {
       try {
-        await updateHoaDon(hoaDon.value.id, { trangThai: newStatus });
+        await updateHoaDon(hoaDon.value.id, {
+          trangThai: newStatus,
+          ghiChu: "",
+        });
         notify.success("Cập nhật trạng thái thành công!");
         await loadData(hoaDon.value.id);
       } catch (err) {
@@ -333,6 +323,11 @@ const confirmChange = async (newStatus) => {
         <div class="col-md-6">
           <label>Tên nhân viên</label>
           <input class="form-control" v-model="hoaDon.tenNhanVien" disabled />
+        </div>
+
+        <div class="col-md-6">
+          <label>Số điện thoại</label>
+          <input class="form-control" v-model="hoaDon.sdt" disabled />
         </div>
 
         <div class="col-md-6">
@@ -457,18 +452,27 @@ const confirmChange = async (newStatus) => {
           </div>
         </div>
 
-        <div class="col-md-6">
-          <label>Số điện thoại</label>
-          <input class="form-control" v-model="hoaDon.sdt" />
-        </div>
+        <div class="col-12" v-if="hoaDon">
+          <div
+            v-if="
+              (hoaDon.loaiHoaDon &&
+                String(hoaDon.loaiHoaDon).toLowerCase() === 'online') ||
+              (hoaDon.diaChiGiaoHang && hoaDon.diaChiGiaoHang.length > 0)
+            "
+          >
+            <label class="form-label fw-bold">
+              <i class="fa-solid fa-truck-fast me-1 text-warning"></i> Địa chỉ
+              giao hàng
+            </label>
 
-        <div class="col-12">
-          <label>Địa chỉ giao hàng</label>
-          <textarea
-            class="form-control"
-            rows="2"
-            v-model="hoaDon.diaChiGiaoHang"
-          />
+            <textarea
+              class="form-control"
+              rows="3"
+              :value="hoaDon.diaChiGiaoHang || 'Chưa có địa chỉ giao hàng'"
+              readonly
+              style="background-color: #e9ecef; cursor: default; resize: none"
+            ></textarea>
+          </div>
         </div>
       </div>
     </div>

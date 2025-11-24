@@ -22,6 +22,7 @@
           >
             <h5 class="mb-0 card-title">
               <i class="fa-solid fa-list-ul me-1 text-warning"></i>Hóa đơn chờ
+              <span v-if="hoaDon && hoaDon.ma"> - {{ hoaDon.ma }}</span>
             </h5>
             <button
               class="btn btn-warning text-white btn-sm"
@@ -117,7 +118,9 @@
                 <li
                   class="list-group-item d-flex align-items-start py-2 px-1 border-0 mb-2 rounded shadow-sm bg-white"
                   v-for="(sp, index) in gioHang"
-                  :key="sp.id"
+                  :key="
+                    sp.id + '-' + (sp.mauSac || '') + '-' + (sp.kichThuoc || '')
+                  "
                 >
                   <div
                     class="me-2 pt-2 fw-semibold text-muted"
@@ -155,12 +158,66 @@
                         sp.kichThuoc || "N/A"
                       }}</span>
                     </div>
-                    <p class="mb-0 mt-1 small">
-                      Số lượng:
-                      <span class="fw-semibold text-dark fs-5">{{
-                        sp.soLuong
-                      }}</span>
-                    </p>
+
+                    <div class="d-flex align-items-center mt-2">
+                      <p
+                        class="mb-0 me-2 small fw-semibold"
+                        style="white-space: nowrap"
+                      >
+                        Số lượng:
+                      </p>
+
+                      <div
+                        class="input-group input-group-sm"
+                        style="width: 125px"
+                      >
+                        <button
+                          class="btn btn-outline-secondary py-0 px-1"
+                          type="button"
+                          @click.stop.prevent="
+                            handleCapNhatSoLuong(sp.id, sp.soLuong - 1)
+                          "
+                          :disabled="sp.soLuong <= 1"
+                        >
+                          <i
+                            class="fa-solid fa-minus"
+                            style="font-size: 0.7rem"
+                          ></i>
+                        </button>
+
+                        <input
+                          type="number"
+                          class="form-control text-center px-0 fw-bold"
+                          :value="sp.soLuong"
+                          min="1"
+                          style="
+                            width: 40px;
+                            max-width: 45px;
+                            font-size: 0.9rem;
+                            height: 28px;
+                          "
+                          @blur.stop.prevent="
+                            handleCapNhatSoLuong(sp.id, $event.target.value)
+                          "
+                          @keyup.enter.stop.prevent="
+                            handleCapNhatSoLuong(sp.id, $event.target.value)
+                          "
+                        />
+
+                        <button
+                          class="btn btn-outline-secondary py-0 px-1"
+                          type="button"
+                          @click.stop.prevent="
+                            handleCapNhatSoLuong(sp.id, sp.soLuong + 1)
+                          "
+                        >
+                          <i
+                            class="fa-solid fa-plus"
+                            style="font-size: 0.7rem"
+                          ></i>
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   <div
@@ -177,7 +234,7 @@
 
                     <button
                       class="btn btn-sm btn-outline-danger py-0 px-1"
-                      @click.stop="handleXoaSanPham(sp.id)"
+                      @click.stop.prevent="handleXoaSanPham(sp.id)"
                     >
                       <i class="fa-solid fa-trash"></i>
                     </button>
@@ -489,9 +546,143 @@
 
           <!-- card 5 -->
           <div class="card p-3 text-center flex-grow-1 big-card">
-            <h5 class="mb-3 text-start">
-              <i class="fa-solid fa-receipt me-2 text-warning"></i>Thông tin đơn
-            </h5>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="mb-0 text-start">
+                <i class="fa-solid fa-receipt me-2 text-warning"></i>Thông tin
+                đơn
+              </h5>
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="banGiaoHangToggle"
+                  v-model="isBanGiaoHang"
+                />
+                <label class="form-check-label fw-bold" for="banGiaoHangToggle"
+                  >Bán giao hàng</label
+                >
+              </div>
+            </div>
+
+            <div
+              v-if="isBanGiaoHang"
+              class="card p-3 mb-3 text-start border-warning"
+            >
+              <div
+                class="d-flex justify-content-between align-items-center mb-3"
+              >
+                <h5 class="fw-bold mb-0 text-dark">Thông tin người nhận</h5>
+                <button
+                  class="btn btn-sm btn-outline-warning"
+                  @click="handleOpenModalDiaChi"
+                >
+                  <i class="fa-solid fa-map-location-dot me-1"></i> Chọn địa chỉ
+                </button>
+              </div>
+
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="tenNguoiNhan" class="form-label text-start w-100"
+                    >Tên người nhận</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="tenNguoiNhan"
+                    v-model="thongTinNguoiNhan.hoTen"
+                    placeholder="Nhập tên..."
+                    disabled
+                  />
+                </div>
+
+                <div class="col-md-6">
+                  <label for="sdt" class="form-label text-start w-100"
+                    >Số điện thoại</label
+                  >
+                  <input
+                    type="tel"
+                    class="form-control"
+                    id="sdt"
+                    v-model="thongTinNguoiNhan.sdt"
+                    placeholder="Nhập SĐT..."
+                    disabled
+                  />
+                </div>
+
+                <div class="col-md-6">
+                  <label for="tinhThanh" class="form-label w-100 small fw-bold"
+                    >Tỉnh/Thành phố</label
+                  >
+                  <select
+                    class="form-select"
+                    v-model="provinceCode"
+                    @change="handleProvinceChange"
+                  >
+                    <option value="" disabled>Chọn Tỉnh/Thành</option>
+                    <option
+                      v-for="p in provinces"
+                      :key="p.code"
+                      :value="p.code"
+                    >
+                      {{ p.name }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="col-md-6">
+                  <label for="quanHuyen" class="form-label w-100 small fw-bold"
+                    >Quận/Huyện</label
+                  >
+                  <select
+                    class="form-select"
+                    v-model="districtCode"
+                    @change="handleDistrictChange"
+                    :disabled="!provinceCode"
+                  >
+                    <option value="" disabled>Chọn Quận/Huyện</option>
+                    <option
+                      v-for="d in districts"
+                      :key="d.code"
+                      :value="d.code"
+                    >
+                      {{ d.name }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="col-md-6">
+                  <label for="phuongXa" class="form-label w-100 small fw-bold"
+                    >Phường/Xã</label
+                  >
+                  <select
+                    class="form-select"
+                    v-model="wardCode"
+                    @change="handleWardChange"
+                    :disabled="!districtCode"
+                  >
+                    <option value="" disabled>Chọn Phường/Xã</option>
+                    <option v-for="w in wards" :key="w.code" :value="w.code">
+                      {{ w.name }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="col-12">
+                  <label
+                    for="diaChiCuThe"
+                    class="form-label w-100 small fw-bold"
+                    >Địa chỉ cụ thể</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="diaChiCuThe"
+                    v-model="thongTinNguoiNhan.diaChiCuThe"
+                    placeholder="Số nhà, ngõ, tên đường..."
+                  />
+                </div>
+              </div>
+            </div>
 
             <div class="border rounded p-2 bg-light-subtle mb-3">
               <div class="d-flex justify-content-between mb-1">
@@ -571,19 +762,80 @@
             <button
               class="btn btn-warning w-100 fw-bold"
               @click="handleThanhToan"
-              :disabled="!hoaDon"
+              :disabled="!hoaDon || isVnpayProcessing"
             >
-              Thanh toán
+              <span v-if="isVnpayProcessing">Đang tạo giao dịch VNPay...</span>
+              <span v-else>Thanh toán</span>
             </button>
           </div>
         </template>
       </div>
     </div>
   </div>
+  <div
+    v-if="showDiaChiModal"
+    class="modal d-block"
+    tabindex="-1"
+    style="background-color: rgba(0, 0, 0, 0.5)"
+  >
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-warning text-white">
+          <h5 class="modal-title fw-bold">Danh sách địa chỉ khách hàng</h5>
+          <button
+            type="button"
+            class="btn-close"
+            @click="showDiaChiModal = false"
+          ></button>
+        </div>
+
+        <div class="modal-body" style="max-height: 400px; overflow-y: auto">
+          <div v-if="hoaDon?.khachHang?.danhSachDiaChi?.length > 0">
+            <div class="list-group">
+              <button
+                v-for="dc in hoaDon.khachHang.danhSachDiaChi"
+                :key="dc.id"
+                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                @click="handleChonDiaChiTuModal(dc)"
+              >
+                <div class="text-start">
+                  <div class="fw-bold text-dark">
+                    <span v-if="dc.macDinh" class="badge bg-danger me-2"
+                      >Mặc định</span
+                    >
+                    {{ dc.diaChiCuThe }}
+                  </div>
+                  <small class="text-muted">
+                    {{ dc.xa }} - {{ dc.huyen }} - {{ dc.thanhPho }}
+                  </small>
+                </div>
+                <i class="fa-solid fa-chevron-right text-warning"></i>
+              </button>
+            </div>
+          </div>
+
+          <div v-else class="text-center py-4 text-muted">
+            <i class="fa-solid fa-box-open fs-1 mb-2"></i>
+            <p>Khách hàng này chưa có địa chỉ nào được lưu.</p>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="showDiaChiModal = false"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import Breadcrumb from "@/components/common/Breadcrumb.vue";
 import {
   taoHoaDon,
@@ -601,9 +853,8 @@ import {
 } from "@/service/BanHangService";
 import Swal from "sweetalert2";
 import { useNotify } from "@/composables/useNotify";
-import KhachHang from "../khachHang/khachHang.vue";
-import { useRoute } from "vue-router";
 import router from "@/router";
+import axios from "axios";
 
 const notify = useNotify();
 const idNhanVien = "02b6c170-6aa5-4cc7-8e52-abc123456789";
@@ -613,6 +864,8 @@ const hoaDonChoList = ref([]);
 const selectedHoaDonId = ref(null);
 const hoaDon = ref(null); // hóa đơn đang chọn
 const gioHang = ref([]);
+const savedList = localStorage.getItem("hoaDonChoList");
+const savedSelectedId = localStorage.getItem("selectedHoaDonId");
 
 const filterMauSac = ref("");
 const filterKichThuoc = ref("");
@@ -629,6 +882,17 @@ const danhSachSanPham = ref([]);
 
 const currentPage = ref(1);
 const itemsPerPage = 5; // Số phần tử mỗi trang
+
+const showDiaChiModal = ref(false);
+const isBanGiaoHang = ref(false); // Trạng thái của Toggle "Bán giao hàng"
+const thongTinNguoiNhan = ref({
+  hoTen: "",
+  sdt: "",
+  tinhThanh: "",
+  quanHuyen: "",
+  phuongXa: "",
+  diaChiCuThe: "",
+});
 
 const totalPages = computed(() => {
   return Math.ceil(filteredSanPham.value.length / itemsPerPage);
@@ -718,7 +982,13 @@ const filterSanPham = () => {
     const matchesXuatXu =
       !filterXuatXu.value || xx === filterXuatXu.value.toLowerCase();
 
-    return matchesSearch && matchesMauSac && matchesKichThuoc && matchesXuatXu;
+    return (
+      sp.soLuongTon > 0 &&
+      matchesSearch &&
+      matchesMauSac &&
+      matchesKichThuoc &&
+      matchesXuatXu
+    );
   });
 };
 
@@ -741,6 +1011,17 @@ async function handleTaoHoaDon() {
     hoaDon.value = newHoaDon;
     gioHang.value = [];
     tongTienHang.value = 0;
+
+    thongTinNguoiNhan.value = {
+      hoTen: "",
+      sdt: "",
+      tinhThanh: "",
+      quanHuyen: "",
+      phuongXa: "",
+      diaChiCuThe: "",
+    };
+    isBanGiaoHang.value = false;
+
     notify.success("Tạo hóa đơn mới thành công!");
   } catch (err) {
     console.error(err);
@@ -749,20 +1030,37 @@ async function handleTaoHoaDon() {
 }
 
 // chọn hóa đơn
+// Tìm đến hàm selectHoaDon và sửa lại:
 const selectHoaDon = (id) => {
   selectedHoaDonId.value = id;
   hoaDon.value = hoaDonChoList.value.find((h) => h.id === id) || null;
   gioHang.value = hoaDon.value?.sanPhamList || [];
   tongTienHang.value = gioHang.value.reduce((sum, sp) => sum + sp.thanhTien, 0);
 
-  // LOGIC MỚI: Kiểm tra Khách hàng mặc định
   const currentKhachHang = hoaDon.value?.khachHang;
+
+  // Logic hiển thị nút sửa khách lẻ
   isGuestEditable.value =
     !currentKhachHang ||
     currentKhachHang.id === khachLeMacDinh.id ||
-    currentKhachHang.ma === khachLeMacDinh.ma; // Giả sử mã KHÁCH LẺ là "KHACHLE"
-  searchKeyword.value = hoaDon.value?.khachHang?.sdt || ""; // Set SĐT hiện tại vào ô tìm kiếm
-  showAddGuestButton.value = false; // Mặc định ẩn
+    currentKhachHang.ma === khachLeMacDinh.ma;
+
+  searchKeyword.value = hoaDon.value?.khachHang?.sdt || "";
+  showAddGuestButton.value = false;
+
+  // === 🔥 CODE THÊM MỚI: RESET FORM GIAO HÀNG THEO HÓA ĐƠN ===
+  if (currentKhachHang && currentKhachHang.id !== KHACH_LE_ID) {
+    // Nếu là khách quen, điền thông tin vào form giao hàng
+    thongTinNguoiNhan.value = {
+      ...thongTinNguoiNhan.value, // Giữ lại các trường địa chỉ nếu muốn
+      hoTen: currentKhachHang.hoTen,
+      sdt: currentKhachHang.sdt,
+    };
+  } else {
+    // Nếu là khách lẻ hoặc hóa đơn mới, reset trắng hoặc để trống
+    thongTinNguoiNhan.value.hoTen = "";
+    thongTinNguoiNhan.value.sdt = "";
+  }
 };
 
 const KHACH_LE_ID = 1;
@@ -818,20 +1116,179 @@ const handleTimKhachHang = async () => {
   }
 };
 
+// --- 1. Khai báo State cho Địa chỉ ---
+const provinces = ref([]); // Danh sách toàn bộ Tỉnh/Thành
+const provinceCode = ref("");
+const districtCode = ref("");
+const wardCode = ref("");
+
+// --- 2. Computed để lọc Huyện/Xã theo cấp cha ---
+const districts = computed(() => {
+  if (!provinceCode.value) return [];
+  const foundProvince = provinces.value.find(
+    (p) => p.code == provinceCode.value
+  );
+  return foundProvince ? foundProvince.districts : [];
+});
+
+const wards = computed(() => {
+  if (!districtCode.value) return [];
+  const foundDistrict = districts.value.find(
+    (d) => d.code == districtCode.value
+  );
+  return foundDistrict ? foundDistrict.wards : [];
+});
+
+// --- 3. Load dữ liệu API (Chạy khi mount) ---
+onMounted(async () => {
+  try {
+    // Gọi API độ sâu 3 để lấy full cây Tỉnh -> Huyện -> Xã
+    const res = await axios.get("https://provinces.open-api.vn/api/?depth=3");
+    provinces.value = res.data;
+  } catch (error) {
+    console.error("Lỗi load tỉnh thành:", error);
+  }
+});
+
+// --- 4. Hàm xử lý khi chọn Dropdown ---
+
+// Khi chọn Tỉnh: Gán tên vào thongTinNguoiNhan, reset Huyện/Xã
+const handleProvinceChange = () => {
+  const prov = provinces.value.find((p) => p.code == provinceCode.value);
+  if (prov) {
+    thongTinNguoiNhan.value.tinhThanh = prov.name;
+  } else {
+    thongTinNguoiNhan.value.tinhThanh = "";
+  }
+  // Reset cấp dưới
+  districtCode.value = "";
+  wardCode.value = "";
+  thongTinNguoiNhan.value.quanHuyen = "";
+  thongTinNguoiNhan.value.phuongXa = "";
+};
+
+// Khi chọn Huyện
+const handleDistrictChange = () => {
+  const dist = districts.value.find((d) => d.code == districtCode.value);
+  if (dist) {
+    thongTinNguoiNhan.value.quanHuyen = dist.name;
+  } else {
+    thongTinNguoiNhan.value.quanHuyen = "";
+  }
+  // Reset cấp dưới
+  wardCode.value = "";
+  thongTinNguoiNhan.value.phuongXa = "";
+};
+
+// Khi chọn Xã
+const handleWardChange = () => {
+  const wd = wards.value.find((w) => w.code == wardCode.value);
+  if (wd) {
+    thongTinNguoiNhan.value.phuongXa = wd.name;
+  } else {
+    thongTinNguoiNhan.value.phuongXa = "";
+  }
+};
+
+// --- 5. Hàm tiện ích: Tìm Mã từ Tên (Dùng để map dữ liệu khách hàng vào Select) ---
+// Hàm này quan trọng để khi bạn chọn khách hàng, Select box tự nhảy đúng giá trị
+const syncAddressToSelects = () => {
+  // 1. Tìm Tỉnh
+  const foundProv = provinces.value.find(
+    (p) => p.name === thongTinNguoiNhan.value.tinhThanh
+  );
+  if (foundProv) {
+    provinceCode.value = foundProv.code;
+
+    // 2. Tìm Huyện (trong tỉnh đó)
+    const foundDist = foundProv.districts.find(
+      (d) => d.name === thongTinNguoiNhan.value.quanHuyen
+    );
+    if (foundDist) {
+      districtCode.value = foundDist.code;
+
+      // 3. Tìm Xã (trong huyện đó)
+      const foundWard = foundDist.wards.find(
+        (w) => w.name === thongTinNguoiNhan.value.phuongXa
+      );
+      if (foundWard) {
+        wardCode.value = foundWard.code;
+      } else {
+        wardCode.value = "";
+      }
+    } else {
+      districtCode.value = "";
+      wardCode.value = "";
+    }
+  } else {
+    provinceCode.value = "";
+    districtCode.value = "";
+    wardCode.value = "";
+  }
+};
+
 const assignKhachHang = async (khachHang) => {
   try {
-    // 1. Gán Khách hàng mới vào hóa đơn trên BE
+    console.log("Dữ liệu khách hàng nhận được:", khachHang);
+
+    // Gọi API cập nhật khách cho hóa đơn
     await capNhatKhachHang(hoaDon.value.id, khachHang.id);
 
-    // 2. Cập nhật trạng thái FE
+    // Cập nhật UI phần khách hàng
     hoaDon.value.khachHang = khachHang;
-    isGuestEditable.value = false; // Khóa input khi đã gán KH đăng ký
-    searchResults.value = []; // Xóa danh sách kết quả
-    searchKeyword.value = khachHang.hoTen; // Cập nhật SĐT vào ô tìm kiếm
-    notify.success("Cập nhật Khách hàng thành công!");
+    isGuestEditable.value = false;
+    searchResults.value = [];
+    searchKeyword.value = khachHang.hoTen;
+
+    // === 🔥 BẮT ĐẦU ĐIỀN FORM GIAO HÀNG ===
+
+    // 1. Điền Tên và SĐT
+    thongTinNguoiNhan.value.hoTen = khachHang.hoTen || "";
+    thongTinNguoiNhan.value.sdt = khachHang.sdt || "";
+
+    // 2. Tìm danh sách địa chỉ
+    // 🔴 SỬA LẠI DÒNG NÀY: Thêm 'danhSachDiaChi' vào đầu tiên
+    const listDiaChi = khachHang.danhSachDiaChi || khachHang.listDiaChi || [];
+
+    console.log("Danh sách địa chỉ tìm thấy:", listDiaChi);
+
+    if (listDiaChi.length > 0) {
+      // 🟢 KHAI BÁO BIẾN diaChiChon Ở ĐÂY (Bên trong IF)
+      const diaChiChon = listDiaChi.find((d) => d.macDinh) || listDiaChi[0];
+
+      console.log("Địa chỉ được chọn:", diaChiChon);
+
+      // C. Điền thông tin địa chỉ vào biến Text (Data Binding)
+      // Lưu ý: Kiểm tra kỹ tên trường API trả về (thanhPho hay tinhThanh, huyen hay quanHuyen...)
+      thongTinNguoiNhan.value.tinhThanh =
+        diaChiChon.thanhPho || diaChiChon.tinhThanh || "";
+      thongTinNguoiNhan.value.quanHuyen =
+        diaChiChon.huyen || diaChiChon.quanHuyen || "";
+      thongTinNguoiNhan.value.phuongXa =
+        diaChiChon.xa || diaChiChon.phuongXa || "";
+      thongTinNguoiNhan.value.diaChiCuThe = diaChiChon.diaChiCuThe || "";
+
+      // D. 🔥 QUAN TRỌNG: Đồng bộ từ Text sang Select Box
+      // Cần setTimeout để chờ Vue cập nhật giá trị text xong thì mới map sang Code
+      setTimeout(() => {
+        syncAddressToSelects();
+      }, 100);
+    } else {
+      // Nếu không có địa chỉ nào, reset form
+      thongTinNguoiNhan.value.tinhThanh = "";
+      thongTinNguoiNhan.value.quanHuyen = "";
+      thongTinNguoiNhan.value.phuongXa = "";
+      thongTinNguoiNhan.value.diaChiCuThe = "";
+
+      provinceCode.value = "";
+      districtCode.value = "";
+      wardCode.value = "";
+    }
+
+    notify.success("Đã cập nhật thông tin khách hàng!");
   } catch (error) {
-    console.error("Lỗi khi gán Khách hàng cho hóa đơn:", error);
-    notify.error("Không thể gán Khách hàng này cho Hóa đơn.");
+    console.error("Lỗi assignKhachHang:", error);
+    notify.error("Lỗi khi chọn khách hàng!");
   }
 };
 
@@ -843,71 +1300,148 @@ const handleSelectKhachHang = (khachHang) => {
 
 // Hàm THÊM NHANH KHÁCH HÀNG MỚI
 const handleThemNhanhKhachHang = async () => {
-  const { value: newSdt } = await Swal.fire({
-    title: "SĐT Khách hàng mới",
-    input: "text",
-    inputLabel: "Nhập Số điện thoại Khách hàng (bắt buộc)",
-    inputPlaceholder: "Ví dụ: 0987654321",
+  await Swal.fire({
+    title: `<span style="font-weight: bold; font-size: 1.3rem;">Thêm khách hàng mới</span>`,
+    html: `
+
+      <style>
+        #swalHoTen, #swalSdt {
+          text-align: left !important;
+          border: 1px solid #ffc107 !important;
+        }
+        #swalHoTen:focus, #swalSdt:focus {
+          border-color: #ffca2c !important;
+          box-shadow: 0 0 3px #ffe082 !important;
+        }
+        .error-text {
+          color: red;
+          font-size: 0.8rem;
+          margin-top: 4px;
+          min-height: 16px;
+        }
+      </style>
+
+      <div style="display: flex; gap: 16px; width: 100%;">
+        <div style="flex: 1; display: flex; flex-direction: column; text-align: left;">
+          <label for="swalHoTen" style="font-weight: bold; margin-bottom: 6px;">Tên khách hàng *</label>
+          <input id="swalHoTen" class="swal2-input" placeholder="Tên khách hàng" style="margin:0;">
+          <small id="errHoTen" class="error-text"></small>
+        </div>
+
+        <div style="flex: 1; display: flex; flex-direction: column; text-align: left;">
+          <label for="swalSdt" style="font-weight: bold; margin-bottom: 6px;">Số điện thoại *</label>
+          <input id="swalSdt" class="swal2-input" placeholder="Sđt khách hàng" style="margin:0;">
+          <small id="errSdt" class="error-text"></small>
+        </div>
+      </div>
+    `,
     showCancelButton: true,
-    inputValidator: (value) => {
-      if (!value || value.trim().length < 10 || value.trim().length > 10) {
-        // Có thể thêm validation SĐT
-        return "SĐT không hợp lệ!";
+    confirmButtonText: "Thêm mới",
+    confirmButtonColor: "#ffc107",
+    width: "620px",
+
+    // ===========================
+    // 🔥 CHỈ SỬA ĐOẠN NÀY
+    // ===========================
+    preConfirm: async () => {
+      const hoTen = document.getElementById("swalHoTen").value.trim();
+      const sdt = document.getElementById("swalSdt").value.trim();
+
+      const errHoTen = document.getElementById("errHoTen");
+      const errSdt = document.getElementById("errSdt");
+
+      errHoTen.innerText = "";
+      errSdt.innerText = "";
+
+      let hasError = false;
+
+      // --- FE validate ---
+      if (!hoTen) {
+        errHoTen.innerText = "Vui lòng nhập tên khách hàng.";
+        hasError = true;
+      }
+
+      if (!sdt) {
+        errSdt.innerText = "Vui lòng nhập số điện thoại.";
+        hasError = true;
+      } else if (sdt.length !== 10 || !/^\d+$/.test(sdt)) {
+        errSdt.innerText = "Số điện thoại phải gồm 10 số.";
+        hasError = true;
+      }
+
+      if (hasError) return false;
+
+      // --- Gọi API trong preConfirm ---
+      try {
+        const res = await themKhachHangMoi({ hoTen, sdt });
+
+        const newKH = res.data;
+
+        await capNhatKhachHang(hoaDon.value.id, newKH.id);
+        hoaDon.value.khachHang = newKH;
+
+        notify.success("Thêm mới và gán Khách hàng thành công!");
+
+        return true; // Đóng popup
+      } catch (error) {
+        console.error("Lỗi thêm nhanh KH:", error);
+
+        const errors = error.response?.data?.errors;
+
+        // --- Lỗi BE từng trường ---
+        if (errors) {
+          if (errors.hoTen) errHoTen.innerText = errors.hoTen;
+          if (errors.sdt) errSdt.innerText = errors.sdt;
+        } else {
+          // --- Lỗi 400 nhưng không có errors ---
+          errHoTen.innerText = error.response?.data || "Lỗi hệ thống!";
+        }
+
+        return false; // Giữ popup lại, KHÔNG đóng
       }
     },
   });
-  if (!newSdt) return;
-  const { value: hoTen } = await Swal.fire({
-    title: "Tên Khách hàng mới",
-    input: "text",
-    inputLabel: `Nhập Tên Khách hàng (SĐT: ${newSdt})`,
-    inputValue: "",
-    showCancelButton: true,
-    inputValidator: (value) => {
-      if (!value || value.trim() === "") {
-        return "Bạn cần nhập tên!";
-      }
-    },
-  });
-  if (hoTen) {
-    try {
-      // Chuẩn bị dữ liệu gửi lên (Sử dụng hoTen thay vì ten)
-      const newKhachHangData = { hoTen: hoTen.trim(), sdt: newSdt.trim() };
-
-      const res = await themKhachHangMoi(newKhachHangData); // Gọi API thêm mới
-
-      if (!res.data) {
-        throw new Error("API thêm mới không trả về dữ liệu Khách hàng.");
-      }
-
-      const newKhachHang = res.data;
-
-      // 3. Gán Khách hàng mới vào hóa đơn (CHỈ TRUYỀN ID)
-      await capNhatKhachHang(hoaDon.value.id, newKhachHang.id);
-
-      // 4. Bind dữ liệu về 2 ô input (Đã đúng)
-      hoaDon.value.khachHang = newKhachHang;
-
-      // Xóa nội dung ô tìm kiếm sau khi thêm thành công (tùy chọn)
-      isGuestEditable.value = false;
-      searchKeyword.value = "";
-      showAddGuestButton.value = false;
-      notify.success("Thêm mới và gán Khách hàng thành công!");
-    } catch (err) {
-      console.error("Lỗi thêm nhanh KH:", err);
-      let errorMessage = "Không thể thêm Khách hàng mới!";
-      if (err.response) {
-        console.error("Lỗi Response Data:", err.response.data);
-        errorMessage =
-          err.response.data || err.response.statusText || errorMessage;
-      }
-      notify.error(errorMessage);
-    }
-  }
 };
+
+if (savedList) {
+  try {
+    hoaDonChoList.value = JSON.parse(savedList) || [];
+  } catch (e) {
+    hoaDonChoList.value = [];
+  }
+}
+
+if (savedSelectedId) {
+  selectedHoaDonId.value = savedSelectedId;
+
+  const hd = hoaDonChoList.value.find((h) => h.id === savedSelectedId);
+  if (hd) {
+    hoaDon.value = hd;
+    gioHang.value = Array.isArray(hd.sanPhamList) ? hd.sanPhamList : [];
+  } else {
+    hoaDon.value = null;
+    gioHang.value = [];
+  }
+}
+
+watch(
+  hoaDonChoList,
+  (newValue) => {
+    localStorage.setItem("hoaDonChoList", JSON.stringify(newValue || []));
+  },
+  { deep: true }
+);
+
+watch(selectedHoaDonId, (newValue) => {
+  if (newValue) localStorage.setItem("selectedHoaDonId", newValue);
+  else localStorage.removeItem("selectedHoaDonId");
+});
 
 // hủy hóa đơn
 const handleHuyHoaDon = async (id) => {
+  localStorage.setItem("hoaDonChoList", JSON.stringify(hoaDonChoList.value));
+  localStorage.setItem("selectedHoaDonId", selectedHoaDonId.value);
+
   const confirm = await Swal.fire({
     title: "Hủy hóa đơn này?",
     text: "Sau khi hủy, hóa đơn sẽ không còn trong danh sách chờ.",
@@ -942,6 +1476,7 @@ const handleThemSanPham = async (sp) => {
     const chiTietHDMoi = res.data;
     const chiTietGioHang = {
       ...chiTietHDMoi,
+      idChiTietSP: sp.id,
       tenSanPham: sp.tenSanPham,
       mauSac: sp.mauSac,
       kichThuoc: sp.kichThuoc,
@@ -974,7 +1509,165 @@ const handleThemSanPham = async (sp) => {
 
     notify.success("Đã thêm sản phẩm!");
   } catch (err) {
-    notify.error("Không thể thêm sản phẩm!");
+    // Kiểm tra nếu BE trả về thông báo cụ thể
+    const msg =
+      err.response?.data?.message || // nếu BE có gửi message field
+      err.response?.data || // nếu BE trả thẳng message string
+      "Không thể thêm sản phẩm!";
+
+    if (msg.includes("Số lượng tồn không đủ")) {
+      notify.warning(msg);
+    } else {
+      notify.error(msg);
+    }
+  }
+};
+
+// API CẬP NHẬT SỐ LƯỢNG SẢN PHẨM TRONG HÓA ĐƠN
+const handleCapNhatSoLuong = async (idChiTietHoaDon, newSoLuongRaw) => {
+  if (!hoaDon.value) return notify.warning("Chưa chọn hóa đơn!");
+
+  // 1. Chuẩn hóa đầu vào
+  let newSoLuong = parseInt(newSoLuongRaw, 10);
+  if (isNaN(newSoLuong) || newSoLuong < 1) {
+    newSoLuong = 1; // Đảm bảo số lượng luôn >= 1
+  }
+
+  // 2. Tìm sản phẩm trong giỏ hàng và xác định Delta
+  const spGioHangIndex = gioHang.value.findIndex(
+    (item) => item.id === idChiTietHoaDon
+  );
+  if (spGioHangIndex === -1)
+    return notify.error("Sản phẩm không có trong giỏ hàng!");
+
+  const currentSp = gioHang.value[spGioHangIndex];
+  const oldSoLuong = currentSp.soLuong;
+
+  // 🔥 TÍNH TOÁN SỐ LƯỢNG CẦN THAY ĐỔI (DELTA)
+  const soLuongThayDoi = newSoLuong - oldSoLuong;
+
+  if (soLuongThayDoi === 0) {
+    return; // Không làm gì nếu số lượng không đổi
+  }
+
+  // Lấy ID chi tiết sản phẩm (ID trong kho) - dùng để gọi API
+  const idChiTietSanPhamKho = currentSp.idChiTietSP;
+
+  if (!idChiTietSanPhamKho) {
+    return notify.error("Thiếu ID chi tiết sản phẩm để cập nhật!");
+  }
+
+  // 🔥 CẬP NHẬT TẠM THỜI TRÊN FE TRƯỚC (Optimistic Update)
+  // Điều này giúp giao diện phản hồi nhanh và giảm khả năng xung đột sự kiện
+  const tempUpdatedSp = {
+    ...currentSp,
+    soLuong: newSoLuong,
+    // Cập nhật tạm thời thành tiền (để UI phản hồi)
+    thanhTien: currentSp.donGia * newSoLuong,
+  };
+
+  // Tạo bản sao của gioHang và cập nhật
+  const newGioHang = [...gioHang.value];
+  newGioHang[spGioHangIndex] = tempUpdatedSp;
+  gioHang.value = newGioHang;
+  hoaDon.value.sanPhamList = newGioHang;
+
+  // Cập nhật tổng số lượng trên hóa đơn chờ (để UI phản hồi)
+  const newTongSoLuong = newGioHang.reduce(
+    (sum, item) => sum + (item.soLuong || 0),
+    0
+  );
+  const indexHoaDonCho = hoaDonChoList.value.findIndex(
+    (hd) => hd.id === hoaDon.value.id
+  );
+
+  if (indexHoaDonCho !== -1) {
+    hoaDonChoList.value[indexHoaDonCho].soLuong = newTongSoLuong;
+  }
+
+  try {
+    // 3. Gọi API cập nhật:
+    // ⚠️ DÙNG HÀM TẠO SẢN PHẨM nhưng truyền vào ID sản phẩm và TỔNG SỐ LƯỢNG MỚI
+    const res = await themSanPhamVaoHoaDon(
+      hoaDon.value.id,
+      idChiTietSanPhamKho,
+      soLuongThayDoi // 🔥 TRUYỀN TỔNG SỐ LƯỢNG MỚI VÀO API
+    );
+
+    const chiTietHDMoi = res.data;
+
+    console.log("✅ API Cập nhật thành công. Dữ liệu BE trả về:", chiTietHDMoi);
+    console.log("Số lượng BE báo là:", chiTietHDMoi.soLuong);
+
+    // 4. Cập nhật lại trạng thái FE bằng dữ liệu chính xác từ BE
+    // (Nếu BE trả về soLuong và thanhTien chính xác)
+    const finalUpdatedSp = {
+      // Giữ lại các thuộc tính FE (tên, màu, size, hình ảnh...)
+      idChiTietSP: currentSp.idChiTietSP,
+      tenSanPham: currentSp.tenSanPham,
+      mauSac: currentSp.mauSac,
+      kichThuoc: currentSp.kichThuoc,
+      hinhAnhUrl: currentSp.hinhAnhUrl,
+      tenXuatXu: currentSp.tenXuatXu,
+
+      // Cập nhật các trường số liệu và ID chính thức từ BE
+      id: chiTietHDMoi.id, // ID chi tiết hóa đơn
+      soLuong: chiTietHDMoi.soLuong, // SỐ LƯỢNG MỚI TỪ BE (Phải khớp với newSoLuong)
+      donGia: chiTietHDMoi.donGia,
+      thanhTien: chiTietHDMoi.thanhTien,
+    };
+
+    // Cần đảm bảo cập nhật lại mảng gioHang.value[spGioHangIndex]
+    // Kể cả khi API trả về cùng một giá trị, đây là cách chuẩn để đảm bảo tính nhất quán.
+    gioHang.value[spGioHangIndex] = finalUpdatedSp;
+
+    const newTongSoLuongFinal = gioHang.value.reduce(
+      (sum, item) => sum + (item.soLuong || 0),
+      0
+    );
+    const indexHoaDonCho = hoaDonChoList.value.findIndex(
+      (hd) => hd.id === hoaDon.value.id
+    );
+
+    if (indexHoaDonCho !== -1) {
+      hoaDonChoList.value[indexHoaDonCho].soLuong = newTongSoLuongFinal;
+    }
+
+    notify.success(`Cập nhật số lượng thành công: ${newSoLuong}!`);
+  } catch (err) {
+    // 5. Xử lý lỗi (Rollback)
+    const msg =
+      err.response?.data?.message ||
+      err.response?.data ||
+      "Không thể cập nhật số lượng!";
+
+    // 🔥 Khôi phục số lượng trên FE về giá trị cũ (trước khi gọi API)
+    const rolledBackSp = {
+      ...currentSp,
+      soLuong: oldSoLuong,
+      thanhTien: currentSp.donGia * oldSoLuong, // Khôi phục thành tiền
+    };
+    gioHang.value[spGioHangIndex] = rolledBackSp;
+    hoaDon.value.sanPhamList = gioHang.value;
+
+    // Cập nhật tổng số lượng trên hóa đơn chờ về giá trị cũ
+    const oldTongSoLuong = gioHang.value.reduce(
+      (sum, item) => sum + (item.soLuong || 0),
+      0
+    );
+    const indexHoaDonCho = hoaDonChoList.value.findIndex(
+      (hd) => hd.id === hoaDon.value.id
+    );
+
+    if (indexHoaDonCho !== -1) {
+      hoaDonChoList.value[indexHoaDonCho].soLuong = oldTongSoLuong;
+    }
+
+    if (msg.includes("Số lượng tồn không đủ")) {
+      notify.warning(msg);
+    } else {
+      notify.error(msg);
+    }
   }
 };
 
@@ -1055,58 +1748,214 @@ const handleChonPhuongThuc = (phuongThuc) => {
   phuongThucThanhToan.value = phuongThuc;
   notify.info(`Đã chọn thanh toán bằng: ${phuongThuc}`);
 };
+
+const isVnpayProcessing = ref(false);
+const handleVNPayPayment = async () => {
+  if (!hoaDon.value) return notify.warning("Chưa có hóa đơn!");
+  if (tongTienSauGiam.value <= 0)
+    return notify.warning("Tổng tiền phải lớn hơn 0 để thanh toán !");
+
+  isVnpayProcessing.value = true;
+
+  let orderInfoRaw = `Thanh toan HD ${hoaDon.value.ma || hoaDon.value.id}`;
+  let orderInfoClean = orderInfoRaw.replace(/\s/g, "");
+
+  const paymentData = {
+    amount: tongTienSauGiam.value,
+    orderInfo: orderInfoClean,
+    language: "vn",
+  };
+
+  try {
+    const response = await axios.post(
+      "http://localhost:8080/admin/vnpay/create-payment",
+      paymentData
+    );
+
+    const { data, code } = response.data;
+
+    if (code === "00" && data) {
+      window.location.href = data;
+    } else {
+      notify.error(
+        `Lỗi tạo giao dịch: ${
+          response.data.message || "Không nhận được URL hợp lệ!"
+        }`
+      );
+    }
+  } catch (error) {
+    console.error("Lỗi khi tạo thanh toán VNPay:", error);
+    notify.error("Lỗi kết nối Server khi tạo giao dịch VNPay.");
+  } finally {
+    isVnpayProcessing.value = false;
+  }
+};
+
+const handleOpenModalDiaChi = () => {
+  // Kiểm tra xem đã có khách hàng chưa
+  if (!hoaDon.value?.khachHang) {
+    notify.warning("Vui lòng chọn khách hàng trước!");
+    return;
+  }
+
+  // Kiểm tra xem khách hàng có danh sách địa chỉ không
+  const listDiaChi = hoaDon.value.khachHang.danhSachDiaChi || [];
+
+  if (listDiaChi.length === 0) {
+    notify.warning("Khách hàng này chưa lưu địa chỉ nào!");
+    return;
+  }
+
+  // Mở modal
+  showDiaChiModal.value = true;
+};
+
+// --- 3. Hàm chọn địa chỉ từ Modal ---
+const handleChonDiaChiTuModal = (diaChi) => {
+  thongTinNguoiNhan.value.tinhThanh = diaChi.thanhPho || "";
+  thongTinNguoiNhan.value.quanHuyen = diaChi.huyen || "";
+  thongTinNguoiNhan.value.phuongXa = diaChi.xa || "";
+  thongTinNguoiNhan.value.diaChiCuThe = diaChi.diaChiCuThe || "";
+
+  // 🔥 THÊM DÒNG NÀY
+  syncAddressToSelects();
+
+  showDiaChiModal.value = false;
+  notify.success("Đã thay đổi địa chỉ giao hàng!");
+};
+
 // thanh toán
 const handleThanhToan = async () => {
+  // 1. Validate cơ bản
   if (!hoaDon.value) return notify.warning("Chưa có hóa đơn!");
   if (gioHang.value.length === 0) return notify.warning("Giỏ hàng rỗng!");
 
   const selectedPtttCode = phuongThucThanhToan.value;
+
+  // ---------------------------------------------------------
+  // BƯỚC 2: Chuẩn bị dữ liệu Giao Hàng & Loại hóa đơn
+  // (Làm bước này trước để có dữ liệu dùng cho việc hiển thị Swal hoặc gửi API)
+  // ---------------------------------------------------------
+  let thongTinGiaoHang = null;
+  let loaiHoaDonQuyetDinh = "Tại cửa hàng"; // Mặc định là tại quầy
+
+  if (isBanGiaoHang.value) {
+    // Validate dữ liệu nếu là giao hàng
+    if (
+      !thongTinNguoiNhan.value.hoTen ||
+      !thongTinNguoiNhan.value.sdt ||
+      !thongTinNguoiNhan.value.diaChiCuThe
+    ) {
+      return notify.warning("Vui lòng điền đủ Tên, SĐT và Địa chỉ nhận hàng!");
+    }
+
+    loaiHoaDonQuyetDinh = "Online";
+
+    // Ghép chuỗi địa chỉ đầy đủ
+    const diaChiDayDu = [
+      thongTinNguoiNhan.value.diaChiCuThe,
+      thongTinNguoiNhan.value.phuongXa,
+      thongTinNguoiNhan.value.quanHuyen,
+      thongTinNguoiNhan.value.tinhThanh,
+    ]
+      .filter(Boolean)
+      .join(", ");
+
+    // Đóng gói object giao hàng
+    thongTinGiaoHang = {
+      tenNguoiNhan: thongTinNguoiNhan.value.hoTen,
+      sdt: thongTinNguoiNhan.value.sdt,
+      diaChiNguoiNhan: diaChiDayDu,
+      phiShip: 0, // Hoặc biến phiVanChuyen nếu có
+    };
+  }
+
+  // ---------------------------------------------------------
+  // BƯỚC 3: Xử lý VNPay (Chuyển khoản)
+  // ---------------------------------------------------------
+  if (selectedPtttCode === "CHUYEN_KHOAN") {
+    // Lưu ý: Nếu muốn lưu địa chỉ giao hàng trước khi sang VNPay,
+    // cần gọi API update hóa đơn ở đây trước khi gọi handleVNPayPayment
+    await handleVNPayPayment();
+    return;
+  }
+
+  // ---------------------------------------------------------
+  // BƯỚC 4: Xử lý Tiền mặt / Cả hai
+  // ---------------------------------------------------------
   const idPhuongThucThanhToan = PHUONG_THUC_ID_MAP[selectedPtttCode];
 
   if (!idPhuongThucThanhToan) {
     return notify.error("Phương thức thanh toán không hợp lệ!");
   }
 
+  // Hiển thị Confirm
   const confirm = await Swal.fire({
     title: "Xác nhận Thanh toán?",
-    // Hiển thị tổng tiền và phương thức thanh toán
     html: `
-        Bạn chắc chắn muốn thanh toán <strong class="text-danger">${(
-          tongTienSauGiam.value ?? 0
-        ).toLocaleString()} VND</strong> cho đơn hàng này ?
+        <div class="text-start">
+            <p>Tổng tiền: <strong class="text-danger">${(
+              tongTienSauGiam.value ?? 0
+            ).toLocaleString()} ₫</strong></p>
+            <p>Loại đơn: <strong>${loaiHoaDonQuyetDinh}</strong></p>
+            ${
+              isBanGiaoHang.value
+                ? `<p class="small text-muted">Người nhận: ${thongTinNguoiNhan.value.hoTen} - ${thongTinNguoiNhan.value.sdt}</p>`
+                : ""
+            }
+        </div>
     `,
     icon: "question",
     showCancelButton: true,
     cancelButtonText: "Hủy",
-    confirmButtonText: "Xác nhận Thanh toán",
+    confirmButtonText: "Xác nhận",
     reverseButtons: true,
   });
 
   if (!confirm.isConfirmed) {
-    notify.info("Đã hủy thanh toán.");
-    return; // Dừng lại nếu người dùng hủy
+    return;
   }
 
   try {
-    // Gửi ID Hóa đơn và ID Phương thức Thanh toán lên BE
-    await thanhToan(hoaDon.value.id, idPhuongThucThanhToan);
+    // ---------------------------------------------------------
+    // BƯỚC 5: Gửi dữ liệu xuống Service
+    // ---------------------------------------------------------
 
+    // Tạo object chứa tất cả thông tin cần update lúc thanh toán
+    const requestData = {
+      idPhuongThucThanhToan: idPhuongThucThanhToan,
+      loaiHoaDon: loaiHoaDonQuyetDinh,
+      ...thongTinGiaoHang, // Spread dữ liệu ship vào (nếu null thì bỏ qua)
+    };
+
+    console.log("Dữ liệu gửi thanh toán:", requestData);
+
+    // Gọi API
+    await thanhToan(hoaDon.value.id, requestData);
+
+    // Xử lý sau khi thành công
     const completedHoaDonId = hoaDon.value.id;
+    notify.success("Thanh toán thành công! Đang chuyển hướng...");
 
-    // Xử lý logic FE sau khi thành công
-    notify.success(
-      "Thanh toán thành công! Chuẩn bị chuyển đến chi tiết hóa đơn ..."
-    );
+    // Xóa khỏi danh sách chờ
     hoaDonChoList.value = hoaDonChoList.value.filter(
       (hd) => hd.id !== hoaDon.value.id
     );
+
+    // Reset state
     hoaDon.value = null;
     gioHang.value = [];
     selectedHoaDonId.value = null;
+
+    // Chuyển trang
     router.push({ name: "ChiTietHD", params: { id: completedHoaDonId } });
   } catch (err) {
     console.error("Lỗi thanh toán:", err);
-    notify.error("Thanh toán thất bại! Vui lòng kiểm tra Server.");
+    notify.error(
+      err.response?.data?.message ||
+        err.response?.data ||
+        "Thanh toán thất bại! Lỗi Server."
+    );
   }
 };
 
