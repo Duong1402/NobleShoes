@@ -36,20 +36,26 @@ import NhanVienDetail from "@/view/nhanVien/nhanVienDetail.vue";
 import TrangChu from "@/components/trangChu.vue";
 import QuanLyHoaDon from "@/view/hoaDon/QuanLyHoaDon.vue";
 import ChiTietHD from "@/view/hoaDon/ChiTietHD.vue";
-import Test from "@/viewOnlineShop/test.vue";
 import { useAuthStore } from "@/components/login/authStore";
 
+// Trang client (người mua)
+import ClientLayout from "@/components/layout/ClientLayout.vue";
+import TrangChuClient from "@/view/client/TrangChuClient.vue";
+
 const listRouter = [
+  //Login customer
   {
     path: "/login-customer",
     name: "loginCustomer",
     component: () => import("@/components/login/customerLogin.vue"),
   },
+  // Login employee
   {
     path: "/login-employee",
     name: "loginEmployee",
     component: () => import("@/components/login/employeeLogin.vue"),
   },
+  //Admin
   {
     path: "/admin",
     component: HeaderLayout,
@@ -206,12 +212,29 @@ const listRouter = [
     ],
     meta: { requiresAuth: true, role: "EMPLOYEE" },
   },
-  { path: "/", redirect: "/admin" },
+  // Auto nhảy về admin
+  // { path: "/", redirect: "/admin" },
+
+  // Giao diện bán hàng onl
   {
-    path: "/customer",
-    component: Test,
-    meta: { requiresAuth: true, role: "CUSTOMER" },
+    path: "/shop",
+    component: ClientLayout,
+    children: [
+      {
+        path: "",
+        name: "TrangChuClient",
+        component: TrangChuClient,
+        meta: { title: "Trang chủ khách hàng", requiresAuth: true, role: "CUSTOMER" },
+      },
+    ],
   },
+
+  {
+    path: "/",
+    name: "Home",
+    component: () => import("@/components/trangChu.vue"),
+    meta: { requiresAuth: false }, // 🟢 QUAN TRỌNG: Trang chủ phải Public
+  }
 ];
 
 const router = createRouter({
@@ -222,81 +245,63 @@ const router = createRouter({
 // TRONG FILE: src/router/index.js
 
 router.beforeEach((to, from, next) => {
-    const authStore = useAuthStore();
-    const isAuthenticated = authStore.isLoggedIn;
-    const isEmployee = authStore.isEmployee; // Bao gồm cả ROLE_ADMIN và ROLE_EMPLOYEE
-    const isCustomer = authStore.isCustomer;
+  const authStore = useAuthStore();
+  const isLoggedIn = authStore.isLoggedIn;
+  const isEmployee = authStore.isEmployee; // (Role ADMIN hoặc EMPLOYEE)
+  const isCustomer = authStore.isCustomer;
 
-    // Debug: Bật lên nếu cần theo dõi luồng chạy
-    // console.log(`Navigating: ${from.path} -> ${to.path} | Auth: ${isAuthenticated} | Role: ${authStore.userType}`);
+  // 1. LOGIC ĐĂNG NHẬP CHÉO (Cross-Login)
+  // Nếu Admin cố vào login Khách -> Logout Admin
+  if (to.path === "/login-customer" && isLoggedIn && isEmployee) {
+    authStore.logout();
+    return next();
+  }
+  // Nếu Khách cố vào login Admin -> Logout Khách
+  if (to.path === "/login-employee" && isLoggedIn && isCustomer) {
+    authStore.logout();
+    return next();
+  }
 
-    // ============================================================
-    // 1. XỬ LÝ LOGIC "ĐĂNG NHẬP CHÉO" (CROSS-LOGIN)
-    // ============================================================
-    
-    // Trường hợp A: Đang là ADMIN mà vào trang Login KHÁCH HÀNG
-    if (to.path === '/login-customer' && isAuthenticated && isEmployee) {
-        console.log("🛑 Admin muốn đăng nhập Khách hàng -> Auto Logout Admin");
-        authStore.logout(); 
-        return next(); // Cho phép vào trang login-customer
+  // 2. CHẶN NGƯỜI ĐÃ ĐĂNG NHẬP VÀO LẠI TRANG LOGIN (Redirect Forward)
+  if (isLoggedIn) {
+    if (to.path === "/login-customer" && isCustomer) {
+      return next("/"); // Khách đã login -> Về trang chủ
+    }
+    if (to.path === "/login-employee" && isEmployee) {
+      return next("/admin"); // NV đã login -> Về Admin
+    }
+  }
+
+  // 3. KIỂM TRA QUYỀN TRUY CẬP (Auth & Role)
+  // Chỉ áp dụng với các trang có meta.requiresAuth = true
+  if (to.meta.requiresAuth) {
+    // 3.1 Chưa đăng nhập -> Đá về trang login tương ứng
+    if (!isLoggedIn) {
+      if (to.path.startsWith("/admin")) {
+        return next("/login-employee");
+      }
+      return next("/login-customer");
     }
 
-    // Trường hợp B: Đang là KHÁCH HÀNG mà vào trang Login ADMIN
-    // (Giả sử đường dẫn login nhân viên là /login-employee hoặc /admin/login)
-    if ((to.path === '/login-employee' || to.path === '/admin/login') && isAuthenticated && isCustomer) {
-        console.log("🛑 Khách hàng muốn vào trang Admin -> Auto Logout Khách hàng");
-        authStore.logout();
-        return next(); // Cho phép vào trang login-employee
+    // 3.2 Sai quyền (Role Mismatch)
+    const requiredRole = to.meta.role;
+    if (requiredRole) {
+      // Yêu cầu CUSTOMER mà là Employee -> Về Admin
+      if (requiredRole === "CUSTOMER" && !isCustomer) {
+        return next("/admin");
+      }
+      // Yêu cầu EMPLOYEE mà là Customer -> Về Home
+      if (
+        (requiredRole === "EMPLOYEE" || requiredRole === "ADMIN") &&
+        !isEmployee
+      ) {
+        return next("/");
+      }
     }
+  }
 
-    // ============================================================
-    // 2. CHẶN NGƯỜI DÙNG ĐÃ ĐĂNG NHẬP QUAY LẠI TRANG LOGIN CỦA CHÍNH MÌNH
-    // ============================================================
-    
-    if (to.path === '/login-customer' && isAuthenticated && isCustomer) {
-        return next('/'); // Khách đã login thì về trang chủ
-    }
-    if ((to.path === '/login-employee' || to.path === '/admin/login') && isAuthenticated && isEmployee) {
-        return next('/admin'); // Nhân viên đã login thì về Dashboard
-    }
-
-    // ============================================================
-    // 3. KIỂM TRA YÊU CẦU ĐĂNG NHẬP (REQUIRES AUTH)
-    // ============================================================
-    
-    if (to.meta.requiresAuth && !isAuthenticated) {
-        // Thông minh: Nếu người dùng đang cố vào link /admin/* -> Đẩy về Login Nhân Viên
-        if (to.path.startsWith('/admin')) {
-            return next('/login-employee'); // Hoặc '/admin/login'
-        }
-        // Mặc định: Đẩy về Login Khách Hàng
-        return next('/login-customer');
-    }
-
-    // ============================================================
-    // 4. KIỂM TRA QUYỀN HẠN (ROLES)
-    // ============================================================
-    
-    if (to.meta.role) {
-        const requiredRole = to.meta.role;
-
-        // 4.1. Trang yêu cầu CUSTOMER -> Nhưng lại là Employee
-        if (requiredRole === 'CUSTOMER' && !isCustomer) {
-            // Chuyển hướng về Admin Dashboard
-            return next('/admin');
-        }
-
-        // 4.2. Trang yêu cầu ADMIN/EMPLOYEE -> Nhưng lại là Customer
-        if ((requiredRole === 'ADMIN' || requiredRole === 'EMPLOYEE') && !isEmployee) {
-            // Chuyển hướng về Trang chủ
-            return next('/');
-        }
-    }
-
-    // ============================================================
-    // 5. CHO PHÉP ĐI TIẾP
-    // ============================================================
-    next();
+  // 4. Cho phép đi tiếp (Nếu không vi phạm gì)
+  next();
 });
 
 export default router;

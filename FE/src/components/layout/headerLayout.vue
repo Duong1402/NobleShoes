@@ -3,6 +3,7 @@ import { RouterLink, RouterView } from "vue-router";
 import FooterLayout from "./footerLayout.vue";
 import Sidebar from "./sidebar.vue";
 import AuthService from "../login/loginService";
+import ChatWidget from "@/components/ChatWidget.vue";
 
 const Logout = () => {
   AuthService.logout();
@@ -283,6 +284,7 @@ const Logout = () => {
 
       <FooterLayout></FooterLayout>
     </div>
+    <ChatWidget />
   </div>
 </template>
 <style></style>

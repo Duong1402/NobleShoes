@@ -79,7 +79,7 @@ const sortedAndFilteredSanPham = computed(() => {
 const totalPages = computed(() => Math.ceil(sortedAndFilteredSanPham.value.length / pageSize.value));
 
 // Danh sách sản phẩm hiển thị theo trang (Sử dụng sortedAndFilteredSanPham)
-const pagedSanPham = computed(() => { // ✅ ĐÃ SỬ DỤNG
+const pagedSanPham = computed(() => { //  ĐÃ SỬ DỤNG
   const start = (currentPage.value - 1) * pageSize.value;
   return sortedAndFilteredSanPham.value.slice(start, start + pageSize.value);
 });

@@ -17,7 +17,7 @@ const handleLogin = () => {
     .then(
       () => {
         // Đăng nhập thành công, chuyển hướng đến trang dashboard admin
-        router.push("/customer");
+        router.push("/shop");
       },
       (error) => {
         // Xử lý lỗi (ví dụ: sai mật khẩu)
