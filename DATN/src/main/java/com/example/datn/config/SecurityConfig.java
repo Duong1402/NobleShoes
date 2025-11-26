@@ -39,7 +39,8 @@ public class SecurityConfig {
                         // Cho phép các API đăng nhập
                         .requestMatchers(
                                 "/api/auth/login/customer",
-                                "/api/auth/login/employee"
+                                "/api/auth/login/employee",
+                                "api/auth/register"
                                 // Thêm các API public khác (vd: /register, /san-pham/public/...)
                         ).permitAll()
                         .requestMatchers("/admin/**") // Bất kỳ URL nào bắt đầu bằng /admin
@@ -63,7 +64,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // 3. THÊM Bean cho CORS (Rất quan trọng cho Vue.js)
+    // 3. THÊM Bean cho CORS
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();

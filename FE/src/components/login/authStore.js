@@ -1,4 +1,3 @@
-// src/stores/auth.store.js
 import { defineStore } from 'pinia';
 import { jwtDecode } from "jwt-decode"; // Đảm bảo đã npm install jwt-decode
 

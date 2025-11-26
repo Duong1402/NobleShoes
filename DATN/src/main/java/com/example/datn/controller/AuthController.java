@@ -1,5 +1,10 @@
 package com.example.datn.controller; // Hoặc package controller của bạn
 
+import com.example.datn.dto.RegisterRequest;
+import com.example.datn.entity.ChucVu;
+import com.example.datn.entity.KhachHang;
+import com.example.datn.repository.ChucVuRepository;
+import com.example.datn.repository.KhachHangRepository;
 import com.example.datn.service.JwtService;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -10,7 +15,10 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Date;
 
 @CrossOrigin(origins = "http://localhost:5173")
 @RestController
@@ -26,27 +34,34 @@ public class AuthController {
 
     private String jwtToken;
 
+    private final KhachHangRepository khachHangRepository;
+    private final ChucVuRepository chucVuRepository;
+    private final PasswordEncoder passwordEncoder;
+
     public AuthController(
             JwtService jwtService,
             @Qualifier("customerAuthenticationProvider") AuthenticationProvider customerAuthProvider,
-            @Qualifier("employeeAuthenticationProvider") AuthenticationProvider employeeAuthProvider
-    ) {
+            @Qualifier("employeeAuthenticationProvider") AuthenticationProvider employeeAuthProvider,
+            KhachHangRepository khachHangRepository, ChucVuRepository chucVuRepository, PasswordEncoder passwordEncoder) {
         this.jwtService = jwtService;
         this.customerAuthProvider = customerAuthProvider;
         this.employeeAuthProvider = employeeAuthProvider;
+        this.khachHangRepository = khachHangRepository;
+        this.chucVuRepository = chucVuRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Data
     @NoArgsConstructor
-    static class LoginRequest{
-            private String username;
-            private String password;
+    static class LoginRequest {
+        private String username;
+        private String password;
     }
 
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    static class LoginResponse{
+    static class LoginResponse {
         private String token;
     }
 
@@ -86,5 +101,42 @@ public class AuthController {
         // Tạo token với claim "EMPLOYEE"
         jwtToken = jwtService.generateToken(userDetails, "EMPLOYEE");
         return ResponseEntity.ok(new LoginResponse(jwtToken));
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+
+        // 1. Check trùng username/email
+        if (khachHangRepository.findByTaiKhoan(request.getTaiKhoan()).isPresent()) {
+            return ResponseEntity.badRequest().body("Tài khoản đã tồn tại!");
+        }
+        // (Bạn có thể check thêm email nếu muốn)
+        if (khachHangRepository.existsByEmail(request.getEmail())) {
+            return ResponseEntity.badRequest().body("Email này đã được sử dụng!");
+        }
+
+        // 2. Lấy Chức Vụ "Khách Hàng"
+        // Giả sử trong DB bạn mã là 'CUSTOMER'
+        ChucVu roleKhachHang = chucVuRepository.findByMa("CV03")
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy quyền Khách hàng trong DB"));
+
+        // 3. Tạo đối tượng Khách Hàng
+        KhachHang kh = new KhachHang();
+        kh.setHoTen(request.getHoTen());
+        kh.setEmail(request.getEmail());
+        kh.setSdt(request.getSdt());
+        kh.setTaiKhoan(request.getTaiKhoan());
+
+        // ⚠️ QUAN TRỌNG: Mã hóa mật khẩu
+        kh.setMatKhau(passwordEncoder.encode(request.getMatKhau()));
+
+        kh.setChucVu(roleKhachHang); // Gán chức vụ
+        kh.setTrangThai((byte) 1);   // 1: Hoạt động
+        kh.setNgayTao(new Date());
+
+        // 4. Lưu vào DB
+        khachHangRepository.save(kh);
+
+        return ResponseEntity.ok("Đăng ký thành công!");
     }
 }

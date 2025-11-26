@@ -10,4 +10,6 @@ public interface KhachHangRepository extends JpaRepository<KhachHang, UUID> {
     Optional<KhachHang> findByTaiKhoanAndMatKhau(String taiKhoan, String matKhau);
 
     Optional<KhachHang> findByTaiKhoan(String username);
+
+    boolean existsByEmail(String email);
 }

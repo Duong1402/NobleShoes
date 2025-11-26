@@ -28,5 +28,9 @@ class AuthService {
         const authStore = useAuthStore();
         authStore.logout(); // <-- Dùng store để logout
     }
+
+    register(data){
+        return axios.post(API_URL + 'register', data);
+    }
 }
 export default new AuthService();
