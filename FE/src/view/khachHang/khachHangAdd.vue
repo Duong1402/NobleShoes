@@ -49,18 +49,6 @@
         </div>
 
         <div class="row g-3 mt-1">
-          <!-- Mã (Code) -->
-          <div class="col-md-6">
-            <label class="form-label">Mã (Code) *</label>
-            <input
-              v-model.trim="form.ma"
-              type="text"
-              class="form-control"
-              placeholder="VD: KH001"
-              required
-            />
-          </div>
-
           <!-- Họ tên -->
           <div class="col-md-6">
             <label class="form-label">Họ tên *</label>
@@ -216,7 +204,6 @@ const notify = useNotify();
 
 /* ====== STATE FORM ====== */
 const form = reactive({
-  ma: "",
   hoTen: "",
   email: "",
   sdt: "",
@@ -342,7 +329,6 @@ const previewAddress = () => {
 
 const buildPreviewHtml = () => `
   <div style="text-align:left;font-size:14px;line-height:1.5">
-    <div><b>Mã</b>: ${form.ma || "—"}</div>
     <div><b>Họ tên</b>: ${form.hoTen || "—"}</div>
     <div><b>SĐT</b>: ${form.sdt || "—"}</div>
     <div><b>Email</b>: ${form.email || "—"}</div>
@@ -362,7 +348,6 @@ const buildPreviewHtml = () => `
 const addKhachHang = async () => {
   const diaChi = previewAddress();
   const payload = {
-    ma: form.ma.trim(),
     hoTen: form.hoTen.trim(),
     email: form.email.trim(),
     sdt: String(form.sdt ?? "").trim(),
@@ -383,8 +368,8 @@ const addKhachHang = async () => {
 };
 
 const confirmSave = async () => {
-  if (!form.ma || !form.hoTen || !form.email || !form.sdt) {
-    notify.error("Vui lòng điền đầy đủ Mã, Họ tên, Email, SĐT!");
+  if (!form.hoTen || !form.email || !form.sdt) {
+    notify.error("Vui lòng điền đầy đủ Họ tên, Email, SĐT!");
     return;
   }
   if (!form.tinhCode) {

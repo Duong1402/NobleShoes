@@ -12,4 +12,6 @@ public interface KhachHangRepository extends JpaRepository<KhachHang, UUID> {
     Optional<KhachHang> findByTaiKhoan(String username);
 
     boolean existsByEmail(String email);
+
+    Optional<KhachHang> findTopByOrderByMaDesc();
 }

@@ -231,9 +231,8 @@ const listRouter = [
 
   {
     path: "/",
-    name: "Home",
-    component: () => import("@/components/trangChu.vue"),
-    meta: { requiresAuth: false }, // 🟢 QUAN TRỌNG: Trang chủ phải Public
+    redirect: "/login-customer",
+     // 🟢 QUAN TRỌNG: Trang chủ phải Public
   }
 ];
 

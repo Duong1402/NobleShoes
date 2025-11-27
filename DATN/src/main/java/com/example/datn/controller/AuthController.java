@@ -4,8 +4,8 @@ import com.example.datn.dto.RegisterRequest;
 import com.example.datn.entity.ChucVu;
 import com.example.datn.entity.KhachHang;
 import com.example.datn.repository.ChucVuRepository;
-import com.example.datn.repository.KhachHangRepository;
 import com.example.datn.service.JwtService;
+import com.example.datn.service.KhachHangService;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -34,7 +34,7 @@ public class AuthController {
 
     private String jwtToken;
 
-    private final KhachHangRepository khachHangRepository;
+    private final KhachHangService khachHangService;
     private final ChucVuRepository chucVuRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -42,11 +42,11 @@ public class AuthController {
             JwtService jwtService,
             @Qualifier("customerAuthenticationProvider") AuthenticationProvider customerAuthProvider,
             @Qualifier("employeeAuthenticationProvider") AuthenticationProvider employeeAuthProvider,
-            KhachHangRepository khachHangRepository, ChucVuRepository chucVuRepository, PasswordEncoder passwordEncoder) {
+            KhachHangService khachHangService, ChucVuRepository chucVuRepository, PasswordEncoder passwordEncoder) {
         this.jwtService = jwtService;
         this.customerAuthProvider = customerAuthProvider;
         this.employeeAuthProvider = employeeAuthProvider;
-        this.khachHangRepository = khachHangRepository;
+        this.khachHangService = khachHangService;
         this.chucVuRepository = chucVuRepository;
         this.passwordEncoder = passwordEncoder;
     }
@@ -107,11 +107,11 @@ public class AuthController {
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
 
         // 1. Check trùng username/email
-        if (khachHangRepository.findByTaiKhoan(request.getTaiKhoan()).isPresent()) {
+        if (khachHangService.findByTaiKhoan(request.getTaiKhoan()).isPresent()) {
             return ResponseEntity.badRequest().body("Tài khoản đã tồn tại!");
         }
         // (Bạn có thể check thêm email nếu muốn)
-        if (khachHangRepository.existsByEmail(request.getEmail())) {
+        if (khachHangService.existsByEmail(request.getEmail())) {
             return ResponseEntity.badRequest().body("Email này đã được sử dụng!");
         }
 
@@ -135,7 +135,7 @@ public class AuthController {
         kh.setNgayTao(new Date());
 
         // 4. Lưu vào DB
-        khachHangRepository.save(kh);
+        khachHangService.save(kh);
 
         return ResponseEntity.ok("Đăng ký thành công!");
     }

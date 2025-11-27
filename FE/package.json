@@ -13,14 +13,23 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.1.0",
+    "@vuelidate/core": "^2.0.3",
+    "@vuelidate/validators": "^2.0.4",
+    "@zxing/browser": "^0.1.5",
     "axios": "^1.12.2",
     "bootstrap": "^5.3.8",
     "decimal.js": "^10.6.0",
     "jquery": "^3.7.1",
     "jquery-sparkline": "^2.4.0",
+    "jwt-decode": "^4.0.0",
+    "lodash": "^4.17.21",
+    "pinia": "^3.0.4",
+    "qrcode": "^1.5.4",
     "sweetalert2": "^11.26.2",
+    "vietnam-provinces": "^0.0.4",
     "vue": "^3.5.22",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.5.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",

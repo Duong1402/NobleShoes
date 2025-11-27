@@ -26,7 +26,7 @@ const handleLogin = () => {
     .then(
       () => {
         // Đăng nhập thành công, chuyển hướng đến trang dashboard admin
-        router.push("/shop");
+        router.replace("/shop");
       },
       (error) => {
         // Xử lý lỗi (ví dụ: sai mật khẩu)
@@ -196,7 +196,7 @@ const handleRegister = async () => {
                               type="password"
                               class="form-style"
                               placeholder="Mật khẩu"
-                              autocomplete="off"
+                              autocomplete="new-password"
                               v-model="form.matKhau"
                             />
                             <i class="input-icon uil uil-lock-alt"></i>
@@ -206,7 +206,7 @@ const handleRegister = async () => {
                               type="text"
                               class="form-style"
                               placeholder="Email"
-                              autocomplete="off"
+                              autocomplete="new-password"
                               v-model="form.email"
                               :class="{ 'input-error': emailError }"
                             />
@@ -250,20 +250,20 @@ const handleRegister = async () => {
 @import url("https://fonts.googleapis.com/css?family=Poppins:400,500,600,700,800,900");
 
 .login-page {
-  font-family: "Poppins", sans-serif;
-  font-weight: 300;
-  font-size: 15px;
-  line-height: 1.7;
-  color: #d5e1a4;
-  background-color: #87afe1;
-  overflow-x: hidden;
+  font-family: 'Poppins', sans-serif;
+	font-weight: 300;
+	font-size: 15px;
+	line-height: 1.7;
+	color: #c4c3ca;
+	background-color: #1f2029;
+	overflow-x: hidden;
 }
 a {
-  cursor: pointer;
+	cursor: pointer;
   transition: all 200ms linear;
 }
 a:hover {
-  text-decoration: none;
+	text-decoration: none;
 }
 .link {
   color: #c4c3ca;
@@ -279,26 +279,26 @@ p {
 h4 {
   font-weight: 600;
 }
-h6 span {
+h6 span{
   padding: 0 20px;
   text-transform: uppercase;
   font-weight: 700;
 }
-.section {
+.section{
   position: relative;
   width: 100%;
   display: block;
 }
-.full-height {
+.full-height{
   min-height: 100vh;
 }
 [type="checkbox"]:checked,
-[type="checkbox"]:not(:checked) {
+[type="checkbox"]:not(:checked){
   position: absolute;
   left: -9999px;
 }
 .checkbox:checked + label,
-.checkbox:not(:checked) + label {
+.checkbox:not(:checked) + label{
   position: relative;
   display: block;
   text-align: center;
@@ -311,7 +311,7 @@ h6 span {
   background-color: #ffeba7;
 }
 .checkbox:checked + label:before,
-.checkbox:not(:checked) + label:before {
+.checkbox:not(:checked) + label:before{
   position: absolute;
   display: block;
   width: 36px;
@@ -319,8 +319,8 @@ h6 span {
   border-radius: 50%;
   color: #ffeba7;
   background-color: #102770;
-  font-family: "unicons";
-  content: "\eb4f";
+  font-family: 'unicons';
+  content: '\eb4f';
   z-index: 20;
   top: -10px;
   left: -10px;
@@ -332,6 +332,7 @@ h6 span {
 .checkbox:checked + label:before {
   transform: translateX(44px) rotate(-270deg);
 }
+
 
 .card-3d-wrap {
   position: relative;
@@ -346,19 +347,18 @@ h6 span {
 .card-3d-wrapper {
   width: 100%;
   height: 100%;
-  position: absolute;
+  position:absolute;    
   top: 0;
-  left: 0;
+  left: 0;  
   -webkit-transform-style: preserve-3d;
   transform-style: preserve-3d;
-  transition: all 600ms ease-out;
+  transition: all 600ms ease-out; 
 }
-.card-front,
-.card-back {
+.card-front, .card-back {
   width: 100%;
   height: 100%;
-  background-color: #5785c7;
-  background-image: url("https://s3-us-west-2.amazonaws.com/s.cdpn.io/1462889/pat.svg");
+  background-color: #2a2b38;
+  background-image: url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/1462889/pat.svg');
   background-position: bottom center;
   background-repeat: no-repeat;
   background-size: 300%;
@@ -379,7 +379,7 @@ h6 span {
 .checkbox:checked ~ .card-3d-wrap .card-3d-wrapper {
   transform: rotateY(180deg);
 }
-.center-wrap {
+.center-wrap{
   position: absolute;
   width: 100%;
   padding: 0 35px;
@@ -390,11 +390,12 @@ h6 span {
   display: block;
 }
 
-.form-group {
+
+.form-group{ 
   position: relative;
   display: block;
-  margin: 0;
-  padding: 0;
+    margin: 0;
+    padding: 0;
 }
 .form-style {
   padding: 13px 20px;
@@ -408,17 +409,17 @@ h6 span {
   letter-spacing: 0.5px;
   outline: none;
   color: #c4c3ca;
-  background-color: #5a63b0;
+  background-color: #1f2029;
   border: none;
   -webkit-transition: all 200ms linear;
   transition: all 200ms linear;
-  box-shadow: 0 4px 8px 0 rgba(21, 21, 21, 0.2);
+  box-shadow: 0 4px 8px 0 rgba(21,21,21,.2);
 }
 .form-style:focus,
 .form-style:active {
   border: none;
   outline: none;
-  box-shadow: 0 4px 8px 0 rgba(21, 21, 21, 0.2);
+  box-shadow: 0 4px 8px 0 rgba(21,21,21,.2);
 }
 .input-icon {
   position: absolute;
@@ -430,61 +431,61 @@ h6 span {
   text-align: left;
   color: #ffeba7;
   -webkit-transition: all 200ms linear;
-  transition: all 200ms linear;
+    transition: all 200ms linear;
 }
 
-.form-group input:-ms-input-placeholder {
+.form-group input:-ms-input-placeholder  {
   color: #c4c3ca;
   opacity: 0.7;
   -webkit-transition: all 200ms linear;
-  transition: all 200ms linear;
+    transition: all 200ms linear;
 }
-.form-group input::-moz-placeholder {
+.form-group input::-moz-placeholder  {
   color: #c4c3ca;
   opacity: 0.7;
   -webkit-transition: all 200ms linear;
-  transition: all 200ms linear;
+    transition: all 200ms linear;
 }
-.form-group input:-moz-placeholder {
+.form-group input:-moz-placeholder  {
   color: #c4c3ca;
   opacity: 0.7;
   -webkit-transition: all 200ms linear;
-  transition: all 200ms linear;
+    transition: all 200ms linear;
 }
-.form-group input::-webkit-input-placeholder {
+.form-group input::-webkit-input-placeholder  {
   color: #c4c3ca;
   opacity: 0.7;
   -webkit-transition: all 200ms linear;
-  transition: all 200ms linear;
+    transition: all 200ms linear;
 }
-.form-group input:focus:-ms-input-placeholder {
+.form-group input:focus:-ms-input-placeholder  {
   opacity: 0;
   -webkit-transition: all 200ms linear;
-  transition: all 200ms linear;
+    transition: all 200ms linear;
 }
-.form-group input:focus::-moz-placeholder {
+.form-group input:focus::-moz-placeholder  {
   opacity: 0;
   -webkit-transition: all 200ms linear;
-  transition: all 200ms linear;
+    transition: all 200ms linear;
 }
-.form-group input:focus:-moz-placeholder {
+.form-group input:focus:-moz-placeholder  {
   opacity: 0;
   -webkit-transition: all 200ms linear;
-  transition: all 200ms linear;
+    transition: all 200ms linear;
 }
-.form-group input:focus::-webkit-input-placeholder {
+.form-group input:focus::-webkit-input-placeholder  {
   opacity: 0;
   -webkit-transition: all 200ms linear;
-  transition: all 200ms linear;
+    transition: all 200ms linear;
 }
 
-.btn {
+.btn{  
   border-radius: 4px;
   height: 44px;
   font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
-  -webkit-transition: all 200ms linear;
+  -webkit-transition : all 200ms linear;
   transition: all 200ms linear;
   padding: 0 30px;
   letter-spacing: 1px;
@@ -504,52 +505,53 @@ h6 span {
   border: none;
   background-color: #ffeba7;
   color: #102770;
-  box-shadow: 0 8px 24px 0 rgba(255, 235, 167, 0.2);
+  box-shadow: 0 8px 24px 0 rgba(255,235,167,.2);
 }
 .btn:active,
-.btn:focus {
+.btn:focus{  
   background-color: #102770;
   color: #ffeba7;
-  box-shadow: 0 8px 24px 0 rgba(16, 39, 112, 0.2);
+  box-shadow: 0 8px 24px 0 rgba(16,39,112,.2);
 }
-.btn:hover {
+.btn:hover{  
   background-color: #102770;
   color: #ffeba7;
-  box-shadow: 0 8px 24px 0 rgba(16, 39, 112, 0.2);
+  box-shadow: 0 8px 24px 0 rgba(16,39,112,.2);
 }
 
+
+
+
 .logo {
-  position: absolute;
-  top: 30px;
-  right: 30px;
-  display: block;
-  z-index: 100;
-  transition: all 250ms linear;
+	position: absolute;
+	top: 30px;
+	right: 30px;
+	display: block;
+	z-index: 100;
+	transition: all 250ms linear;
 }
 .logo img {
-  height: 26px;
-  width: auto;
-  display: block;
+	height: 26px;
+	width: auto;
+	display: block;
 }
 input:-webkit-autofill,
 input:-webkit-autofill:hover, 
 input:-webkit-autofill:focus, 
 input:-webkit-autofill:active {
-    /* 1. Dùng bóng đổ (box-shadow) để che màu nền mặc định của trình duyệt */
-    /* Thay #5a63b0 bằng mã màu nền input của bạn */
-    -webkit-box-shadow: 0 0 0 30px #5a63b0 inset !important;
+    /* Đè màu nền bằng box-shadow (Màu tím của bạn: #5a63b0) */
+    -webkit-box-shadow: 0 0 0 1000px #5a63b0 inset !important;
     
-    /* 2. Đổi màu chữ thành màu xám sáng như thiết kế */
+    /* Đổi màu chữ thành xám sáng */
     -webkit-text-fill-color: #c4c3ca !important;
     
-    /* 3. Giữ bo góc */
+    /* Giữ nguyên bo góc */
     border-radius: 4px !important;
     
-    /* 4. Đảm bảo chuyển màu mượt mà (tùy chọn) */
-    transition: background-color 5000s ease-in-out 0s;
-}
-.input-error {
-    border: 1px solid #ff4b5c !important; /* Viền đỏ */
-    box-shadow: 0 0 5px #ff4b5c !important;
+    /* Mẹo nhỏ: Làm chậm quá trình đổi màu nền của trình duyệt */
+    transition: background-color 9999s ease-in-out 0s !important;
+    
+    /* Đảm bảo chữ không bị mất */
+    caret-color: #c4c3ca !important;
 }
 </style>

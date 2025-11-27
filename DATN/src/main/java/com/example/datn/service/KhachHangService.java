@@ -34,10 +34,26 @@ public class KhachHangService {
     }
 
     public KhachHang save(KhachHang obj) {
+        if (obj.getMa() == null || obj.getMa().isEmpty()) {
+            obj.setMa(autoTaoMa());
+        }
         return repo.save(obj);
     }
 
     public void deleteById(UUID id) {
         repo.deleteById(id);
+    }
+
+    public Optional<KhachHang> findByTaiKhoan(String tk){
+        return repo.findByTaiKhoan(tk);
+    }
+
+    public Boolean existsByEmail(String email){
+        return repo.existsByEmail(email);
+    }
+
+    private String autoTaoMa() {
+        long count = repo.count();
+        return String.format("KH%03d", count);
     }
 }
