@@ -121,38 +121,40 @@ if (lichSuThayDoi.value.length > 0) {
     return;
   }
 
-  // Nếu hóa đơn chưa có lịch sử (chưa đổi trạng thái)
-  if (hoaDon.value.trangThai === 0) {
-    // Trường hợp hóa đơn bị hủy, chỉ hiển thị 1 bước "Hủy"
-    lichSuHienThi.value = [{
+  // 🔥 Build timeline chuẩn
+const FIXED_STEPS = [1, 2, 3, 4, 5]; // 5 bước cố định
+
+if (hoaDon.value.trangThai === 0) {
+  // Nếu đơn bị hủy → chỉ hiển thị 1 bước
+  lichSuHienThi.value = [
+    {
       id: 1,
       text: TRANG_THAI_HOA_DON[0],
-      thoiGian: hoaDon.value.thoiGianHuy || hoaDon.value.ngayTao,
-      isCanceled: true
-    }];
-  } else {
-    // Hóa đơn bình thường, tạo các bước đến trạng thái hiện tại
-    const currentStep = Number(hoaDon.value.trangThai);
-
-    for (let s = 1; s <= currentStep; s++) {
-      // 🔥 Nếu có lịch sử, tìm thời gian tương ứng theo trạng thái
-      const lichSuStep = lichSuThayDoi.value.find(
-        (i) => i.trangThaiMoi === s
-      );
-
-      steps.push({
-        id: s,
-        text: TRANG_THAI_HOA_DON[s],
-        thoiGian:
-          (lichSuStep && (lichSuStep.thoiGianCapNhat || lichSuStep.thoiGian || lichSuStep.ngayTao)) ||
-          hoaDon.value.ngayCapNhat ||
-          hoaDon.value.ngayTao,
-        isDone: s < currentStep
-      });
+      thoiGian: hoaDon.value.thoiGianHuy || hoaDon.value.ngayCapNhat,
+      isCanceled: true,
+      isDone: true
     }
+  ];
+} else {
+  const current = Number(hoaDon.value.trangThai);
 
-    lichSuHienThi.value = steps;
-  }
+  // map lịch sử theo trạng thái mới để dễ lấy thời gian
+  const historyMap = {};
+  lichSuThayDoi.value.forEach(h => {
+    historyMap[h.trangThaiMoi] =
+      h.thoiGianCapNhat || h.thoiGian || h.ngayTao;
+  });
+
+  lichSuHienThi.value = FIXED_STEPS.map(step => ({
+    id: step,
+    text: TRANG_THAI_HOA_DON[step],
+    thoiGian: historyMap[step] || null,
+    isDone: step < current,
+    isCurrent: step === current,
+    isCanceled: false
+  })).filter(s => s.id <= current); // chỉ hiển thị đến bước hiện tại
+}
+
 }
 
 
@@ -287,7 +289,8 @@ const confirmChange = async (newStatus) => {
               current: index === lichSuHienThi.length - 1 && step.text !== 'Hoàn thành',
             }"
           >
-            <span class="circle-number">{{ index + 1 }}</span>
+            <span class="circle-number">{{ step.id }}</span>
+
           </div>
 
           <div class="timeline-label mt-2">{{ step.text }}</div>
@@ -372,13 +375,7 @@ const confirmChange = async (newStatus) => {
             <button v-if="hoaDon.trangThai == 4" class="btn btn-outline-secondary btn-sm" @click="confirmChange(3)">
               🔙 Quay lại
             </button>
-            <button v-if="hoaDon.trangThai == 4" class="btn btn-outline-danger btn-sm" @click="confirmChange(0)">
-              ❌ Hủy
-            </button>
-            <!-- Hoàn thành -->
-             <button v-if="hoaDon.trangThai == 5" class="btn btn-outline-secondary btn-sm" @click="confirmChange(4)">
-              🔙 Quay lại
-            </button>
+            
             <!-- Đã hủy -->
             <button v-if="hoaDon.trangThai == 0" class="btn btn-outline-primary btn-sm" @click="confirmChange(1)">
               ↩️ Khôi phục (Chờ xác nhận)
@@ -406,6 +403,7 @@ const confirmChange = async (newStatus) => {
           <thead class="table-light">
             <tr>
               <th>Ảnh</th>
+              <th>Mã SP</th>
               <th>Tên SP</th>
               <th class="text-center">Số lượng</th>
               <th class="text-center">Màu sắc</th>
@@ -423,6 +421,7 @@ const confirmChange = async (newStatus) => {
                   style="width: 70px; height: 70px; object-fit: cover;"
                 />
               </td>
+              <td>{{ sp.maSanPham }}</td>
               <td>{{ sp.tenSanPham }}</td>
               <td class="text-center">{{ sp.soLuong }}</td>
               <td class="text-center">{{ sp.mauSac }}</td>
@@ -495,7 +494,7 @@ const confirmChange = async (newStatus) => {
                 </tr>
                 <tr v-for="(item, i) in lichSuThayDoi" :key="i">
                   <td>{{ formatDateTime(item.thoiGian || item.ngayTao) }}</td>
-                  <td>{{ item.nguoiThucHien || '-' }}</td>
+                  <td>{{ item.nguoiChinhSua || '-' }}</td>
                   <td>{{ item.ghiChu || '-' }}</td>
                 </tr>
               </tbody>
