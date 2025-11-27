@@ -18,7 +18,7 @@ const lichSuHienThi = ref([]); // sẽ dùng để render timeline
 const TRANG_THAI_HOA_DON = {
   1: "Chờ xác nhận",
   2: "Đã xác nhận",
-  3: "Chờ thanh toán",
+  3: "Dã thanh toán",
   4: "Đang giao",
   5: "Hoàn thành",
   0: "Đã hủy",
@@ -37,7 +37,6 @@ const formatDateTime = (str) => {
   });
 };
 
-// Hàm load dữ liệu (hoaDon + lich su)
 const loadData = async (id) => {
   try {
     const res = await getHoaDonById(id);
@@ -51,114 +50,51 @@ const loadData = async (id) => {
 
   try {
     const historyRes = await getLichSuHoaDon(id);
-    console.log("JSON lịch sử từ API:", historyRes.data);
-
     lichSuThayDoi.value = historyRes.data || [];
   } catch (err) {
     console.warn("Không có lịch sử hoặc lỗi gọi lịch sử:", err);
     lichSuThayDoi.value = [];
   }
 
-  // Xây lichSuHienThi
-if (lichSuThayDoi.value.length > 0) {
-  // Có lịch sử từ backend
-  lichSuHienThi.value = lichSuThayDoi.value.map((item, idx) => {
-    const text =
-      item.tenTrangThai ||
-      TRANG_THAI_HOA_DON[item.trangThaiMoi] ||
-      item.trangThaiMoi ||
-      `Bước ${idx + 1}`;
-    const thoiGian =
-      item.thoiGian || item.ngayTao || item.thoiGianCapNhat || null;
-    return {
-      id: idx + 1,
-      text,
-      thoiGian,
-      raw: item,
-      isCanceled: item.trangThaiMoi === 0,
-    };
-  });
-} else {
-  const steps = [];
+  const FIXED_STEPS = [1, 2, 3, 4, 5]; // 5 bước cố định
 
-  // Nếu có lịch sử thay đổi trạng thái
-  if (lichSuThayDoi.value.length > 0) {
-    lichSuHienThi.value = lichSuThayDoi.value.map((item, idx) => {
-      const text =
-        item.tenTrangThai ||
-        TRANG_THAI_HOA_DON[item.trangThaiMoi] ||
-        item.trangThaiMoi ||
-        `Bước ${idx + 1}`;
+  if (hoaDon.value.trangThai === 0) {
+    // Nếu đơn bị hủy → chỉ hiển thị 1 bước
+    lichSuHienThi.value = [
+      {
+        id: 0,
+        text: TRANG_THAI_HOA_DON[0],
+        thoiGian: hoaDon.value.thoiGianHuy || hoaDon.value.ngayCapNhat,
+        isCanceled: true,
+        isDone: true,
+      },
+    ];
+  } else {
+    const current = Number(hoaDon.value.trangThai);
 
-      // Dùng thời gian thực tế ưu tiên theo thứ tự sau:
-      const thoiGian =
-        item.thoiGianCapNhat ||
-        item.thoiGian ||
-        item.ngayTao ||
-        null;
+    // Chỉ hiển thị từ bước 1 → bước hiện tại
+    lichSuHienThi.value = FIXED_STEPS
+      .filter(step => step <= current)
+      .map(step => {
+        // Lấy thời gian từ lịch sử nếu có
+        const historyItem = lichSuThayDoi.value.find(h => h.trangThaiMoi === step);
+        const thoiGian = historyItem
+          ? historyItem.thoiGianCapNhat || historyItem.thoiGian || historyItem.ngayTao
+          : null;
 
-      // Nếu trạng thái là "Hủy" thì chỉ hiển thị riêng bước hủy
-      if (item.trangThaiMoi === 0) {
-        return [
-          {
-            id: idx + 1,
-            text: TRANG_THAI_HOA_DON[0],
-            thoiGian,
-            isCanceled: true
-          }
-        ];
-      }
-
-      return {
-        id: idx + 1,
-        text,
-        thoiGian,
-        isCanceled: false,
-        isDone: item.trangThaiMoi && item.trangThaiMoi !== 0
-      };
-    }).flat();
-
-    return;
+        return {
+          id: step,
+          text: TRANG_THAI_HOA_DON[step],
+          thoiGian,
+          isDone: step < current,
+          isCurrent: step === current,
+          isCanceled: false,
+        };
+      });
   }
-
-  // 🔥 Build timeline chuẩn
-const FIXED_STEPS = [1, 2, 3, 4, 5]; // 5 bước cố định
-
-if (hoaDon.value.trangThai === 0) {
-  // Nếu đơn bị hủy → chỉ hiển thị 1 bước
-  lichSuHienThi.value = [
-    {
-      id: 1,
-      text: TRANG_THAI_HOA_DON[0],
-      thoiGian: hoaDon.value.thoiGianHuy || hoaDon.value.ngayCapNhat,
-      isCanceled: true,
-      isDone: true
-    }
-  ];
-} else {
-  const current = Number(hoaDon.value.trangThai);
-
-  // map lịch sử theo trạng thái mới để dễ lấy thời gian
-  const historyMap = {};
-  lichSuThayDoi.value.forEach(h => {
-    historyMap[h.trangThaiMoi] =
-      h.thoiGianCapNhat || h.thoiGian || h.ngayTao;
-  });
-
-  lichSuHienThi.value = FIXED_STEPS.map(step => ({
-    id: step,
-    text: TRANG_THAI_HOA_DON[step],
-    thoiGian: historyMap[step] || null,
-    isDone: step < current,
-    isCurrent: step === current,
-    isCanceled: false
-  })).filter(s => s.id <= current); // chỉ hiển thị đến bước hiện tại
-}
-
-}
-
-
 };
+
+
 
 // load lần đầu
 onMounted(() => {
@@ -274,36 +210,44 @@ const confirmChange = async (newStatus) => {
       <h5>Lịch sử đơn hàng</h5>
 
       <div
-        class="timeline-container d-flex align-items-center position-relative"
-        v-if="lichSuHienThi && lichSuHienThi.length"
+    class="timeline-container d-flex align-items-center position-relative"
+    v-if="lichSuHienThi && lichSuHienThi.length"
+  >
+    <div
+      v-for="(step, index) in lichSuHienThi"
+      :key="step.id + '-' + index"
+      class="timeline-step text-center flex-fill"
+    >
+      <!-- Circle -->
+      <div
+        class="timeline-circle mx-auto"
+        :class="{
+          done: step.isDone,
+          current: step.isCurrent,
+          canceled: step.isCanceled
+        }"
       >
-        <div
-          v-for="(step, index) in lichSuHienThi"
-          :key="step.id + '-' + index"
-          class="timeline-step text-center flex-fill"
-        >
-          <div
-            class="timeline-circle mx-auto"
-            :class="{
-              done: index < lichSuHienThi.length - 1 || step.text === 'Hoàn thành',
-              current: index === lichSuHienThi.length - 1 && step.text !== 'Hoàn thành',
-            }"
-          >
-            <span class="circle-number">{{ step.id }}</span>
-
-          </div>
-
-          <div class="timeline-label mt-2">{{ step.text }}</div>
-          <div v-if="step.thoiGian" class="text-muted small mt-1">{{ formatDateTime(step.thoiGian) }}</div>
-
-          <!-- connector line (we keep it visual): use pseudo element via CSS, but keep fallback div for compatibility -->
-          <div v-if="index < lichSuHienThi.length - 1" class="timeline-line"></div>
-        </div>
+        <span class="circle-number">{{ step.id }}</span>
       </div>
 
-      <div class="text-start mt-3">
-        <button class="btn btn-primary btn-sm" style="background-color:#4b8cf7; border-color:#4b8cf7;" @click="showHistory = true">
-          Chi tiết lịch sử
+      <!-- Label -->
+      <div class="timeline-label mt-2">{{ step.text }}</div>
+      <div v-if="step.thoiGian" class="text-muted small mt-1">
+        {{ formatDateTime(step.thoiGian) }}
+      </div>
+
+      <!-- Connector line -->
+      <div v-if="index < lichSuHienThi.length - 1" class="timeline-line"></div>
+    </div>
+  </div>
+
+  <div class="text-start mt-3">
+    <button
+      class="btn btn-primary btn-sm"
+      style="background-color:#4b8cf7; border-color:#4b8cf7;"
+      @click="showHistory = true"
+    >
+      Chi tiết lịch sử
         </button>
       </div>
     </div>
@@ -375,7 +319,13 @@ const confirmChange = async (newStatus) => {
             <button v-if="hoaDon.trangThai == 4" class="btn btn-outline-secondary btn-sm" @click="confirmChange(3)">
               🔙 Quay lại
             </button>
-            
+            <button v-if="hoaDon.trangThai == 4" class="btn btn-outline-danger btn-sm" @click="confirmChange(0)">
+              ❌ Hủy
+            </button>
+            <!-- Hoàn thành -->
+            <button v-if="hoaDon.trangThai == 3" class="btn btn-outline-danger btn-sm" @click="confirmChange(0)">
+              ❌ Hủy
+            </button>
             <!-- Đã hủy -->
             <button v-if="hoaDon.trangThai == 0" class="btn btn-outline-primary btn-sm" @click="confirmChange(1)">
               ↩️ Khôi phục (Chờ xác nhận)
@@ -435,30 +385,37 @@ const confirmChange = async (newStatus) => {
     </div>
 
     <!-- Tổng tiền -->
-    <div class="card shadow-sm mb-5 p-4 outer-total-card">
-      <div class="row">
-        <!-- Phiếu giảm giá -->
-        <div class="col-md-6">
-          <div class="card p-3 inner-card">
-            <p class="mb-0">
-              <strong>Phiếu giảm giá:</strong>
-              {{ hoaDon.phieuGiamGia || "Không áp dụng" }}
-            </p>
-          </div>
-        </div>
-
-        <!-- Tổng tiền -->
-        <div class="col-md-6">
-          <div class="card p-3 text-end inner-card">
-            <p class="mb-1">Tổng tiền hàng: {{ hoaDon.tongTien.toLocaleString() }} ₫</p>
-            <p class="mb-1">Phí vận chuyển: Miễn phí (0 ₫)</p>
-            <h5 class="fw-bold text-danger mb-0">
-              Tổng tiền: {{ hoaDon.tongTien.toLocaleString() }} ₫
-            </h5>
-          </div>
-        </div>
+<div class="card shadow-sm mb-5 p-4 outer-total-card">
+  <div class="row">
+    <!-- Phiếu giảm giá -->
+    <div class="col-md-6">
+      <div class="card p-3 inner-card">
+        <p class="mb-1">
+          <strong>Phiếu giảm giá:</strong>
+          {{ hoaDon.phieuGiamGia?.ten || "Không áp dụng" }}
+        </p>
+        <p v-if="hoaDon.phieuGiamGia?.soTienGiam" class="mb-0 text-success">
+          <strong>Giảm giá:</strong> -{{ hoaDon.phieuGiamGia.soTienGiam.toLocaleString() }} ₫
+        </p>
       </div>
     </div>
+
+    <!-- Tổng tiền -->
+    <div class="col-md-6">
+      <div class="card p-3 text-end inner-card">
+        <p class="mb-1">Tổng tiền hàng: {{ hoaDon.tongTien.toLocaleString() }} ₫</p>
+        <p class="mb-1">
+          Phí vận chuyển: 
+          {{ hoaDon.phiVanChuyen ? hoaDon.phiVanChuyen.toLocaleString() + " ₫" : "Miễn phí (0 ₫)" }}
+        </p>
+        <h5 class="fw-bold text-danger mb-0">
+          Tổng tiền: 
+          {{ (hoaDon.tongTien - (hoaDon.phieuGiamGia?.soTienGiam || 0) + (hoaDon.phiVanChuyen || 0)).toLocaleString() }} ₫
+        </h5>
+      </div>
+    </div>
+  </div>
+</div>
 
     <!-- Nút hành động -->
     <div class="d-flex justify-content-end gap-2">

@@ -36,6 +36,7 @@ import TrangChu from "@/components/trangChu.vue";
 import QuanLyHoaDon from "@/view/hoaDon/QuanLyHoaDon.vue";
 import ChiTietHD from "@/view/hoaDon/ChiTietHD.vue";
 import BanHangTaiQuay from "@/view/banHang/banHangTaiQuay.vue";
+import ThongKe from "@/view/thongKe/ThongKe.vue";
 
 const listRouter = [
   {
@@ -49,8 +50,6 @@ const listRouter = [
         meta: { title: "Trang chủ" },
         meta: { title: "Trang chủ" },
       },
-
-      // Sản phẩm
 
       // Sản phẩm
       {
@@ -271,6 +270,14 @@ const listRouter = [
         component: BanHangTaiQuay,
         meta: { title: "Bán hàng tại quầy" },
       },
+      
+      //Thống kê
+      {
+        path: "thong-ke",
+        name: "ThongKe",
+        component: ThongKe,
+        meta: {title: "Thống kê"}
+      }
     ],
   },
   { path: "/", redirect: "/admin" },
