@@ -1,5 +1,5 @@
 <template>
-  <div class="container-fluid mt-4 px-5">
+  <div class="container-fluid mt-4 px-1">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
         <div
@@ -85,11 +85,18 @@
               class="form-control"
               :class="{ 'is-invalid': v$.sdt.$error }"
               placeholder="Nhập số điện thoại"
+              @blur="v$.sdt.$touch()"
             />
-            <small v-if="v$.sdt.required.$invalid" class="text-danger">
+            <small
+              v-if="v$.sdt.$dirty && v$.sdt.required.$invalid"
+              class="text-danger"
+            >
               Vui lòng nhập số điện thoại
             </small>
-            <small v-else-if="v$.sdt.phone.$invalid" class="text-danger">
+            <small
+              v-else-if="v$.sdt.$dirty && v$.sdt.phone.$invalid"
+              class="text-danger"
+            >
               Số điện thoại không hợp lệ (phải có 10 số và bắt đầu bằng 0)
             </small>
           </div>
@@ -105,17 +112,23 @@
               placeholder="Nhập email nhân viên"
               @blur="v$.email.$touch()"
             />
-            <small v-if="v$.email.required.$invalid" class="text-danger">
+            <small
+              v-if="v$.email.$dirty && v$.email.required.$invalid"
+              class="text-danger"
+            >
               Vui lòng nhập email
             </small>
-            <small v-else-if="v$.email.email.$invalid" class="text-danger">
+            <small
+              v-else-if="v$.email.$dirty && v$.email.email.$invalid"
+              class="text-danger"
+            >
               Email không đúng định dạng
             </small>
-            <small v-else-if="v$.email.duplicate.$invalid" class="text-danger">
+            <small
+              v-else-if="v$.email.$dirty && v$.email.duplicate.$invalid"
+              class="text-danger"
+            >
               Email đã tồn tại, vui lòng nhập email khác
-            </small>
-            <small v-else-if="isCheckingEmail" class="text-muted">
-              Đang kiểm tra email...
             </small>
           </div>
 
@@ -129,6 +142,7 @@
                 class="form-control"
                 :class="{ 'is-invalid': v$.cccd.$error }"
                 placeholder="Nhập CCCD nhân viên"
+                @blur="v$.cccd.$touch()"
               />
               <!-- Bấm sẽ mở modal và bắt đầu scan -->
               <button
@@ -142,10 +156,16 @@
             </div>
 
             <!-- Thông báo lỗi -->
-            <small v-if="v$.cccd.required.$invalid" class="text-danger">
+            <small
+              v-if="v$.cccd.$dirty && v$.cccd.required.$invalid"
+              class="text-danger"
+            >
               Vui lòng nhập CCCD
             </small>
-            <small v-else-if="v$.cccd.cccd.$invalid" class="text-danger">
+            <small
+              v-else-if="v$.cccd.$dirty && v$.cccd.cccd.$invalid"
+              class="text-danger"
+            >
               CCCD phải có 12 số
             </small>
 
@@ -585,7 +605,7 @@ const handleFileUpload = async (event) => {
   uploading.value = true;
 
   try {
-    const res = await axios.post("http://localhost:8080/api/upload", formData, {
+    const res = await axios.post("http://localhost:8080/admin/upload", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     form.urlAnh = res.data;
