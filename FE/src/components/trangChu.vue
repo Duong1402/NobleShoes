@@ -1,6 +1,6 @@
 <script setup></script>
 <template>
-  <div class="container-fluid mt-4 px-1">
+  <div class="page-inner">
     <div
       class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-4"
     >
@@ -412,7 +412,7 @@
                   >
                 </div>
                 <div class="info-user ms-3">
-                  <div class="username">Thedd</div>
+                  <div class="username">Hizrian</div>
                   <div class="status">Web Designer</div>
                 </div>
                 <button class="btn btn-icon btn-link op-8 me-1">

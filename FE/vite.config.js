@@ -15,7 +15,4 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
-  css: {
-    devSourcemap: false, // tắt sourcemap trong môi trường dev
-  },
 })

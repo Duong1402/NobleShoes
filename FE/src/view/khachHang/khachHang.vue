@@ -5,24 +5,17 @@ import { useNotify } from "@/composables/useNotify";
 
 // Service Khách hàng
 import { getAllKhachHang, updateKhachHang } from "@/service/KhachHangService";
-import { getDiaChiByKhachHangId } from "@/service/DiaChiService";
 
 /* ============ STATE ============ */
 const notify = useNotify();
 
-const isLoading = ref(false); // trạng thái tải danh sách
-const khachHang = ref([]); // toàn bộ KH
-const q = ref(""); // từ khóa tìm kiếm
-const statusFilter = ref("all"); // all | active | inactive
+const isLoading = ref(false);        // trạng thái tải danh sách
+const khachHang = ref([]);           // toàn bộ KH
+const q = ref("");                   // từ khóa tìm kiếm
+const statusFilter = ref("all");     // all | active | inactive
 
 // Ưu tiên ID KH vừa thêm (được set bên trang Thêm KH)
 const newFirstId = ref(null);
-
-const khachHangDiaChiMap = ref(new Map());
-
-const getDisplayAddress = (kh) => {
-  return khachHangDiaChiMap.value.get(kh.id) || "— Chưa có địa chỉ —";
-};
 
 /* ============ HELPERS ============ */
 const fDate = (d) => {
@@ -66,10 +59,8 @@ const loadKhachHang = async () => {
 
     // Chuẩn hóa: array / {data:array} / {data:{content:array}}
     const raw = res?.data ?? res ?? [];
-    const data = Array.isArray(raw) ? raw : raw?.content ?? [];
+    const data = Array.isArray(raw) ? raw : (raw?.content ?? []);
     khachHang.value = Array.isArray(data) ? data : [];
-
-    await loadDiaChiForKhachHang(khachHang.value);
 
     const NEW_ID = sessionStorage.getItem("NEW_KH_ID");
     if (NEW_ID) {
@@ -84,36 +75,6 @@ const loadKhachHang = async () => {
   } finally {
     isLoading.value = false;
   }
-};
-
-const loadDiaChiForKhachHang = async (khachHangList) => {
-  // Chỉ lấy địa chỉ của khách hàng mới hoặc chưa có trong Map
-  const promises = khachHangList
-    .filter((kh) => !khachHangDiaChiMap.value.has(kh.id))
-    .map(async (kh) => {
-      try {
-        // Gọi API lấy danh sách địa chỉ của KH này
-        // GIẢ ĐỊNH: findAllByKhachHangId(id) trả về List<DiaChi>
-        const res = await getDiaChiByKhachHangId(kh.id);
-        const addresses = res?.data ?? res ?? [];
-
-        if (addresses.length > 0) {
-          // Chọn địa chỉ đầu tiên (coi là mặc định)
-          const dc = addresses[0]; // Tạo chuỗi địa chỉ đầy đủ
-          const fullAddress = [dc.diaChiCuThe, dc.xa, dc.huyen, dc.thanhPho]
-            .filter(Boolean)
-            .join(", "); // Lưu vào Map
-          khachHangDiaChiMap.value.set(kh.id, fullAddress);
-        } else {
-          khachHangDiaChiMap.value.set(kh.id, "—");
-        }
-      } catch (e) {
-        console.warn(`Không thể lấy địa chỉ cho KH ID: ${kh.id}`, e);
-        khachHangDiaChiMap.value.set(kh.id, "— Lỗi tải địa chỉ —");
-      }
-    }); // Chờ tất cả các promise chạy xong
-
-  await Promise.all(promises);
 };
 
 onMounted(loadKhachHang);
@@ -149,10 +110,8 @@ const filtered = computed(() => {
         .some((s) => s.includes(kw));
     const okStatus =
       statusFilter.value === "all" ||
-      (statusFilter.value === "active" &&
-        (kh.trangThai === 1 || kh.trangThai === true)) ||
-      (statusFilter.value === "inactive" &&
-        !(kh.trangThai === 1 || kh.trangThai === true));
+      (statusFilter.value === "active"   && (kh.trangThai === 1 || kh.trangThai === true)) ||
+      (statusFilter.value === "inactive" && !(kh.trangThai === 1 || kh.trangThai === true));
     return okKw && okStatus;
   });
 });
@@ -163,12 +122,8 @@ const currentPage = ref(1);
 const pageSizes = [5, 10, 20, 50];
 
 const startIndex = computed(() => (currentPage.value - 1) * pageSize.value);
-const endIndex = computed(() =>
-  Math.min(startIndex.value + pageSize.value, filtered.value.length)
-);
-const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filtered.value.length / pageSize.value))
-);
+const endIndex   = computed(() => Math.min(startIndex.value + pageSize.value, filtered.value.length));
+const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / pageSize.value)));
 
 const paginated = computed(() =>
   filtered.value.slice(startIndex.value, startIndex.value + pageSize.value)
@@ -179,12 +134,9 @@ function goTo(p) {
   currentPage.value = target;
 }
 
-watch([q, statusFilter, pageSize], () => {
-  currentPage.value = 1;
-});
+watch([q, statusFilter, pageSize], () => { currentPage.value = 1; });
 watch(filtered, () => {
-  if (currentPage.value > totalPages.value)
-    currentPage.value = totalPages.value;
+  if (currentPage.value > totalPages.value) currentPage.value = totalPages.value;
 });
 
 /* ============ ACTIONS ============ */
@@ -199,9 +151,7 @@ const toggleTrangThai = async (kh) => {
     };
     await updateKhachHang(kh.id, payload);
     notify.success(
-      `Đã chuyển sang: ${
-        kh.trangThai === 1 ? "Còn hoạt động" : "Ngừng hoạt động"
-      }`
+      `Đã chuyển sang: ${kh.trangThai === 1 ? "Còn hoạt động" : "Ngừng hoạt động"}`
     );
   } catch (err) {
     kh.trangThai = old; // rollback
@@ -221,43 +171,23 @@ const exportExcel = async () => {
 
     const rows = filtered.value.map((kh, idx) => ({
       STT: idx + 1,
-      Mã: kh.ma || "",
+      "Mã": kh.ma || "",
       "Họ tên": kh.hoTen || "",
-      SĐT: kh.sdt || "",
-      Email: kh.email || "",
-      "Giới tính": kh.gioiTinh === 1 || kh.gioiTinh === true ? "Nam" : "Nữ",
+      "SĐT": kh.sdt || "",
+      "Email": kh.email || "",
+      "Giới tính": (kh.gioiTinh === 1 || kh.gioiTinh === true) ? "Nam" : "Nữ",
       "Ngày sinh": kh.ngaySinh ? fDate(kh.ngaySinh) : "",
       "Địa chỉ": kh.diaChi || "",
-      "Trạng thái":
-        kh.trangThai === 1 || kh.trangThai === true
-          ? "Còn hoạt động"
-          : "Ngừng hoạt động",
+      "Trạng thái": (kh.trangThai === 1 || kh.trangThai === true) ? "Còn hoạt động" : "Ngừng hoạt động",
     }));
 
-    const ws = XLSX.utils.json_to_sheet(rows, {
-      header: [
-        "STT",
-        "Mã",
-        "Họ tên",
-        "SĐT",
-        "Email",
-        "Giới tính",
-        "Ngày sinh",
-        "Địa chỉ",
-        "Trạng thái",
-      ],
-    });
+    const ws = XLSX.utils.json_to_sheet(rows, { header: [
+      "STT","Mã","Họ tên","SĐT","Email","Giới tính","Ngày sinh","Địa chỉ","Trạng thái"
+    ] });
 
     ws["!cols"] = [
-      { wch: 6 },
-      { wch: 12 },
-      { wch: 24 },
-      { wch: 14 },
-      { wch: 28 },
-      { wch: 10 },
-      { wch: 12 },
-      { wch: 40 },
-      { wch: 18 },
+      { wch: 6 }, { wch: 12 }, { wch: 24 }, { wch: 14 }, { wch: 28 },
+      { wch: 10 }, { wch: 12 }, { wch: 40 }, { wch: 18 },
     ];
 
     const wb = XLSX.utils.book_new();
@@ -265,9 +195,7 @@ const exportExcel = async () => {
 
     const now = new Date();
     const pad = (n) => String(n).padStart(2, "0");
-    const ts = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
-      now.getDate()
-    )}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
+    const ts = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
     const filename = `khach_hang_${ts}.xlsx`;
 
     XLSX.writeFile(wb, filename);
@@ -280,13 +208,11 @@ const exportExcel = async () => {
 </script>
 
 <template>
-  <div class="container-fluid mt-4 px-1">
+  <div class="container-fluid mt-4 px-5">
     <!-- Header -->
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
-        <div
-          class="page-header d-flex align-items-center justify-content-between"
-        >
+        <div class="page-header d-flex align-items-center justify-content-between">
           <div>
             <h3 class="fw-bold text-warning mb-1">Quản lý khách hàng</h3>
             <Breadcrumb class="mt-2 mb-0" />
@@ -357,9 +283,7 @@ const exportExcel = async () => {
           </div>
 
           <!-- Footer của bộ lọc -->
-          <div
-            class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4"
-          >
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4">
             <p class="mb-2 mb-md-0">
               Tổng số khách hàng:
               <span class="text-warning fw-bold">{{ filtered.length }}</span>
@@ -369,10 +293,7 @@ const exportExcel = async () => {
               <button
                 type="button"
                 class="btn btn-warning text-white"
-                @click="
-                  q = '';
-                  statusFilter = 'all';
-                "
+                @click="q=''; statusFilter='all'"
               >
                 Đặt lại bộ lọc
               </button>
@@ -429,10 +350,7 @@ const exportExcel = async () => {
                   <!-- Loading row -->
                   <tr v-if="isLoading">
                     <td colspan="9" class="text-center py-4">
-                      <div
-                        class="spinner-border text-warning"
-                        role="status"
-                      ></div>
+                      <div class="spinner-border text-warning" role="status"></div>
                       <div class="mt-2 text-secondary">Đang tải dữ liệu...</div>
                     </td>
                   </tr>
@@ -457,55 +375,37 @@ const exportExcel = async () => {
                     <td>{{ kh.hoTen }}</td>
                     <td>{{ kh.sdt }}</td>
                     <td>{{ kh.email }}</td>
-                    <td style="max-width: 240px; white-space: normal">
-                      {{ getDisplayAddress(kh) }}
+                    <td style="max-width: 240px; white-space: normal;">
+                      {{ kh.diaChi }}
                     </td>
                     <td>
                       <span
                         class="badge rounded-pill fs-6 px-3 status-badge"
                         :class="{
-                          'text-white bg-warning':
-                            kh.trangThai === 1 || kh.trangThai === true,
-                          'text-white bg-danger': !(
-                            kh.trangThai === 1 || kh.trangThai === true
-                          ),
+                          'text-white bg-warning': (kh.trangThai === 1 || kh.trangThai === true),
+                          'text-white bg-danger': !(kh.trangThai === 1 || kh.trangThai === true),
                         }"
                       >
-                        {{
-                          kh.trangThai === 1 || kh.trangThai === true
-                            ? "Còn hoạt động"
-                            : "Ngừng hoạt động"
-                        }}
+                        {{ (kh.trangThai === 1 || kh.trangThai === true) ? "Còn hoạt động" : "Ngừng hoạt động" }}
                       </span>
                     </td>
                     <td class="text-center align-middle">
-                      <div
-                        class="d-flex justify-content-center align-items-center gap-3"
-                      >
+                      <div class="d-flex justify-content-center align-items-center gap-3">
                         <div class="form-check form-switch m-0">
                           <input
                             class="form-check-input switch-yellow"
                             type="checkbox"
                             role="switch"
                             :id="'switch-' + kh.id"
-                            :checked="
-                              kh.trangThai === 1 || kh.trangThai === true
-                            "
+                            :checked="kh.trangThai === 1 || kh.trangThai === true"
                             @change="toggleTrangThai(kh)"
-                            style="
-                              cursor: pointer;
-                              width: 2.4rem;
-                              height: 1.3rem;
-                            "
+                            style="cursor: pointer; width:2.4rem; height:1.3rem"
                           />
                         </div>
 
                         <!-- Điều hướng sang trang sửa bằng route name -->
                         <router-link
-                          :to="{
-                            name: 'KhachHangDetail',
-                            params: { id: kh.id },
-                          }"
+                          :to="{ name: 'KhachHangDetail', params: { id: kh.id } }"
                           class="btn btn-link btn-warning btn-lg p-0"
                           title="Sửa khách hàng"
                         >
@@ -526,55 +426,28 @@ const exportExcel = async () => {
             </div>
 
             <!-- Pagination controls -->
-            <div
-              class="d-flex flex-column flex-md-row align-items-center justify-content-between mt-3 gap-2"
-            >
+            <div class="d-flex flex-column flex-md-row align-items-center justify-content-between mt-3 gap-2">
               <div class="d-flex align-items-center gap-2">
                 <label class="mb-0">Hiển thị</label>
-                <select
-                  class="form-select form-select-sm"
-                  style="width: 90px"
-                  v-model.number="pageSize"
-                >
-                  <option v-for="s in pageSizes" :key="s" :value="s">
-                    {{ s }}
-                  </option>
+                <select class="form-select form-select-sm" style="width: 90px" v-model.number="pageSize">
+                  <option v-for="s in pageSizes" :key="s" :value="s">{{ s }}</option>
                 </select>
                 <span class="text-muted">
-                  Dòng {{ filtered.length ? startIndex + 1 : 0 }}–{{
-                    endIndex
-                  }}
-                  / {{ filtered.length }}
+                  Dòng {{ filtered.length ? (startIndex + 1) : 0 }}–{{ endIndex }} / {{ filtered.length }}
                 </span>
               </div>
 
               <div class="btn-group">
-                <button
-                  class="btn btn-sm btn-outline-secondary"
-                  :disabled="currentPage === 1"
-                  @click="goTo(1)"
-                >
+                <button class="btn btn-sm btn-outline-secondary" :disabled="currentPage===1" @click="goTo(1)">
                   « Đầu
                 </button>
-                <button
-                  class="btn btn-sm btn-outline-secondary"
-                  :disabled="currentPage === 1"
-                  @click="goTo(currentPage - 1)"
-                >
+                <button class="btn btn-sm btn-outline-secondary" :disabled="currentPage===1" @click="goTo(currentPage-1)">
                   ‹ Trước
                 </button>
-                <button
-                  class="btn btn-sm btn-outline-secondary"
-                  :disabled="currentPage === totalPages"
-                  @click="goTo(currentPage + 1)"
-                >
+                <button class="btn btn-sm btn-outline-secondary" :disabled="currentPage===totalPages" @click="goTo(currentPage+1)">
                   Sau ›
                 </button>
-                <button
-                  class="btn btn-sm btn-outline-secondary"
-                  :disabled="currentPage === totalPages"
-                  @click="goTo(totalPages)"
-                >
+                <button class="btn btn-sm btn-outline-secondary" :disabled="currentPage===totalPages" @click="goTo(totalPages)">
                   Cuối »
                 </button>
               </div>
@@ -584,6 +457,7 @@ const exportExcel = async () => {
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
@@ -591,76 +465,63 @@ const exportExcel = async () => {
 </template>
 
 <style scoped>
-.badge {
-  transition: all 0.2s ease;
-}
-.badge:hover {
-  transform: scale(1.05);
-  opacity: 0.9;
-}
+.badge { transition: all 0.2s ease; }
+.badge:hover { transform: scale(1.05); opacity: 0.9; }
 
-.form-check-input {
-  cursor: pointer;
-}
+.form-check-input { cursor: pointer; }
 
 /* ====== Trạng thái: 3 radio bằng nhau, không viền hộp, cao = ô tìm kiếm ====== */
-.status-group {
-  display: flex;
-  gap: 10px;
-  width: 100%;
+.status-group{
+  display:flex;
+  gap:10px;
+  width:100%;
 }
-.status-group .custom-radio {
-  flex: 1 1 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 38px; /* = .form-control mặc định */
-  padding: 0 10px;
-  border: none;
-  background: transparent;
-  box-shadow: none;
-  cursor: pointer;
-  user-select: none;
-  margin: 0;
-  white-space: nowrap;
-  font-size: 0.95rem;
+.status-group .custom-radio{
+  flex:1 1 0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  height:38px;            /* = .form-control mặc định */
+  padding:0 10px;
+  border:none;
+  background:transparent;
+  box-shadow:none;
+  cursor:pointer;
+  user-select:none;
+  margin:0;
+  white-space:nowrap;
+  font-size:0.95rem;
 }
-.status-group .form-check-input {
-  width: 16px;
-  height: 16px;
-  margin: 0;
+.status-group .form-check-input{
+  width:16px;
+  height:16px;
+  margin:0;
 }
-.status-group .custom-radio:has(.form-check-input:checked) {
-  border: none;
-  box-shadow: none;
-  background: transparent;
+.status-group .custom-radio:has(.form-check-input:checked){
+  border:none;
+  box-shadow:none;
+  background:transparent;
 }
-.status-group .custom-radio .form-check-label {
-  color: inherit;
-  font-weight: 500;
-}
-.status-group .custom-radio:has(.form-check-input:checked) .form-check-label {
-  color: #ffc107;
-  font-weight: 600;
+.status-group .custom-radio .form-check-label{ color:inherit; font-weight:500; }
+.status-group .custom-radio:has(.form-check-input:checked) .form-check-label{
+  color:#ffc107; font-weight:600;
 }
 
 /* Radio checked màu vàng */
-.custom-radio .form-check-input:checked {
-  background-color: #ffc107 !important;
-  border-color: #ffc107 !important;
+.custom-radio .form-check-input:checked{
+  background-color:#ffc107 !important;
+  border-color:#ffc107 !important;
 }
 
 /* ====== Switch màu vàng ====== */
-.form-check-input.switch-yellow {
-  accent-color: #ffc107;
-} /* Chrome/Edge/Firefox */
-.form-switch .form-check-input.switch-yellow:checked {
-  background-color: #ffc107 !important;
-  border-color: #ffc107 !important;
+.form-check-input.switch-yellow { accent-color:#ffc107; }  /* Chrome/Edge/Firefox */
+.form-switch .form-check-input.switch-yellow:checked{
+  background-color:#ffc107 !important;
+  border-color:#ffc107 !important;
 }
-.form-switch .form-check-input.switch-yellow:focus {
-  box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+.form-switch .form-check-input.switch-yellow:focus{
+  box-shadow:0 0 0 .2rem rgba(255,193,7,.25);
 }
 
 /* ====== Bảng ====== */

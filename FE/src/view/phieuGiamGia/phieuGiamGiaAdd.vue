@@ -19,7 +19,7 @@ const khachHangSelected = ref([]);
 const totalPages = ref(0);
 const page = ref(0);
 const size = ref(10);
-const res = ref(null);
+
 // Form thêm phiếu giảm giá
 const form = reactive({ hinhThucGiamGia: true });
 
@@ -43,63 +43,56 @@ const gotoPage = (p) => {
 //Thêm phiếu giảm giá
 const addPhieuGiamGia = async () => {
   try {
-    // 🔹 Xóa lỗi cũ
-    Object.keys(errors).forEach((key) => (errors[key] = ""));
-
-    // 🔹 Chuẩn hóa dữ liệu gửi
-    const payload = {
+    let payload = {
       ...form,
       trangThai: true,
-      giaTriGiamToiThieu: form.giaTriGiamToiThieu || 0,
+      iaTriGiamToiThieu: form.giaTriGiamToiThieu || 0, // đảm bảo không null
       giaTriGiamToiDa: form.giaTriGiamToiDa || 0,
     };
 
-    // 🔹 Nếu là phiếu cá nhân
+    // if (loaiPhieu.value === "Cá nhân") {
+    //   if (!khachHangSelected.value.length) {
+    //     notify.error("Vui lòng chọn 1 khách hàng!");
+    //     return;
+    //   }
+    // }
+
     if (loaiPhieu.value === "Cá nhân") {
       if (!khachHangSelected.value.length) {
         notify.error("Vui lòng chọn 1 khách hàng!");
         return;
       }
 
-      // 1️⃣ Tạo phiếu giảm giá
-      const { data: phieu } = await createPhieuGiamGia(JSON.parse(JSON.stringify(payload)));
+      // 1️⃣ Tạo phiếu giảm giá chung
+      const p = await createPhieuGiamGia(JSON.parse(JSON.stringify(payload)));
 
-      // 2️⃣ Chuẩn bị dữ liệu phiếu cá nhân
+      // 2️⃣ Chuẩn bị dữ liệu phiếu giảm giá cá nhân (chỉ giữ dữ liệu cần thiết)
       const payloadCaNhan = {
-        trangThai: true,
         ten: form.ten,
         ngayNhan: form.ngayBatDau,
         ngayHetHan: form.ngayKetThuc,
-        phieuGiamGia: { id: phieu.id },
-        khachHang: { id: khachHangSelected.value[0].id },
+        phieuGiamGia: { id: p.data.id }, // chỉ cần ID
+        khachHang: { id: khachHangSelected.value[0].id }, // danh sách ID khách hàng
       };
 
-      // 3️⃣ Gửi dữ liệu cá nhân
-       res = await createPhieuGiamGiaCaNhan(payloadCaNhan);
-       if (!res) throw new Error("Lỗi khi thêm đợt giảm giá cá nhân");
-    } else {
-      // 🔹 Nếu là phiếu chung
-      res = await createPhieuGiamGia(JSON.parse(JSON.stringify(payload)));
-      if (!res) throw new Error("Lỗi khi thêm đợt giảm giá");
+      // 3️⃣ Gửi dữ liệu
+      await createPhieuGiamGiaCaNhan(payloadCaNhan);
     }
 
-    // 🔹 Thông báo và điều hướng
     notify.success("Thêm phiếu giảm giá thành công!");
     router.push("/admin/phieu-giam-gia");
   } catch (error) {
-    if (error.response?.status === 400) {
-      // 🔹 BE trả về object có errors
-      const backendErrors = error.response.data.errors || error.response.data;
-      Object.assign(errors, backendErrors);
-      console.log("Lỗi validation:", backendErrors);
+    if (error.response && error.response.status === 400) {
+      // Gán lỗi validation từ backend
+      Object.assign(errors, error.response.data);
       notify.error("Vui lòng kiểm tra lại thông tin!");
+      console.log("Lỗi validation:", errors);
     } else {
       console.error("Lỗi khi thêm phiếu giảm giá:", error);
       notify.error("Thêm thất bại, vui lòng thử lại!");
     }
   }
 };
-
 
 // Tạo hàm confirm
 const confirmSave = async () => {
@@ -121,7 +114,7 @@ const confirmSave = async () => {
 };
 </script>
 <template>
-  <div class="container-fluid mt-4 px-1">
+  <div class="container-fluid mt-4 px-5">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
         <div
@@ -313,9 +306,7 @@ const confirmSave = async () => {
                 <thead>
                   <tr style="text-align: center">
                     <th class="text-center">
-                      <input
-                        type="checkbox"
-                      />
+                      <i class="fa-regular fa-square"></i>
                     </th>
                     <th>STT</th>
                     <th>Mã</th>

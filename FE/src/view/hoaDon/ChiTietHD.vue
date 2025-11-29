@@ -18,7 +18,7 @@ const lichSuHienThi = ref([]); // sẽ dùng để render timeline
 const TRANG_THAI_HOA_DON = {
   1: "Chờ xác nhận",
   2: "Đã xác nhận",
-  3: "Dã thanh toán",
+  3: "Chờ thanh toán",
   4: "Đang giao",
   5: "Hoàn thành",
   0: "Đã hủy",
@@ -86,8 +86,8 @@ const loadData = async (id) => {
           id: step,
           text: TRANG_THAI_HOA_DON[step],
           thoiGian,
-          isDone: step < current,
-          isCurrent: step === current,
+          isDone: step < current && step !== 5,
+          isCurrent: step === current && step !== 5,
           isCanceled: false,
         };
       });
@@ -222,7 +222,7 @@ const confirmChange = async (newStatus) => {
       <div
         class="timeline-circle mx-auto"
         :class="{
-          done: step.isDone,
+          done: step.isDone || step.id === 5,
           current: step.isCurrent,
           canceled: step.isCanceled
         }"
@@ -557,18 +557,6 @@ const confirmChange = async (newStatus) => {
   font-weight: 700;
 }
 
-/* done = những bước trước bước hiện tại */
-.timeline-circle.done {
-  background-color: #198754;
-  color: white;
-}
-
-/* current = bước hiện tại */
-.timeline-circle.current {
-  background-color: #f5c542;
-  color: #000;
-  transform: scale(1.05);
-}
 
 /* connector line: use pseudo element so it stretches between steps */
 .timeline-step::after {
@@ -611,7 +599,7 @@ const confirmChange = async (newStatus) => {
 
 .timeline-circle.current {
   background-color: #f5c542;
-  color: #000;
+  color: #fff;
   transform: scale(1.05);
 }
 

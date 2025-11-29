@@ -4,20 +4,42 @@ import { ref, onMounted, computed, watch } from "vue";
 import { Modal } from "bootstrap";
 import Swal from "sweetalert2";
 import axios from "axios";
-import {
-  getAllNhanVien,
-  updateNhanVien,
-  createNhanVien,
-} from "@/service/NhanVienService";
+import { getAllNhanVien, updateNhanVien } from "@/service/NhanVienService";
 import { getAllChucVu } from "@/service/ChucVuService";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { useNotify } from "@/composables/useNotify";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
 
 const nhanVien = ref([]);
 const chucVuList = ref([]);
 const notify = useNotify();
+
+const selectedNhanVien = ref({
+  id: "",
+  ma: "",
+  hoTen: "",
+  sdt: "",
+  email: "",
+  urlAnh: "",
+  gioiTinh: true, // true = Nam, false = Nữ
+  ngaySinh: "", // ISO string: "YYYY-MM-DD"
+  diaChi: "",
+  cccd: "",
+  taiKhoan: "",
+  matKhau: "",
+  nguoiTao: "",
+  nguoiSua: "",
+  ngayTao: "", // ISO string
+  ngaySua: "", // ISO string
+  chucVu: {
+    id: "",
+    ten: "",
+  },
+  trangThai: 1, // 1 = hoạt động, 0 = ngừng
+});
+
+// Thêm ảnh lên cloud
+const previewUrl = ref("");
+const uploading = ref(false);
 
 // Từ khóa tìm kiếm
 const searchTerm = ref("");
@@ -39,162 +61,30 @@ watch([searchTerm, filterStatus], () => {
 const currentPage = ref(1);
 const itemsPerPage = ref(5); // mặc định hiển thị 10 dòng
 
-// ========================== 🟩 XUẤT DANH SÁCH NHÂN VIÊN 🟩 ==========================
-const exportToExcel = () => {
-  if (!filteredNhanVien.value.length) {
-    notify.warning("Không có dữ liệu để xuất!");
-    return;
-  }
-
-  const data = filteredNhanVien.value.map((nv, index) => ({
-    STT: index + 1,
-    "Mã nhân viên": nv.ma,
-    "Họ tên": nv.hoTen,
-    Email: nv.email,
-    "Số điện thoại": nv.sdt,
-    CCCD: nv.cccd || "",
-    "Ngày sinh": nv.ngaySinh
-      ? new Date(nv.ngaySinh).toLocaleDateString("vi-VN")
-      : "",
-    "Giới tính": nv.gioiTinh ? "Nam" : "Nữ",
-    "Địa chỉ": nv.diaChi || "",
-    "Chức vụ": nv.chucVu?.ten || "",
-    "Trạng thái": nv.trangThai === 1 ? "Còn hoạt động" : "Ngừng hoạt động",
-  }));
-
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "DanhSachNhanVien");
-
-  const buffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  saveAs(new Blob([buffer]), "DanhSachNhanVien.xlsx");
-  notify.success("Xuất file Excel thành công!");
-};
-
-// ========================== 🟨 NHẬP DỮ LIỆU TỪ EXCEL 🟨 ==========================
-const importing = ref(false);
-const importFromExcel = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = async (evt) => {
-    const data = new Uint8Array(evt.target.result);
-    const workbook = XLSX.read(data, { type: "array" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const importedData = XLSX.utils.sheet_to_json(sheet);
-
-    console.log("Dữ liệu Excel nhập vào:", importedData);
-
-    if (!importedData.length) {
-      notify.warning("File Excel không có dữ liệu!");
-      return;
-    }
-
-    // Map dữ liệu sang đúng format backend cần
-    const mappedData = importedData.map((item) => {
-      // Chuyển giới tính
-      const gioiTinh = String(item["Giới tính"]).toLowerCase().includes("nam")
-        ? true
-        : false;
-
-      // Map chức vụ từ tên sang ID
-      const chucVuObj = chucVuList.value.find(
-        (cv) =>
-          cv.ten.toLowerCase().trim() ===
-          String(item["Chức vụ"] || "")
-            .toLowerCase()
-            .trim()
-      );
-
-      return {
-        hoTen: item["Họ tên"] || "",
-        email: item["Email"] || "",
-        sdt: item["Số điện thoại"] || "",
-        cccd: item["CCCD"] || "",
-        ngaySinh: item["Ngày sinh"]
-          ? new Date(item["Ngày sinh"]).toISOString().split("T")[0]
-          : null,
-        gioiTinh,
-        diaChi: item["Địa chỉ"] || "",
-        chucVu: chucVuObj ? { id: chucVuObj.id } : null,
-        trangThai: String(item["Trạng thái"]).toLowerCase().includes("ngừng")
-          ? 0
-          : 1,
-      };
-    });
-
-    // Kiểm tra những dòng thiếu chức vụ
-    const invalidChucVu = mappedData.filter((x) => !x.chucVu);
-    if (invalidChucVu.length > 0) {
-      Swal.fire({
-        icon: "warning",
-        title: "Thiếu dữ liệu chức vụ!",
-        html: `Có ${invalidChucVu.length} nhân viên không khớp chức vụ trong hệ thống.<br>Vui lòng kiểm tra lại cột <b>Chức vụ</b>.`,
-      });
-      return;
-    }
-
-    Swal.fire({
-      title: "Nhập dữ liệu từ Excel?",
-      text: `Bạn muốn thêm ${mappedData.length} nhân viên từ file này?`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Có, nhập ngay",
-      cancelButtonText: "Hủy",
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        importing.value = true;
-        notify.info("Đang nhập dữ liệu, vui lòng chờ...");
-        try {
-          // Gọi API thêm nhân viên hàng loạt
-          for (const nv of mappedData) {
-            await createNhanVien(nv);
-          }
-
-          notify.success("Nhập dữ liệu thành công!");
-          await loadNhanVien();
-        } catch (err) {
-          console.error("❌ Lỗi khi nhập Excel:", err);
-          notify.error("Có lỗi khi nhập dữ liệu!");
-        } finally {
-          importing.value = false;
-        }
-      }
-    });
-  };
-
-  reader.readAsArrayBuffer(file);
-};
-
-// ========================== 🟦 TẢI FILE MẪU EXCEL 🟦 ==========================
-const downloadTemplateExcel = () => {
-  const templateData = [
-    {
-      "Họ tên": "Nguyễn Văn A",
-      Email: "a@example.com",
-      "Số điện thoại": "0909123456",
-      CCCD: "012345678901",
-      "Ngày sinh": "01/01/1990",
-      "Giới tính": "Nam",
-      "Địa chỉ": "123 Nguyễn Chí Thanh, Láng Hạ, Đống Đa, Hà Nội",
-      "Chức vụ": "Nhân viên",
-    },
-  ];
-
-  const ws = XLSX.utils.json_to_sheet(templateData);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Template");
-
-  const buffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  saveAs(new Blob([buffer]), "MauNhapNhanVien.xlsx");
-  notify.success("Tải file mẫu Excel thành công!");
-};
+let modalInstance = null;
 
 // Khi component mount, load danh sách nhân viên
 onMounted(async () => {
   await loadNhanVien();
   await loadChucVu();
+
+  // Nếu URL có ?id=... thì tự động mở modal chi tiết
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
+  if (id) {
+    const nv = nhanVien.value.find((n) => String(n.id).trim() === id.trim());
+    if (nv) {
+      setTimeout(() => editNhanVien(nv), 200);
+    }
+  }
+
+  // Khi modal đóng (bấm nút X hoặc ra ngoài) → xóa ?id trên URL
+  // const modalEl = document.getElementById("detailModal");
+  // if (modalEl) {
+  //   modalEl.addEventListener("hidden.bs.modal", () => {
+  //     window.history.pushState({}, "", "/admin/nhan-vien");
+  //   });
+  // }
 });
 
 // Hàm load danh sách nhân viên
@@ -216,6 +106,57 @@ const loadChucVu = async () => {
   } catch (err) {
     console.error("Lỗi khi tải danh sách chức vụ:", err);
     console.error("Chi tiết lỗi:", err.message || err);
+  }
+};
+
+// Hàm mở modal chi tiết + update
+const editNhanVien = (nv) => {
+  // Deep copy để tránh ảnh hưởng đến list chính
+  selectedNhanVien.value = JSON.parse(JSON.stringify(nv));
+  previewUrl.value = nv.urlAnh || "";
+  window.history.pushState({}, "", `?id=${nv.id}`);
+
+  // Chuẩn hóa dữ liệu giới tính sang kiểu số (0/1)
+  if (
+    selectedNhanVien.value.gioiTinh !== true &&
+    selectedNhanVien.value.gioiTinh !== false
+  ) {
+    selectedNhanVien.value.gioiTinh = false;
+  }
+
+  // Chuẩn hóa chucVu (tránh undefined)
+  selectedNhanVien.value.chucVu =
+    nv.chucVu && nv.chucVu.id
+      ? { id: String(nv.chucVu.id), ten: nv.chucVu.ten }
+      : { id: "", ten: "" };
+
+  const modalEl = document.getElementById("detailModal");
+  if (!modalInstance) modalInstance = new Modal(modalEl);
+  modalInstance.show();
+};
+
+// Upload ảnh lên Cloudinary
+const handleImageChange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", "nobleshoes_preset");
+  try {
+    uploading.value = true;
+    const res = await axios.post(
+      "https://api.cloudinary.com/v1_1/dppzg4tin/image/upload",
+      formData
+    );
+    selectedNhanVien.value.urlAnh = res.data.secure_url;
+    previewUrl.value = res.data.secure_url;
+    uploading.value = false;
+    notify.success("Tải ảnh lên thành công!");
+  } catch (err) {
+    console.error("Lỗi upload ảnh:", err);
+    uploading.value = false;
+    notify.error("Tải ảnh lên thất bại!");
   }
 };
 
@@ -247,6 +188,26 @@ const filteredNhanVien = computed(() => {
     return matchKeyword && matchStatus;
   });
 });
+
+// Hàm lưu cập nhật nhân viên
+const saveNhanVien = async () => {
+  try {
+    // Chuẩn dữ liệu gửi về BE (chỉ cần ID chức vụ)
+    const payload = {
+      ...selectedNhanVien.value,
+      chucVu: { id: selectedNhanVien.value.chucVu.id },
+      urlAnh: selectedNhanVien.value.urlAnh,
+    };
+
+    await updateNhanVien(payload.id, payload);
+    notify.success("Cập nhật thành công!");
+    modalInstance.hide();
+    await loadNhanVien();
+  } catch (err) {
+    console.error("❌ Lỗi khi cập nhật nhân viên:", err);
+    notify.error("Có lỗi khi cập nhật!");
+  }
+};
 
 // Danh sách sau khi lọc, cắt theo trang
 const paginatedNhanVien = computed(() => {
@@ -327,7 +288,7 @@ const toggleTrangThai = async (nv) => {
 };
 </script>
 <template>
-  <div class="container-fluid mt-4 px-1">
+  <div class="container-fluid mt-4 px-5">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
         <div
@@ -418,42 +379,12 @@ const toggleTrangThai = async (nv) => {
               <button type="button" class="btn btn-dark" @click="resetFilter">
                 Đặt lại bộ lọc
               </button>
-
               <router-link
                 :to="{ name: 'nhanVienAdd' }"
                 class="btn btn-warning text-white"
               >
                 Thêm nhân viên
               </router-link>
-
-              <!-- ✅ Xuất Excel -->
-              <button
-                type="button"
-                class="btn btn-warning text-white"
-                @click="exportToExcel"
-              >
-                Xuất Excel
-              </button>
-
-              <!-- ✅ Nhập từ Excel -->
-              <label class="btn btn-warning text-white mb-0">
-                Nhập từ Excel
-                <input
-                  type="file"
-                  accept=".xlsx,.xls"
-                  hidden
-                  @change="importFromExcel"
-                />
-              </label>
-
-              <!-- ✅ Tải mẫu Excel -->
-              <button
-                type="button"
-                class="btn btn-warning text-white"
-                @click="downloadTemplateExcel"
-              >
-                Tải mẫu Excel
-              </button>
             </div>
           </div>
         </form>
@@ -641,6 +572,257 @@ const toggleTrangThai = async (nv) => {
                   </li>
                 </ul>
               </nav>
+            </div>
+          </div>
+
+          <!-- Modal Detail + Update -->
+          <div
+            class="modal fade"
+            id="detailModal"
+            tabindex="-1"
+            aria-labelledby="detailModalLabel"
+            aria-hidden="true"
+          >
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+              <div class="modal-content">
+                <div class="modal-header bg-warning text-white">
+                  <h5 class="modal-title" id="detailModalLabel">
+                    Chi tiết nhân viên
+                  </h5>
+                  <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                  ></button>
+                </div>
+
+                <div class="modal-body">
+                  <div class="row g-3">
+                    <!-- Ảnh -->
+                    <div class="text-center mb-3">
+                      <img
+                        :src="
+                          previewUrl ||
+                          selectedNhanVien.urlAnh ||
+                          '/src/assets/img/default-avatar.png'
+                        "
+                        alt="Avatar"
+                        class="rounded-circle shadow-sm mb-2"
+                        style="width: 100px; height: 100px; object-fit: cover"
+                      />
+                      <div>
+                        <label
+                          for="uploadInput"
+                          class="btn btn-outline-warning btn-sm"
+                        >
+                          <i class="fa-solid fa-camera me-1"></i> Chọn ảnh
+                        </label>
+                        <input
+                          id="uploadInput"
+                          type="file"
+                          accept="image/*"
+                          hidden
+                          @change="handleImageChange"
+                        />
+                      </div>
+                      <small
+                        v-if="uploading"
+                        class="text-secondary d-block mt-1"
+                      >
+                        Đang tải ảnh lên...
+                      </small>
+                    </div>
+
+                    <!-- Mã nhân viên -->
+                    <div class="col-md-6">
+                      <label class="form-label">Mã nhân viên</label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        v-model="selectedNhanVien.ma"
+                        disabled
+                      />
+                    </div>
+
+                    <!-- Họ tên -->
+                    <div class="col-md-6">
+                      <label class="form-label">Tên nhân viên</label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        v-model="selectedNhanVien.hoTen"
+                      />
+                    </div>
+
+                    <!-- Số điện thoại -->
+                    <div class="col-md-6">
+                      <label class="form-label">Số điện thoại</label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        v-model="selectedNhanVien.sdt"
+                      />
+                    </div>
+
+                    <!-- Email -->
+                    <div class="col-md-6">
+                      <label class="form-label">Email</label>
+                      <input
+                        type="email"
+                        class="form-control"
+                        v-model="selectedNhanVien.email"
+                      />
+                    </div>
+
+                    <!-- Ngày sinh -->
+                    <div class="col-md-6">
+                      <label class="form-label">Ngày sinh</label>
+                      <input
+                        type="date"
+                        class="form-control"
+                        v-model="selectedNhanVien.ngaySinh"
+                      />
+                    </div>
+
+                    <!-- Giới tính -->
+                    <div class="col-md-6">
+                      <label class="form-label d-block">Giới tính</label>
+                      <div class="form-check form-check-inline">
+                        <input
+                          class="form-check-input"
+                          type="radio"
+                          id="gioiTinhNam"
+                          :value="true"
+                          v-model="selectedNhanVien.gioiTinh"
+                        />
+                        <label class="form-check-label" for="gioiTinhNam"
+                          >Nam</label
+                        >
+                      </div>
+                      <div class="form-check form-check-inline">
+                        <input
+                          class="form-check-input"
+                          type="radio"
+                          id="gioiTinhNu"
+                          :value="false"
+                          v-model="selectedNhanVien.gioiTinh"
+                        />
+                        <label class="form-check-label" for="gioiTinhNu"
+                          >Nữ</label
+                        >
+                      </div>
+                    </div>
+
+                    <!-- Địa chỉ -->
+                    <div class="col-12">
+                      <label class="form-label">Địa chỉ</label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        v-model="selectedNhanVien.diaChi"
+                      />
+                    </div>
+
+                    <!-- Chức vụ -->
+                    <div class="col-md-6">
+                      <label class="form-label">Chức vụ</label>
+                      <select
+                        v-model="selectedNhanVien.chucVu.id"
+                        class="form-select"
+                      >
+                        <option disabled value="">-- Chọn chức vụ --</option>
+                        <option
+                          v-for="cv in chucVuList"
+                          :key="cv.id"
+                          :value="cv.id"
+                        >
+                          {{ cv.ten }}
+                        </option>
+                      </select>
+                    </div>
+
+                    <!-- Trạng thái -->
+                    <div class="col-md-6">
+                      <label class="form-label d-block">Trạng thái</label>
+                      <div
+                        class="form-check form-check-inline"
+                        :class="{
+                          activeStatus: selectedNhanVien.trangThai == 1,
+                        }"
+                      >
+                        <input
+                          class="form-check-input"
+                          type="radio"
+                          id="trangThaiHoatDong"
+                          :value="1"
+                          v-model="selectedNhanVien.trangThai"
+                        />
+                        <label class="form-check-label" for="trangThaiHoatDong">
+                          Còn hoạt động
+                        </label>
+                      </div>
+
+                      <div
+                        class="form-check form-check-inline"
+                        :class="{
+                          inactiveStatus: selectedNhanVien.trangThai == 0,
+                        }"
+                      >
+                        <input
+                          class="form-check-input"
+                          type="radio"
+                          id="trangThaiNgung"
+                          :value="0"
+                          v-model="selectedNhanVien.trangThai"
+                        />
+                        <label class="form-check-label" for="trangThaiNgung">
+                          Ngừng hoạt động
+                        </label>
+                      </div>
+                    </div>
+
+                    <!-- Ngày tạo -->
+                    <div class="col-md-6">
+                      <label class="form-label">Ngày tạo</label>
+                      <input
+                        type="date"
+                        class="form-control"
+                        v-model="selectedNhanVien.ngayTao"
+                        disabled
+                      />
+                    </div>
+
+                    <!-- Ngày sửa -->
+                    <div class="col-md-6">
+                      <label class="form-label">Ngày sửa</label>
+                      <input
+                        type="date"
+                        class="form-control"
+                        v-model="selectedNhanVien.ngaySua"
+                        disabled
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="modal-footer">
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                  >
+                    Đóng
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-warning text-white"
+                    @click="confirmSave"
+                  >
+                    Lưu thay đổi
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

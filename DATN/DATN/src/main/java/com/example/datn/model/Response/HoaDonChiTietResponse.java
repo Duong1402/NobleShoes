@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 @Getter
 @Setter
 public class HoaDonChiTietResponse {
+    private String maSanPham;
     private String tenSanPham;
     private Integer soLuong;
     private BigDecimal donGia;
@@ -17,7 +18,7 @@ public class HoaDonChiTietResponse {
     private BigDecimal thanhTien;
 
     public HoaDonChiTietResponse(HoaDonChiTiet hdct) {
-
+        this.maSanPham = hdct.getChiTietSanPham().getSanPham().getMa();
         this.tenSanPham = hdct.getChiTietSanPham().getSanPham().getTen();
         this.soLuong = hdct.getSoLuong();
         this.mauSac = hdct.getChiTietSanPham().getMauSac().getTen();
