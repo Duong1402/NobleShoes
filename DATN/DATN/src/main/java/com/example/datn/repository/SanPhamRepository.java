@@ -14,6 +14,8 @@ import java.util.UUID;
 public interface SanPhamRepository extends JpaRepository<SanPham, UUID> {
     Optional<SanPham> findTopByOrderByMaDesc();
 
+    // Phương thức kiểm tra tên sản phẩm đã tồn tại hay chưa
+    boolean existsByTen(String ten);
     @Query(value = """
             SELECT 
                 sp.id AS id,

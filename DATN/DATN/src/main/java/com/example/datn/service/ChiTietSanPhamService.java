@@ -8,6 +8,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,6 +36,7 @@ public class ChiTietSanPhamService {
         return chiTietSanPhamRepository.findChiTietSanPhamDTOBySanPhamId(sanPhamId);
     }
 
+    // 4️⃣ Cập nhật toàn bộ chi tiết sản phẩm (modal)
     @Transactional
     public ChiTietSanPham updateChiTietSanPham(UUID id, ChiTietSanPhamUpdateDTO dto) {
         ChiTietSanPham existing = chiTietSanPhamRepository.findById(id)
@@ -91,6 +93,22 @@ public class ChiTietSanPhamService {
         }
 
         return chiTietSanPhamRepository.saveAndFlush(existing);
+    }
+
+    // 5️⃣ Inline update giá bán và số lượng tồn (dùng cho table)
+    @Transactional
+    public void updateGiaBanVaSoLuong(UUID ctspId, BigDecimal giaBan, Integer soLuongTon) {
+        ChiTietSanPham ctsp = chiTietSanPhamRepository.findById(ctspId)
+                .orElseThrow(() -> new RuntimeException("Chi tiết sản phẩm không tồn tại!"));
+
+        if(giaBan != null && giaBan.compareTo(BigDecimal.ZERO) > 0) {
+            ctsp.setGiaBan(giaBan);
+        }
+        if(soLuongTon != null && soLuongTon >= 0) {
+            ctsp.setSoLuongTon(soLuongTon);
+        }
+
+        chiTietSanPhamRepository.save(ctsp);
     }
 
 }

@@ -88,15 +88,15 @@ const editItem = (item) => {
 
 // Validate form
 const validateForm = () => {
-  if (selectedMucDichSuDung.value.id) {
-    if (!selectedMucDichSuDung.value.ma?.trim()) {
-      notify.warning("Vui lòng nhập mã mục đích sử dụng!");
-      return false;
-    }
-    if (selectedMucDichSuDung.value.ma.length < 2) {
-      notify.warning("Mã mục đích sử dụng phải có ít nhất 2 ký tự!");
-      return false;
-    }
+  // ✅ Kiểm tra trùng tên
+  const duplicate = mucDichSuDungs.value.some(
+    (d) =>
+      d.ten.trim().toLowerCase() === selectedMucDichSuDung.value.ten.trim().toLowerCase() &&
+      d.id !== selectedMucDichSuDung.value.id // tránh trùng chính bản thân khi sửa
+  );
+  if (duplicate) {
+    notify.warning("Tên danh mục đã tồn tại, vui lòng chọn tên khác!");
+    return false;
   }
 
   if (!selectedMucDichSuDung.value.ten?.trim()) {

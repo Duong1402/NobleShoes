@@ -10,8 +10,7 @@ import java.util.UUID;
 @Getter
 @Setter
 public class ChiTietSanPhamDTO {
-
-    private UUID id; // ID chi tiết sản phẩm
+    private UUID id;
     private String maSP;
     private String tenSP;
 
@@ -29,17 +28,20 @@ public class ChiTietSanPhamDTO {
     private String kichThuoc;
     private String chatLieu;
 
-    // URL ảnh: có thể 1, 2 hoặc 3 ảnh
     private String urlAnh1;
     private String urlAnh2;
     private String urlAnh3;
+
+    // ✅ Thêm số lượng tồn
+    private Integer soLuongTon;
 
     public ChiTietSanPhamDTO(UUID id, String maSP, String tenSP,
                              String tenDanhMuc, String tenThuongHieu, String tenXuatXu,
                              String tenDayGiay, String tenDeGiay, String mucDichSuDung,
                              BigDecimal giaBan, String moTa,
                              String mauSac, String kichThuoc, String chatLieu,
-                             String urlAnh1, String urlAnh2, String urlAnh3) {
+                             String urlAnh1, String urlAnh2, String urlAnh3,
+                             Integer soLuongTon) {
         this.id = id;
         this.maSP = maSP;
         this.tenSP = tenSP;
@@ -57,9 +59,9 @@ public class ChiTietSanPhamDTO {
         this.urlAnh1 = urlAnh1;
         this.urlAnh2 = urlAnh2;
         this.urlAnh3 = urlAnh3;
+        this.soLuongTon = soLuongTon; // ✅ gán giá trị
     }
 
-    // Trả về ảnh đầu tiên để hiển thị ở table/modal
     @JsonProperty("hinhAnhUrl")
     public String getHinhAnhUrl() {
         if (urlAnh1 != null && !urlAnh1.isEmpty()) return urlAnh1;
@@ -67,5 +69,5 @@ public class ChiTietSanPhamDTO {
         if (urlAnh3 != null && !urlAnh3.isEmpty()) return urlAnh3;
         return null;
     }
-
 }
+
