@@ -32,15 +32,11 @@ export const apDungGiamGia = (idHoaDon, idPhieuGiamGia) => {
 };
 
 export const thanhToan = (idHoaDon, requestData) => {
-  return axios.post(
-    `${API_URL}/hoa-don/${idHoaDon}/thanh-toan`, 
-    requestData, 
-    {
-      headers: {
-        "Content-Type": "application/json"
-      }
-    }
-  );
+  return axios.post(`${API_URL}/hoa-don/${idHoaDon}/thanh-toan`, requestData, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
 };
 
 export const getChiTietHoaDon = (idHoaDon) => {
@@ -60,6 +56,10 @@ export async function getDanhSachSanPham() {
   }
 }
 
+export const apDungKhuyenMaiTuDong = (idHoaDon) => {
+  return axios.post(`${API_URL}/ap-dung-khuyen-mai-tu-dong/${idHoaDon}`);
+};
+
 // Xóa sản phẩm khỏi hóa đơn
 export const xoaSanPhamKhoiHoaDon = (idHoaDon, idChiTietSanPham) => {
   return axios.delete(`${API_URL}/${idHoaDon}/chi-tiet/${idChiTietSanPham}`);
@@ -75,4 +75,9 @@ export const themKhachHangMoi = (khachHangData) => {
 
 export const timKhachHangDaDangKy = (keyword) => {
   return axios.get(`${API_URL}/khach-hang/tim-kiem/${keyword}`);
+};
+
+
+export const getHoaDonById = (id) => {
+  return axios.get(`${API_URL}/hoa-don/${id}`); 
 };

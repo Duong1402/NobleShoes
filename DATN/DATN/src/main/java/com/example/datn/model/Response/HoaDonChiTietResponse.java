@@ -22,7 +22,8 @@ public class HoaDonChiTietResponse {
 
     private String hinhAnhUrl;
     private String mauSac;
-    private String size;
+    private String kichThuoc;
+    private String tenXuatXu;
 
     public HoaDonChiTietResponse(HoaDonChiTiet hdct) {
         this.id = hdct.getId();
@@ -39,12 +40,16 @@ public class HoaDonChiTietResponse {
             }
 
             if (ctsp.getKichThuoc() != null) {
-                this.size = ctsp.getKichThuoc().getTen();
+                this.kichThuoc = ctsp.getKichThuoc().getTen();
             }
 
             SanPham sanPham = ctsp.getSanPham();
             if (sanPham != null) {
                 this.tenSanPham = sanPham.getTen();
+
+                if (sanPham.getXuatXu() != null) {
+                    this.tenXuatXu = sanPham.getXuatXu().getTen();
+                }
 
                 HinhAnh hinhAnh = sanPham.getHinhAnh();
                 if (hinhAnh != null) {

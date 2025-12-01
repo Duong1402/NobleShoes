@@ -89,14 +89,15 @@ public class HoaDon {
     // Phương thức tính toán giá trị giảm thực tế của Hóa đơn
     @JsonGetter
     public BigDecimal getGiamGiaThucTeHoaDon() {
-//        Quy ước: tongTien = tiền sau khi đã giảm SP
-//        Quy ước: tongTienSauGiam = tổng tiền cuối cùng sau khi giảm giá SP và HoaDon
-        if (this.tongTien != null && this.tongTienSauGiam != null) {
-            return this.tongTien.subtract(this.tongTienSauGiam);
-        }
-        return BigDecimal.ZERO;
+        return this.tongTien != null && this.tongTienSauGiam != null
+                ? this.tongTien.subtract(this.tongTienSauGiam)
+                : BigDecimal.ZERO;
     }
 
     @OneToMany(mappedBy = "hoaDon", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<LichSuHoaDon> lichSuHoaDons;
+
+    @OneToMany(mappedBy = "hoaDon", fetch = FetchType.EAGER)
+    @JsonIgnore
+    private List<HoaDonChiTiet> hoaDonChiTiets;
 }

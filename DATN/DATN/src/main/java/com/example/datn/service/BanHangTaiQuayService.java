@@ -4,11 +4,15 @@ import com.example.datn.entity.*;
 import com.example.datn.model.request.ThanhToanRequest;
 import com.example.datn.repository.*;
 import com.example.datn.service.impl.BanHangTaiQuayServiceImpl;
-import jakarta.transaction.Transactional;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -26,6 +30,9 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
     private final PhieuGiamGiaRepository phieuGiamGiaRepository;
     private final NhanVienRepository nhanVienRepository;
     private final LichSuHoaDonRepository lichSuHoaDonRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public enum trangThaiHoaDon {
         DA_HUY(0),
@@ -136,11 +143,13 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
             hdct.setTrangThai(trangThaiHoaDonChiTiet.DANG_BAN.getValue());
         }
 
-        hoaDonChiTietRepository.save(hdct);
+        hoaDonChiTietRepository.saveAndFlush(hdct);
 
         // cập nhật tồn kho
         ctsp.setSoLuongTon(ctsp.getSoLuongTon() - soLuong);
         chiTietSanPhamRepository.save(ctsp);
+
+        capNhatLaiTongTienVaKhuyenMai(idHoaDon);
 
         return hdct;
     }
@@ -155,6 +164,9 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
 
         hd.setSdt(kh.getSdt());
         hd.setTenKhachHang(kh.getHoTen());
+
+//        capNhatLaiTongTienVaKhuyenMai(idHoaDon);
+
         return hoaDonRepository.save(hd);
     }
 
@@ -164,12 +176,22 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn"));
         PhieuGiamGia pgg = phieuGiamGiaRepository.findById(idPhieuGiamGia)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu giảm giá"));
-        BigDecimal tongTien = tinhTongTien(idHoaDon);
-        BigDecimal giam = pgg.getGiaTriGiam() != null ? pgg.getGiaTriGiam() : BigDecimal.ZERO;
-        hd.setTongTien(tongTien);
-        hd.setTongTienSauGiam(tongTien.subtract(giam));
+//        BigDecimal tongTien = tinhTongTien(idHoaDon);
+//        BigDecimal giam = pgg.getGiaTriGiam() != null ? pgg.getGiaTriGiam() : BigDecimal.ZERO;
+//        hd.setTongTien(tongTien);
+//        hd.setTongTienSauGiam(tongTien.subtract(giam));
+//        hd.setPhieuGiamGia(pgg);
+//        return hoaDonRepository.save(hd);
+
+        // 🔥 BƯỚC 1: CẬP NHẬT PHIẾU GIẢM GIÁ VÀO HÓA ĐƠN
         hd.setPhieuGiamGia(pgg);
-        return hoaDonRepository.save(hd);
+        // Lưu tạm thời để hàm tính toán có thể đọc được PGG mới
+        hoaDonRepository.save(hd);
+
+        // 🔥 BƯỚC 2: GỌI HÀM TÍNH TOÁN LẠI TỔNG TIỀN (Sẽ tính toán lại tổng tiền và tongTienSauGiam)
+        capNhatLaiTongTienVaKhuyenMai(idHoaDon);
+
+        return hd;
     }
 
     @Override
@@ -290,7 +312,13 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
         System.out.println("🔄 Hoàn lại tồn cho sản phẩm: " + ctsp.getId() + ", tồn mới = " + ctsp.getSoLuongTon());
 
         hdct.setTrangThai(trangThaiHoaDonChiTiet.DA_XOA.getValue());
-        hoaDonChiTietRepository.save(hdct);
+        hoaDonChiTietRepository.saveAndFlush(hdct);
+
+        // 🔥 Cần lấy lại đối tượng HoaDon để update
+        HoaDon hd = hoaDonRepository.findById(idHoaDon).orElseThrow();
+
+        // 🔥 THÊM DÒNG NÀY: Tính lại tiền
+        capNhatLaiTongTienVaKhuyenMai(idHoaDon);
     }
 
     public List<KhachHang> timKhachHangByHotenOrSdt(String keyword) {
@@ -378,5 +406,121 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
         String newMa = "KH" + String.format("%02d", newNumber);
 
         return newMa;
+    }
+
+    public PhieuGiamGia timPhieuGiamGiaTotNhat(UUID idHoaDon, UUID idKhachHang) {
+        // 1. Lấy tổng tiền
+        HoaDon hoaDon = hoaDonRepository.findById(idHoaDon).orElseThrow();
+
+        // Tính lại tổng tiền cho chắc ăn (giống controller)
+        BigDecimal tongTienHang = BigDecimal.ZERO;
+        if (hoaDon.getHoaDonChiTiets() != null) {
+            for (HoaDonChiTiet ct : hoaDon.getHoaDonChiTiets()) {
+                if (ct.getThanhTien() != null) tongTienHang = tongTienHang.add(ct.getThanhTien());
+            }
+        }
+        System.out.println("🔥 [DEBUG] Tổng tiền đơn hàng: " + tongTienHang);
+
+        // 2. Lấy danh sách phiếu từ DB
+        List<PhieuGiamGia> listCoupons = phieuGiamGiaRepository.findValidCouponsForCustomer(idKhachHang);
+        System.out.println("🔥 [DEBUG] Tìm thấy " + listCoupons.size() + " phiếu trong DB (thỏa mãn ngày & trạng thái).");
+
+        PhieuGiamGia bestCoupon = null;
+        BigDecimal maxDiscountAmount = BigDecimal.ZERO;
+
+        for (PhieuGiamGia phieu : listCoupons) {
+            System.out.println("  👉 Đang check phiếu: " + phieu.getTen() + " | Mã: " + phieu.getMa());
+
+            // --- CHECK 1: Điều kiện giá trị đơn hàng tối thiểu ---
+            BigDecimal dieuKienToiThieu = phieu.getGiaTriGiamToiThieu();
+            if (dieuKienToiThieu != null && tongTienHang.compareTo(dieuKienToiThieu) < 0) {
+                System.out.println("     ❌ BỊ LOẠI: Tổng tiền (" + tongTienHang + ") nhỏ hơn điều kiện tối thiểu (" + dieuKienToiThieu + ")");
+                continue;
+            }
+
+            // --- TÍNH TOÁN ---
+            BigDecimal currentDiscountAmount = BigDecimal.ZERO;
+            if (Boolean.TRUE.equals(phieu.getHinhThucGiamGia())) {
+                // Giảm %
+                BigDecimal phanTram = phieu.getGiaTriGiam();
+                currentDiscountAmount = tongTienHang.multiply(phanTram).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+
+                if (phieu.getGiaTriGiamToiDa() != null && currentDiscountAmount.compareTo(phieu.getGiaTriGiamToiDa()) > 0) {
+                    currentDiscountAmount = phieu.getGiaTriGiamToiDa();
+                    System.out.println("     ℹ️ Áp dụng giảm tối đa: " + currentDiscountAmount);
+                }
+            } else {
+                // Giảm tiền
+                currentDiscountAmount = phieu.getGiaTriGiam();
+            }
+
+            System.out.println("     ✅ HỢP LỆ. Mức giảm: " + currentDiscountAmount);
+
+            // So sánh tìm Best
+            if (currentDiscountAmount.compareTo(maxDiscountAmount) > 0) {
+                maxDiscountAmount = currentDiscountAmount;
+                bestCoupon = phieu;
+                System.out.println("     ⭐️ Đây đang là phiếu ngon nhất!");
+            }
+        }
+
+        return bestCoupon;
+    }
+
+    // TRONG BanHangTaiQuayService.java
+
+    // Hàm này dùng để tính toán lại mọi thứ mỗi khi giỏ hàng thay đổi
+    // TRONG BanHangTaiQuayService.java
+
+    // 👇 Sửa tham số đầu vào thành UUID idHoaDon
+    private void capNhatLaiTongTienVaKhuyenMai(UUID idHoaDon) {
+        // 1. Lấy Hóa Đơn
+        HoaDon hd = hoaDonRepository.findById(idHoaDon)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn"));
+
+        // Lấy thông tin phiếu giảm giá ra trước (để tránh lỗi Lazy khi detach)
+        PhieuGiamGia phieu = hd.getPhieuGiamGia();
+
+        // 🔥 BƯỚC QUAN TRỌNG NHẤT: DETACH (TÁCH) HÓA ĐƠN KHỎI CONTEXT
+        // Để ngăn Hibernate tự động xóa sản phẩm mới do cơ chế đồng bộ danh sách
+        entityManager.detach(hd);
+
+        // 2. Tính tổng tiền từ DB (Query Native)
+        BigDecimal tongTienHang = hoaDonChiTietRepository.tongTienHoaDon(idHoaDon);
+
+        // 3. Tính toán Khuyến mãi (Logic cũ)
+        BigDecimal soTienGiam = BigDecimal.ZERO;
+
+        if (phieu != null) {
+            // Check điều kiện tối thiểu
+            if (phieu.getGiaTriGiamToiThieu() != null
+                    && tongTienHang.compareTo(phieu.getGiaTriGiamToiThieu()) < 0) {
+                phieu = null; // Gỡ phiếu
+            } else {
+                // Tính tiền giảm
+                if (Boolean.TRUE.equals(phieu.getHinhThucGiamGia())) {
+                    BigDecimal phanTram = phieu.getGiaTriGiam();
+                    soTienGiam = tongTienHang.multiply(phanTram)
+                            .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+                    if (phieu.getGiaTriGiamToiDa() != null
+                            && soTienGiam.compareTo(phieu.getGiaTriGiamToiDa()) > 0) {
+                        soTienGiam = phieu.getGiaTriGiamToiDa();
+                    }
+                } else {
+                    soTienGiam = phieu.getGiaTriGiam();
+                }
+
+                if (soTienGiam.compareTo(tongTienHang) > 0) {
+                    soTienGiam = tongTienHang;
+                }
+            }
+        }
+
+        // 4. Tính tiền sau giảm
+        BigDecimal tienSauGiam = tongTienHang.subtract(soTienGiam).max(BigDecimal.ZERO);
+
+        // 5. UPDATE TRỰC TIẾP VÀO DB
+        // Lúc này hd đã bị detach nên Hibernate sẽ không can thiệp vào list sản phẩm nữa
+        hoaDonRepository.updateTienVaKhuyenMai(idHoaDon, tongTienHang, tienSauGiam, phieu);
     }
 }
