@@ -27,7 +27,7 @@
           </li>
 
           <!-- Mẫu menu có submenu -->
-           <li class="nav-item" :class="{ active: activeRoute === 'BanHang' }">
+          <li class="nav-item" :class="{ active: activeRoute === 'BanHang' }">
             <router-link
               :to="{ name: 'BanHang' }"
               class="nav-link link-with-icon"
@@ -132,8 +132,9 @@ const menus = [
     title: "Quản lý hóa đơn",
     icon: "fas fa-file",
     routeName: "HoaDon",
-    children: [{ text: "Hóa Đơn",route: "HoaDon" }],
+    children: [{ text: "Hóa Đơn", route: "HoaDon" }],
   },
+
   {
     key: "giamGia",
     title: "Quản lý giảm giá",
@@ -165,10 +166,10 @@ const menus = [
     icon: "fa-solid fa-users",
     routeName: "nhanVien",
     children: [
-      { text: "Nhân viên",  route: "nhanVien"}, 
-      { text: "Khách hàng" , route: "khachHang"}],
+      { text: "Nhân viên", route: "nhanVien" },
+      { text: "Khách hàng", route: "khachHang" },
+    ],
   },
-  
 ];
 </script>
 

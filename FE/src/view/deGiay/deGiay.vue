@@ -90,11 +90,15 @@ const editItem = (item) => {
 
 // Validate
 const validateForm = () => {
-  if (selectedDeGiay.value.id) {
-    if (!selectedDeGiay.value.ma?.trim()) {
-      notify.warning("Vui lòng nhập mã đế giày!");
-      return false;
-    }
+  // ✅ Kiểm tra trùng tên
+  const duplicate = deGiays.value.some(
+    (d) =>
+      d.ten.trim().toLowerCase() === selectedDeGiay.value.ten.trim().toLowerCase() &&
+      d.id !== selectedDeGiay.value.id // tránh trùng chính bản thân khi sửa
+  );
+      if (duplicate) {
+    notify.warning("Tên đã tồn tại, vui lòng chọn tên khác!");
+    return false;
   }
   if (!selectedDeGiay.value.ten?.trim()) {
     notify.warning("Vui lòng nhập tên đế giày!");

@@ -93,11 +93,15 @@ const editItem = (item) => {
 
 // --- Validate ---
 const validateForm = () => {
-  if (selectedThuongHieu.value.id) {
-    if (!selectedThuongHieu.value.ma?.trim()) {
-      notify.warning("Vui lòng nhập mã thương hiệu!");
-      return false;
-    }
+  // ✅ Kiểm tra trùng tên
+  const duplicate = thuongHieus.value.some(
+    (d) =>
+      d.ten.trim().toLowerCase() === selectedThuongHieu.value.ten.trim().toLowerCase() &&
+      d.id !== selectedThuongHieu.value.id // tránh trùng chính bản thân khi sửa
+  );
+    if (duplicate) {
+    notify.warning("Tên đã tồn tại, vui lòng chọn tên khác!");
+    return false;
   }
   if (!selectedThuongHieu.value.ten?.trim()) {
     notify.warning("Vui lòng nhập tên thương hiệu!");

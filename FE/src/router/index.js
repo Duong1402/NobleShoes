@@ -38,6 +38,10 @@ import QuanLyHoaDon from "@/view/hoaDon/QuanLyHoaDon.vue";
 import ChiTietHD from "@/view/hoaDon/ChiTietHD.vue";
 import BanHangTaiQuay from "@/view/banHang/banHangTaiQuay.vue";
 
+// Trang client (người mua)
+import ClientLayout from "@/components/layout/ClientLayout.vue";
+import TrangChuClient from "@/view/client/TrangChuClient.vue";
+
 const listRouter = [
   {
     path: "/admin",
@@ -258,6 +262,7 @@ const listRouter = [
         path: "hoa-don",
         name: "HoaDon",
         component: QuanLyHoaDon,
+        component: QuanLyHoaDon,
         meta: { title: "Quản lý Hóa đơn" },
       },
       {
@@ -271,6 +276,18 @@ const listRouter = [
         name: "BanHang",
         component: BanHangTaiQuay,
         meta: { title: "Bán hàng tại quầy" },
+      },
+      {
+        path: "/shop",
+        component: ClientLayout,
+        children: [
+          {
+            path: "",
+            name: "TrangChuClient",
+            component: TrangChuClient,
+            meta: { title: "Trang chủ khách hàng" },
+          },
+        ],
       },
     ],
   },

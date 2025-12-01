@@ -9,7 +9,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -56,5 +58,26 @@ public class ChiTietSanPhamController {
         }
     }
 
+    // ✅ Inline update endpoint
+    @PutMapping("/inline/{ctspId}")
+    public ResponseEntity<?> updateInline(
+            @PathVariable UUID ctspId,
+            @RequestBody Map<String, Object> payload
+    ) {
+        try {
+            BigDecimal giaBan = payload.get("giaBan") != null
+                    ? new BigDecimal(payload.get("giaBan").toString())
+                    : null;
+            Integer soLuongTon = payload.get("soLuongTon") != null
+                    ? Integer.parseInt(payload.get("soLuongTon").toString())
+                    : null;
+
+            chiTietSanPhamService.updateGiaBanVaSoLuong(ctspId, giaBan, soLuongTon);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(e.getMessage());
+        }
+    }
 
 }

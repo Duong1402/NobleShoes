@@ -9,6 +9,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -37,29 +38,30 @@ public class ChiTietSanPhamService {
         return chiTietSanPhamRepository.findChiTietSanPhamDTOBySanPhamId(sanPhamId);
     }
 
+    // 4️⃣ Cập nhật toàn bộ chi tiết sản phẩm (modal)
     @Transactional
     public ChiTietSanPham updateChiTietSanPham(UUID id, ChiTietSanPhamUpdateDTO dto) {
         ChiTietSanPham existing = chiTietSanPhamRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Chi tiết sản phẩm không tồn tại!"));
 
         // Cập nhật tên SP và liên kết
-        if (dto.getTenSP() != null) existing.getSanPham().setTen(dto.getTenSP());
-        if (dto.getDanhMucId() != null) {
+        if(dto.getTenSP() != null) existing.getSanPham().setTen(dto.getTenSP());
+        if(dto.getDanhMucId() != null) {
             DanhMuc dm = danhMucRepository.findById(dto.getDanhMucId())
                     .orElseThrow(() -> new RuntimeException("Danh mục không tồn tại!"));
             existing.getSanPham().setDanhMuc(dm);
         }
-        if (dto.getThuongHieuId() != null) {
+        if(dto.getThuongHieuId() != null) {
             ThuongHieu th = thuongHieuRepository.findById(dto.getThuongHieuId())
                     .orElseThrow(() -> new RuntimeException("Thương hiệu không tồn tại!"));
             existing.getSanPham().setThuongHieu(th);
         }
-        if (dto.getXuatXuId() != null) {
+        if(dto.getXuatXuId() != null) {
             XuatXu xx = xuatXuRepository.findById(dto.getXuatXuId())
                     .orElseThrow(() -> new RuntimeException("Xuất xứ không tồn tại!"));
             existing.getSanPham().setXuatXu(xx);
         }
-        if (dto.getMucDichSuDungId() != null) {
+        if(dto.getMucDichSuDungId() != null) {
             MucDichSuDung md = mucDichSuDungRepository.findById(dto.getMucDichSuDungId())
                     .orElseThrow(() -> new RuntimeException("Mục đích sử dụng không tồn tại!"));
             existing.getSanPham().setMucDichSuDung(md);
@@ -80,19 +82,35 @@ public class ChiTietSanPhamService {
         // Hình ảnh như cũ
         if (dto.getHinhAnhUrl() != null && !dto.getHinhAnhUrl().isEmpty()) {
             HinhAnh ha = existing.getSanPham().getHinhAnh();
-            if (ha == null) {
+            if(ha == null){
                 ha = new HinhAnh();
                 ha.setMa("HA-" + UUID.randomUUID().toString().substring(0, 8));
                 ha = hinhAnhRepository.save(ha);
                 existing.getSanPham().setHinhAnh(ha);
             }
-            if (ha.getUrlAnh1() == null || ha.getUrlAnh1().isEmpty()) ha.setUrlAnh1(dto.getHinhAnhUrl());
-            else if (ha.getUrlAnh2() == null || ha.getUrlAnh2().isEmpty()) ha.setUrlAnh2(dto.getHinhAnhUrl());
+            if(ha.getUrlAnh1() == null || ha.getUrlAnh1().isEmpty()) ha.setUrlAnh1(dto.getHinhAnhUrl());
+            else if(ha.getUrlAnh2() == null || ha.getUrlAnh2().isEmpty()) ha.setUrlAnh2(dto.getHinhAnhUrl());
             else ha.setUrlAnh3(dto.getHinhAnhUrl());
             hinhAnhRepository.save(ha);
         }
 
         return chiTietSanPhamRepository.saveAndFlush(existing);
+    }
+
+    // 5️⃣ Inline update giá bán và số lượng tồn (dùng cho table)
+    @Transactional
+    public void updateGiaBanVaSoLuong(UUID ctspId, BigDecimal giaBan, Integer soLuongTon) {
+        ChiTietSanPham ctsp = chiTietSanPhamRepository.findById(ctspId)
+                .orElseThrow(() -> new RuntimeException("Chi tiết sản phẩm không tồn tại!"));
+
+        if(giaBan != null && giaBan.compareTo(BigDecimal.ZERO) > 0) {
+            ctsp.setGiaBan(giaBan);
+        }
+        if(soLuongTon != null && soLuongTon >= 0) {
+            ctsp.setSoLuongTon(soLuongTon);
+        }
+
+        chiTietSanPhamRepository.save(ctsp);
     }
 
     public List<ChiTietSanPhamResponse> getAll() {
@@ -104,6 +122,5 @@ public class ChiTietSanPhamService {
                 .map(ChiTietSanPhamResponse::new)
                 .collect(Collectors.toList());
     }
-
 
 }

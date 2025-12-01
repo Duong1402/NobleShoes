@@ -33,6 +33,11 @@ public class SanPhamService {
 
     @Transactional
     public SanPham saveSanPham(SanPhamRequest req) {
+        //Kiểm tra Trùng lặp Tên sản phẩm
+        if (sanPhamRepository.existsByTen(req.getTen())) {
+            // Ném lỗi Nghiệp vụ
+            throw new RuntimeException("Lỗi: Tên sản phẩm đã tồn tại!");
+        }
 
         // 1. Lưu Hình ảnh cho sản phẩm (lấy từ biến thể đầu tiên nếu có)
         HinhAnh hinhAnh = new HinhAnh();

@@ -105,18 +105,16 @@ const editItem = (item) => {
 
 // ✅ Validate form trước khi lưu
 const validateForm = () => {
-  // 💡 CHỈ kiểm tra Mã danh mục khi đang CẬP NHẬT
-  if (selectedDanhMuc.value.id) {
-    if (!selectedDanhMuc.value.ma?.trim()) {
-      notify.warning("Vui lòng nhập mã danh mục!");
-      return false;
-    }
-    if (selectedDanhMuc.value.ma.length < 2) {
-      notify.warning("Mã danh mục phải có ít nhất 2 ký tự!");
-      return false;
-    }
+  // ✅ Kiểm tra trùng tên
+  const duplicate = danhMucs.value.some(
+    (d) =>
+      d.ten.trim().toLowerCase() === selectedDanhMuc.value.ten.trim().toLowerCase() &&
+      d.id !== selectedDanhMuc.value.id // tránh trùng chính bản thân khi sửa
+  );
+  if (duplicate) {
+    notify.warning("Tên danh mục đã tồn tại, vui lòng chọn tên khác!");
+    return false;
   }
-
   // Luôn kiểm tra Tên danh mục
   if (!selectedDanhMuc.value.ten?.trim()) {
     notify.warning("Vui lòng nhập tên danh mục!");
