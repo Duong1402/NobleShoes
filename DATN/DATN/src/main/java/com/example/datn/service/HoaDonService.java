@@ -4,6 +4,7 @@ import com.example.datn.entity.*;
 import com.example.datn.model.Response.HoaDonChiTietResponse;
 import com.example.datn.model.Response.HoaDonDetailResponse;
 import com.example.datn.model.Response.HoaDonResponse;
+import com.example.datn.model.Response.LichSuHoaDonResponse;
 import com.example.datn.model.request.HoaDonFilterRequest;
 import com.example.datn.model.request.UpdateHoaDonRequest;
 import com.example.datn.repository.HoaDonChiTietRepository;
@@ -20,7 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -31,10 +34,20 @@ public class HoaDonService {
     private HoaDonRepository hoaDonRepository;
 
     @Autowired
-    private LichSuHoaDonRepository lichSuHoaDonRepository;
+    private HoaDonChiTietRepository hoaDonChiTietRepository;
 
     @Autowired
-    private HoaDonChiTietRepository hoaDonChiTietRepository;
+    private LichSuHoaDonRepository lichSuHoaDonRepository;
+
+    private static final Map<Integer, String> TRANG_THAI_MAP = Map.of(
+            0, "Đã hủy",
+            1, "Chờ xác nhận",
+            2, "Đã xác nhận",
+            3, "Chờ thanh toán",
+            4, "Đang giao",
+            5, "Hoàn thành"
+
+    );
 
     public Page<HoaDonResponse> searchHoaDon(HoaDonFilterRequest filter, Pageable pageable) {
         Specification<HoaDon> spec = HoaDonSpecification.filter(filter);
@@ -66,10 +79,11 @@ public class HoaDonService {
                 .map(HoaDonChiTietResponse::new)
                 .collect(Collectors.toList());
 
-        List<LichSuHoaDon> lichSu = lichSuHoaDonRepository.findAllByHoaDonIdOrderByThoiGianAsc(id);
+//        List<LichSuHoaDon> lichSu = lichSuHoaDonRepository.findAllByHoaDonIdOrderByThoiGianAsc(id);
+        List<LichSuHoaDon> lichSuList = lichSuHoaDonRepository.findAllByHoaDonId(id);
 
 
-        return new HoaDonDetailResponse(hoaDon, chiTietResponses, lichSu);
+        return new HoaDonDetailResponse(hoaDon, chiTietResponses, lichSuList);
     }
 
     @Transactional
@@ -95,7 +109,60 @@ public class HoaDonService {
         hoaDon.setSdt(sdt);
         hoaDon.setDiaChiGiaoHang(request.getDiaChiGiaoHang());
 
-        HoaDon updatedHoaDon = hoaDonRepository.save(hoaDon);
+        Integer trangThaiCu = hoaDon.getTrangThai();
+        Integer trangThaiMoi = request.getTrangThai();
+        String sdtCu = hoaDon.getSdt();
+        String sdtMoi = request.getSdt();
+        String diaChiCu = hoaDon.getDiaChiGiaoHang();
+        String diaChiMoi = request.getDiaChiGiaoHang();
+
+        String nguoiThucHien = "Admin";
+        boolean coThayDoi = false;
+
+        if (trangThaiMoi != null && !trangThaiMoi.equals(trangThaiCu)) {
+            LichSuHoaDon ls = new LichSuHoaDon();
+            ls.setHoaDon(hoaDon);
+            ls.setThoiGian(LocalDateTime.now());
+            ls.setNguoiThucHien(nguoiThucHien);
+            ls.setGhiChu("Đổi trạng thái: " +
+                    TRANG_THAI_MAP.getOrDefault(trangThaiCu, "Cũ") + " -> " +
+                    TRANG_THAI_MAP.getOrDefault(trangThaiMoi, "Mới"));
+            lichSuHoaDonRepository.save(ls);
+
+            hoaDon.setTrangThai(trangThaiMoi);
+            coThayDoi = true;
+        }
+
+        if (sdtMoi != null && !sdtMoi.equals(sdtCu)) {
+            LichSuHoaDon ls = new LichSuHoaDon();
+            ls.setHoaDon(hoaDon);
+            ls.setThoiGian(LocalDateTime.now());
+            ls.setNguoiThucHien(nguoiThucHien);
+            ls.setGhiChu("Đổi SĐT: " + sdtCu + " -> " + sdtMoi);
+            lichSuHoaDonRepository.save(ls);
+
+            hoaDon.setSdt(sdtMoi);
+            coThayDoi = true;
+        }
+
+
+        if (diaChiMoi != null && !diaChiMoi.equals(diaChiCu)) {
+            LichSuHoaDon ls = new LichSuHoaDon();
+            ls.setHoaDon(hoaDon);
+            ls.setThoiGian(LocalDateTime.now());
+            ls.setNguoiThucHien(nguoiThucHien);
+            ls.setGhiChu("Đổi địa chỉ: " + diaChiCu + " -> " + diaChiMoi);
+            lichSuHoaDonRepository.save(ls);
+
+            hoaDon.setDiaChiGiaoHang(diaChiMoi);
+            coThayDoi = true;
+        }
+
+        HoaDon updatedHoaDon = hoaDon;
+        if (coThayDoi) {
+            updatedHoaDon = hoaDonRepository.save(hoaDon);
+        }
+
 
         LichSuHoaDon lichSu = new LichSuHoaDon();
         lichSu.setHoaDon(updatedHoaDon);

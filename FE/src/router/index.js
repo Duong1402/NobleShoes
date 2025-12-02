@@ -41,6 +41,7 @@ import BanHangTaiQuay from "@/view/banHang/banHangTaiQuay.vue";
 // Trang client (người mua)
 import ClientLayout from "@/components/layout/ClientLayout.vue";
 import TrangChuClient from "@/view/client/TrangChuClient.vue";
+import ThongKe from "@/view/thongKe/ThongKe.vue";
 
 const listRouter = [
   {
@@ -276,6 +277,12 @@ const listRouter = [
         name: "BanHang",
         component: BanHangTaiQuay,
         meta: { title: "Bán hàng tại quầy" },
+      },
+      {
+        path: "thong-ke",
+        name: "ThongKe",
+        component: ThongKe,
+        meta: { title: "Thống kê" },
       },
       {
         path: "/shop",

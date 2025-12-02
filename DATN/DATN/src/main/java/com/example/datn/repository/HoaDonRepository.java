@@ -1,5 +1,6 @@
 package com.example.datn.repository;
 
+import com.example.datn.dto.thongke.TrangThaiDonHangDto;
 import com.example.datn.entity.HoaDon;
 import com.example.datn.entity.PhieuGiamGia;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,11 +13,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Repository
 public interface HoaDonRepository extends JpaRepository<HoaDon, UUID>,
         JpaSpecificationExecutor<HoaDon> {
+    List<HoaDon> findByNgayTaoBetween(LocalDate start, LocalDate end);
 
     @Query(value = """
                 SELECT CONCAT('HD', RIGHT(CONCAT('00',
@@ -33,4 +37,12 @@ public interface HoaDonRepository extends JpaRepository<HoaDon, UUID>,
                                @Param("tongTien") BigDecimal tongTien,
                                @Param("tongTienSauGiam") BigDecimal tongTienSauGiam,
                                @Param("phieuGiamGia") PhieuGiamGia phieuGiamGia);
+    @Query("SELECT new com.example.datn.dto.thongke.TrangThaiDonHangDto(hd.trangThai, COUNT(hd.id)) " +
+            "FROM HoaDon hd " +
+            "WHERE hd.ngayTao BETWEEN :start AND :end " +
+            "GROUP BY hd.trangThai")
+    List<TrangThaiDonHangDto> findTrangThaiDonHangStats(
+            @Param("start") LocalDate start,
+            @Param("end") LocalDate end
+    );
 }

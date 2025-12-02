@@ -87,17 +87,17 @@
           </li>
 
           <!-- Quản lý nhân viên -->
-          <!-- <li class="nav-item" :class="{ active: activeRoute === 'nhanVien' }">
+          <li class="nav-item" :class="{ active: activeRoute === 'ThongKe' }">
             <router-link
-              :to="{ name: 'nhanVien' }"
+              :to="{ name: 'ThongKe' }"
               class="nav-link link-with-icon"
             >
               <div class="icon-title">
-                <i class="fas fa-user-alt"></i>
-                <p class="mb-0">Quản lý nhân viên</p>
+                <i class="fa-solid fa-chart-line"></i>
+                <p class="mb-0">Thống kê</p>
               </div>
             </router-link>
-          </li> -->
+          </li>
         </ul>
       </div>
     </div>

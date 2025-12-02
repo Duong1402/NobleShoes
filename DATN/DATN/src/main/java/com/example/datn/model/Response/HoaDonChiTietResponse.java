@@ -8,26 +8,32 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 @Getter
 @Setter
 public class HoaDonChiTietResponse {
-    private UUID id;
+
     private String maSanPhamChiTiet;
+    private String maSanPham;
     private String tenSanPham;
     private int soLuong;
     private BigDecimal donGia;
+    private String mauSac;
     private BigDecimal thanhTien;
+    private String size;
 
     private String hinhAnhUrl;
-    private String mauSac;
     private String kichThuoc;
     private String tenXuatXu;
 
     public HoaDonChiTietResponse(HoaDonChiTiet hdct) {
-        this.id = hdct.getId();
+
+        this.maSanPham = hdct.getChiTietSanPham().getSanPham().getMa();
+        this.tenSanPham = hdct.getChiTietSanPham().getSanPham().getTen();
         this.soLuong = hdct.getSoLuong();
+        this.mauSac = hdct.getChiTietSanPham().getMauSac().getTen();
+        this.size = hdct.getChiTietSanPham().getKichThuoc().getTen();
+        this.kichThuoc = hdct.getChiTietSanPham().getKichThuoc().getTen();
         this.donGia = hdct.getDonGia();
         this.thanhTien = hdct.getThanhTien();
 

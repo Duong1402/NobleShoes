@@ -41,7 +41,6 @@ const formatDateTime = (str) => {
   });
 };
 
-// Hàm load dữ liệu (hoaDon + lich su)
 const loadData = async (id) => {
   // 1. Tải Hóa đơn
   try {
@@ -67,84 +66,45 @@ const loadData = async (id) => {
     lichSuThayDoi.value = [];
   }
 
-  // 3. --- Xây dựng lichSuHienThi (Timeline) ---
-  const trangThaiHienTai = Number(hoaDon.value.trangThai);
-  const steps = [];
+  const FIXED_STEPS = [1, 2, 3, 4, 5]; // 5 bước cố định
 
-  // Yêu cầu: Nếu trạng thái là 5 (Hoàn thành) HOẶC 0 (Đã hủy), chỉ hiển thị 1 bước duy nhất
-  if (trangThaiHienTai === 5 || trangThaiHienTai === 0) {
+  if (hoaDon.value.trangThai === 0) {
+    // Nếu đơn bị hủy → chỉ hiển thị 1 bước
     lichSuHienThi.value = [
       {
-        id: trangThaiHienTai,
-        text: TRANG_THAI_HOA_DON[trangThaiHienTai],
-        thoiGian: hoaDon.value.ngayCapNhat || hoaDon.value.ngayTao,
-        isDone: trangThaiHienTai === 5,
-        isCanceled: trangThaiHienTai === 0,
+        id: 0,
+        text: TRANG_THAI_HOA_DON[0],
+        thoiGian: hoaDon.value.thoiGianHuy || hoaDon.value.ngayCapNhat,
+        isCanceled: true,
+        isDone: true,
       },
     ];
-    return;
-  }
-
-  // Trường hợp còn lại (1, 2, 3, 4): Xây dựng timeline dựa trên lịch sử (ưu tiên) hoặc trạng thái hiện tại
-
-  if (lichSuThayDoi.value.length > 0) {
-    const statusSet = new Set();
-    // ⚠️ Sửa: Sắp xếp theo THỜI GIAN, không phải trạng thái mới
-    const sortedHistory = [...lichSuThayDoi.value].sort((a, b) => {
-      // Giả sử item.thoiGian là timestamp/ISO string mà new Date() có thể so sánh
-      const timeA = new Date(a.thoiGian || a.ngayTao || 0);
-      const timeB = new Date(b.thoiGian || b.ngayTao || 0);
-      return timeA.getTime() - timeB.getTime();
-    });
-
-    // Tạo một map để lưu thời gian của lần chuyển đổi cuối cùng cho mỗi trạng thái
-    const statusTimes = {};
-    sortedHistory.forEach((item) => {
-      const statusId = item.trangThaiMoi;
-      if (statusId >= 1 && statusId <= 5) {
-        const thoiGian =
-          item.thoiGianCapNhat || item.thoiGian || item.ngayTao || null;
-        // Chỉ lưu lần chuyển đổi cuối cùng đến trạng thái này
-        statusTimes[statusId] = thoiGian;
-      }
-    });
-
-    // Xây dựng steps từ 1 đến trạng thái hiện tại, lấy thời gian từ statusTimes
-    for (let s = 1; s <= 5; s++) {
-      // Lặp qua tất cả 5 bước chính
-      if (s <= trangThaiHienTai) {
-        // Chỉ thêm các bước <= trạng thái hiện tại
-        steps.push({
-          id: s,
-          text: TRANG_THAI_HOA_DON[s],
-          thoiGian: statusTimes[s] || hoaDon.value.ngayTao, // Lấy thời gian từ lịch sử hoặc ngày tạo
-          isDone: s < trangThaiHienTai,
-          isCurrent: s === trangThaiHienTai,
-          isCanceled: false,
-        });
-      }
-    }
-
-    lichSuHienThi.value = steps;
   } else {
-    // Không có lịch sử (Có thể là hóa đơn mới vừa tạo), tạo các bước từ 1 đến trạng thái hiện tại
-    const steps = [];
-    for (let s = 1; s <= trangThaiHienTai; s++) {
-      steps.push({
-        id: s,
-        text: TRANG_THAI_HOA_DON[s],
-        thoiGian: hoaDon.value.ngayCapNhat || hoaDon.value.ngayTao,
-        isDone: s < trangThaiHienTai,
-        isCurrent: s === trangThaiHienTai,
-        isCanceled: false,
+    const current = Number(hoaDon.value.trangThai);
+
+    // Chỉ hiển thị từ bước 1 → bước hiện tại
+    lichSuHienThi.value = FIXED_STEPS
+      .filter(step => step <= current)
+      .map(step => {
+        // Lấy thời gian từ lịch sử nếu có
+        const historyItem = lichSuThayDoi.value.find(h => h.trangThaiMoi === step);
+        const thoiGian = historyItem
+          ? historyItem.thoiGianCapNhat || historyItem.thoiGian || historyItem.ngayTao
+          : null;
+
+        return {
+          id: step,
+          text: TRANG_THAI_HOA_DON[step],
+          thoiGian,
+          isDone: step < current && step !== 5,
+          isCurrent: step === current && step !== 5,
+          isCanceled: false,
+        };
       });
-    }
-    lichSuHienThi.value = steps;
   }
 };
 
-console.log("📌 HoaDon:", hoaDon.value);
-console.log("📌 Chi tiết SP:", hoaDon.value?.chiTietSanPham);
+
 
 // load lần đầu
 onMounted(async () => {
@@ -268,46 +228,44 @@ const confirmChange = async (newStatus) => {
       <h5>Lịch sử đơn hàng</h5>
 
       <div
-        class="timeline-container d-flex align-items-center position-relative"
-        v-if="lichSuHienThi && lichSuHienThi.length"
+    class="timeline-container d-flex align-items-center position-relative"
+    v-if="lichSuHienThi && lichSuHienThi.length"
+  >
+    <div
+      v-for="(step, index) in lichSuHienThi"
+      :key="step.id + '-' + index"
+      class="timeline-step text-center flex-fill"
+    >
+      <!-- Circle -->
+      <div
+        class="timeline-circle mx-auto"
+        :class="{
+          done: step.isDone || step.id === 5,
+          current: step.isCurrent,
+          canceled: step.isCanceled
+        }"
       >
-        <div
-          v-for="(step, index) in lichSuHienThi"
-          :key="step.id + '-' + index"
-          class="timeline-step text-center flex-fill"
-        >
-          <div
-            class="timeline-circle mx-auto"
-            :class="{
-              done:
-                index < lichSuHienThi.length - 1 || step.text === 'Hoàn thành',
-              current:
-                index === lichSuHienThi.length - 1 &&
-                step.text !== 'Hoàn thành',
-            }"
-          >
-            <span class="circle-number">{{ index + 1 }}</span>
-          </div>
-
-          <div class="timeline-label mt-2">{{ step.text }}</div>
-          <div v-if="step.thoiGian" class="text-muted small mt-1">
-            {{ formatDateTime(step.thoiGian) }}
-          </div>
-
-          <!-- connector line (we keep it visual): use pseudo element via CSS, but keep fallback div for compatibility -->
-          <div
-            v-if="index < lichSuHienThi.length - 1"
-            class="timeline-line"
-          ></div>
-        </div>
+        <span class="circle-number">{{ step.id }}</span>
       </div>
 
-      <div class="text-start mt-3">
-        <button
-          class="btn btn-outline-warning btn-sm"
-          @click="showHistory = true"
-        >
-          Chi tiết lịch sử
+      <!-- Label -->
+      <div class="timeline-label mt-2">{{ step.text }}</div>
+      <div v-if="step.thoiGian" class="text-muted small mt-1">
+        {{ formatDateTime(step.thoiGian) }}
+      </div>
+
+      <!-- Connector line -->
+      <div v-if="index < lichSuHienThi.length - 1" class="timeline-line"></div>
+    </div>
+  </div>
+
+  <div class="text-start mt-3">
+    <button
+      class="btn btn-primary btn-sm"
+      style="background-color:#4b8cf7; border-color:#4b8cf7;"
+      @click="showHistory = true"
+    >
+      Chi tiết lịch sử
         </button>
       </div>
     </div>
@@ -434,12 +392,8 @@ const confirmChange = async (newStatus) => {
               ❌ Hủy
             </button>
             <!-- Hoàn thành -->
-            <button
-              v-if="hoaDon.trangThai == 5"
-              class="btn btn-outline-secondary btn-sm"
-              @click="confirmChange(4)"
-            >
-              🔙 Quay lại
+            <button v-if="hoaDon.trangThai == 3" class="btn btn-outline-danger btn-sm" @click="confirmChange(0)">
+              ❌ Hủy
             </button>
             <!-- Đã hủy -->
             <button
@@ -485,6 +439,7 @@ const confirmChange = async (newStatus) => {
           <thead class="table-light">
             <tr>
               <th>Ảnh</th>
+              <th>Mã SP</th>
               <th>Tên SP</th>
               <th class="text-center">Số lượng</th>
               <th class="text-center">Màu sắc</th>
@@ -502,6 +457,7 @@ const confirmChange = async (newStatus) => {
                   style="width: 70px; height: 70px; object-fit: cover"
                 />
               </td>
+              <td>{{ sp.maSanPham }}</td>
               <td>{{ sp.tenSanPham }}</td>
               <td class="text-center">{{ sp.soLuong }}</td>
               <td class="text-center">{{ sp.mauSac }}</td>
@@ -515,32 +471,37 @@ const confirmChange = async (newStatus) => {
     </div>
 
     <!-- Tổng tiền -->
-    <div class="card shadow-sm mb-5 p-4 outer-total-card">
-      <div class="row">
-        <!-- Phiếu giảm giá -->
-        <div class="col-md-6">
-          <div class="card p-3 inner-card">
-            <p class="mb-0">
-              <strong>Phiếu giảm giá:</strong>
-              {{ hoaDon.phieuGiamGia || "Không áp dụng" }}
-            </p>
-          </div>
-        </div>
-
-        <!-- Tổng tiền -->
-        <div class="col-md-6">
-          <div class="card p-3 text-end inner-card">
-            <p class="mb-1">
-              Tổng tiền hàng: {{ hoaDon.tongTien.toLocaleString() }} ₫
-            </p>
-            <p class="mb-1">Phí vận chuyển: Miễn phí (0 ₫)</p>
-            <h5 class="fw-bold text-danger mb-0">
-              Tổng tiền: {{ hoaDon.tongTien.toLocaleString() }} ₫
-            </h5>
-          </div>
-        </div>
+<div class="card shadow-sm mb-5 p-4 outer-total-card">
+  <div class="row">
+    <!-- Phiếu giảm giá -->
+    <div class="col-md-6">
+      <div class="card p-3 inner-card">
+        <p class="mb-1">
+          <strong>Phiếu giảm giá:</strong>
+          {{ hoaDon.phieuGiamGia?.ten || "Không áp dụng" }}
+        </p>
+        <p v-if="hoaDon.phieuGiamGia?.soTienGiam" class="mb-0 text-success">
+          <strong>Giảm giá:</strong> -{{ hoaDon.phieuGiamGia.soTienGiam.toLocaleString() }} ₫
+        </p>
       </div>
     </div>
+
+    <!-- Tổng tiền -->
+    <div class="col-md-6">
+      <div class="card p-3 text-end inner-card">
+        <p class="mb-1">Tổng tiền hàng: {{ hoaDon.tongTien.toLocaleString() }} ₫</p>
+        <p class="mb-1">
+          Phí vận chuyển: 
+          {{ hoaDon.phiVanChuyen ? hoaDon.phiVanChuyen.toLocaleString() + " ₫" : "Miễn phí (0 ₫)" }}
+        </p>
+        <h5 class="fw-bold text-danger mb-0">
+          Tổng tiền: 
+          {{ (hoaDon.tongTien - (hoaDon.phieuGiamGia?.soTienGiam || 0) + (hoaDon.phiVanChuyen || 0)).toLocaleString() }} ₫
+        </h5>
+      </div>
+    </div>
+  </div>
+</div>
 
     <!-- Nút hành động -->
     <div class="d-flex justify-content-end gap-2">
@@ -578,7 +539,6 @@ const confirmChange = async (newStatus) => {
                 <tr>
                   <th>Thời gian</th>
                   <th>Người chỉnh sửa</th>
-                  <th>Trạng thái HĐ</th>
                   <th>Ghi chú</th>
                 </tr>
               </thead>
@@ -588,16 +548,8 @@ const confirmChange = async (newStatus) => {
                 </tr>
                 <tr v-for="(item, i) in lichSuThayDoi" :key="i">
                   <td>{{ formatDateTime(item.thoiGian || item.ngayTao) }}</td>
-                  <td>{{ item.nguoiCapNhat || item.nguoiThucHien || "-" }}</td>
-                  <td>
-                    {{
-                      TRANG_THAI_HOA_DON[item.trangThaiMoi] ||
-                      item.tenTrangThai ||
-                      item.trangThaiMoi ||
-                      "-"
-                    }}
-                  </td>
-                  <td>{{ item.ghiChu || "-" }}</td>
+                  <td>{{ item.nguoiChinhSua || '-' }}</td>
+                  <td>{{ item.ghiChu || '-' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -704,18 +656,6 @@ const confirmChange = async (newStatus) => {
   font-weight: 700;
 }
 
-/* done = những bước trước bước hiện tại */
-.timeline-circle.done {
-  background-color: #198754;
-  color: white;
-}
-
-/* current = bước hiện tại */
-.timeline-circle.current {
-  background-color: #f5c542;
-  color: #000;
-  transform: scale(1.05);
-}
 
 /* connector line: use pseudo element so it stretches between steps */
 .timeline-step::after {
@@ -758,7 +698,7 @@ const confirmChange = async (newStatus) => {
 
 .timeline-circle.current {
   background-color: #f5c542;
-  color: #000;
+  color: #fff;
   transform: scale(1.05);
 }
 
