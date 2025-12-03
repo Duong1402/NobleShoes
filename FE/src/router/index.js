@@ -241,8 +241,6 @@ const router = createRouter({
   routes: listRouter,
 });
 
-// TRONG FILE: src/router/index.js
-
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
   const isLoggedIn = authStore.isLoggedIn;
@@ -271,33 +269,39 @@ router.beforeEach((to, from, next) => {
     }
   }
 
-  // 3. KIỂM TRA QUYỀN TRUY CẬP (Auth & Role)
-  // Chỉ áp dụng với các trang có meta.requiresAuth = true
-  if (to.meta.requiresAuth) {
-    // 3.1 Chưa đăng nhập -> Đá về trang login tương ứng
-    if (!isLoggedIn) {
-      if (to.path.startsWith("/admin")) {
-        return next("/login-employee");
-      }
-      return next("/login-customer");
+  // 3. KIỂM TRA XÁC THỰC VÀ QUYỀN
+    
+    // 3.1. CHƯA ĐĂNG NHẬP (UNAUTHENTICATED)
+    if (to.meta.requiresAuth && !isLoggedIn) {
+        
+        // Xác định trang đăng nhập đích
+        const targetLoginPath = to.path.startsWith("/admin") ? "/login-employee" : "/login-customer";
+        
+        // Nếu đã ở trang login rồi, cho phép load trang đó (thoát khỏi guard)
+        if (to.path === targetLoginPath) {
+            return next();
+        }
+
+        // Nếu đang cố gắng vào trang bảo mật khác -> Redirect về login đích
+        return next(targetLoginPath);
     }
 
-    // 3.2 Sai quyền (Role Mismatch)
-    const requiredRole = to.meta.role;
-    if (requiredRole) {
-      // Yêu cầu CUSTOMER mà là Employee -> Về Admin
-      if (requiredRole === "CUSTOMER" && !isCustomer) {
-        return next("/admin");
-      }
-      // Yêu cầu EMPLOYEE mà là Customer -> Về Home
-      if (
-        (requiredRole === "EMPLOYEE" || requiredRole === "ADMIN") &&
-        !isEmployee
-      ) {
-        return next("/");
-      }
+    // 3.2 ĐÃ ĐĂNG NHẬP, NHƯNG SAI QUYỀN (ROLE MISMATCH)
+    if (isLoggedIn && to.meta.role) { // Chỉ kiểm tra nếu đã đăng nhập và có yêu cầu vai trò
+        const requiredRole = to.meta.role;
+
+        // Yêu cầu CUSTOMER mà là Employee
+        if (requiredRole === "CUSTOMER" && !isCustomer) {
+            // Redirect Employee về Admin Dashboard (vẫn là nhà của họ)
+            return next("/admin");
+        }
+        
+        // Yêu cầu ADMIN/EMPLOYEE mà là Customer
+        if ((requiredRole === "EMPLOYEE" || requiredRole === "ADMIN") && !isEmployee) {
+            // Redirect Customer về Trang chủ/Shop
+            return next("/shop");
+        }
     }
-  }
 
   // 4. Cho phép đi tiếp (Nếu không vi phạm gì)
   next();
