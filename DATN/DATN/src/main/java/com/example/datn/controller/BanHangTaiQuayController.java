@@ -4,6 +4,8 @@ import com.example.datn.entity.HoaDon;
 import com.example.datn.entity.HoaDonChiTiet;
 import com.example.datn.entity.KhachHang;
 import com.example.datn.entity.PhieuGiamGia;
+import com.example.datn.expection.LoiPhieuGiamGiaException;
+import com.example.datn.model.Response.ThemSanPhamResponse;
 import com.example.datn.model.request.ThanhToanRequest;
 import com.example.datn.repository.HoaDonRepository;
 import com.example.datn.service.BanHangTaiQuayService;
@@ -52,12 +54,14 @@ public class BanHangTaiQuayController {
 
     // 2.Thêm sản phẩm vào hóa đơn
     @PostMapping("/them-san-pham")
-    public ResponseEntity<HoaDonChiTiet> themSanPham(
+    public ResponseEntity<ThemSanPhamResponse> themSanPham(
             @RequestParam UUID idHoaDon,
             @RequestParam UUID idChiTietSanPham,
             @RequestParam int soLuong) {
-        HoaDonChiTiet hdct = banHangTaiQuayService.themSanPhamVaoHoaDon(idHoaDon, idChiTietSanPham, soLuong);
-        return ResponseEntity.ok(hdct);
+        ThemSanPhamResponse response = banHangTaiQuayService.themSanPhamVaoHoaDon(idHoaDon, idChiTietSanPham, soLuong);
+
+        // Trả về DTO cho Frontend
+        return ResponseEntity.ok(response);
     }
 
     //    xóa sản phẩm khói hóa đơn
@@ -113,15 +117,22 @@ public class BanHangTaiQuayController {
             @RequestBody ThanhToanRequest request
     ) {
         try {
-            // Gọi Service với tham số mới
+            // Gọi Service
             HoaDon hoaDonDaThanhToan = banHangTaiQuayService.thanhToan(
                     idHoaDon,
                     request
             );
             return ResponseEntity.ok(hoaDonDaThanhToan);
 
+        } catch (LoiPhieuGiamGiaException e) {
+            // 🔥 BẮT LỖI RIÊNG CHO PHIẾU GIẢM GIÁ
+            // Lỗi này do ta chủ động ném ra sau khi đã gỡ phiếu và tính lại tiền.
+            // Trả về 400 để Frontend bắt được và reload lại giao diện.
+            return ResponseEntity.badRequest().body(e.getMessage());
+
         } catch (Exception e) {
-            // Trả về lỗi để Frontend hiển thị notify.error
+            // Bắt các lỗi không mong muốn khác (Lỗi hệ thống, null pointer...)
+            e.printStackTrace(); // In lỗi ra console server để dễ debug
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }

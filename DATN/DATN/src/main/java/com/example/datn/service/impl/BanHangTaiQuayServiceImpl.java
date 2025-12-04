@@ -3,6 +3,7 @@ package com.example.datn.service.impl;
 import com.example.datn.entity.HoaDon;
 import com.example.datn.entity.HoaDonChiTiet;
 import com.example.datn.entity.KhachHang;
+import com.example.datn.model.Response.ThemSanPhamResponse;
 import com.example.datn.model.request.ThanhToanRequest;
 
 import java.util.List;
@@ -12,7 +13,7 @@ public interface BanHangTaiQuayServiceImpl {
 
     HoaDon taoHoaDonCho(UUID idNhanVien);
 
-    HoaDonChiTiet themSanPhamVaoHoaDon(UUID idHoaDon, UUID idChiTietSanPham, int soLuong);
+    ThemSanPhamResponse themSanPhamVaoHoaDon(UUID idHoaDon, UUID idChiTietSanPham, int soLuong);
 
     HoaDon capNhatKhachHang(UUID idHoaDon, UUID idKhachHang);
 

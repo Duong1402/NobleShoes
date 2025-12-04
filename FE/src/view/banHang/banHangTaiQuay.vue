@@ -164,6 +164,15 @@
                       </span>
                     </div>
 
+                    <div
+                      v-if="sp.warningMessage"
+                      class="alert alert-danger py-1 px-2 mb-2 d-flex align-items-center animate__animated animate__fadeIn"
+                      style="font-size: 0.85rem; border-radius: 4px"
+                    >
+                      <i class="fa-solid fa-circle-exclamation me-2"></i>
+                      <span class="text-danger">{{ sp.warningMessage }}</span>
+                    </div>
+
                     <div class="d-flex align-items-center mt-2">
                       <p
                         class="mb-0 me-2 small fw-semibold"
@@ -201,15 +210,7 @@
                             font-size: 0.9rem;
                             height: 28px;
                           "
-                          @input="
-                            handleUpdateTempSoLuong(sp.id, $event.target.value)
-                          "
-                          @blur.stop.prevent="
-                            handleCapNhatSoLuong(sp.id, $event.target.value)
-                          "
-                          @keyup.enter.stop.prevent="
-                            handleCapNhatSoLuong(sp.id, $event.target.value)
-                          "
+                          @change="handleCapNhatSoLuong(sp.id, $event.target.value, $event.target)"
                         />
 
                         <button
@@ -729,7 +730,7 @@
             <div class="mb-3 text-start border-bottom pb-3">
               <div
                 v-if="hoaDon && hoaDon.phieuGiamGia && hoaDon.phieuGiamGia.id"
-                class="mb-3 text-start border-bottom pb-3"
+                class="mb-3"
               >
                 <div
                   class="d-flex justify-content-between align-items-center mb-2"
@@ -738,10 +739,20 @@
                     <i class="fa-solid fa-ticket text-warning me-1"></i> Mã giảm
                     giá
                   </span>
+
+                  <div>
+                    <button
+                      class="btn btn-sm btn-outline-primary"
+                      @click="handleApDungKhuyenMai"
+                      title="Tìm mã tốt hơn"
+                    >
+                      <i class="fa-solid fa-ticket me-1"></i> Đổi mã khác
+                    </button>
+                  </div>
                 </div>
 
                 <div
-                  class="card shadow-sm border-0"
+                  class="card shadow-sm border-0 animate__animated animate__fadeIn"
                   style="
                     background-color: #f0fdf4;
                     border-left: 4px solid #198754 !important;
@@ -805,13 +816,14 @@
                 </div>
               </div>
 
-              <div v-else class="mb-3 text-start border-bottom pb-3">
+              <div v-else class="mb-2">
                 <div
                   class="d-flex justify-content-between align-items-center mb-2"
                 >
-                  <span class="fw-bold small text-uppercase text-muted"
-                    >Mã giảm giá</span
-                  >
+                  <span class="fw-bold small text-uppercase text-muted">
+                    Mã giảm giá
+                  </span>
+
                   <button
                     class="btn btn-sm btn-outline-primary"
                     @click="handleApDungKhuyenMai"
@@ -821,17 +833,12 @@
                       hoaDon.khachHang.hoTen === 'Khách lẻ'
                     "
                   >
-                    <i class="fa-solid fa-ticket me-1"></i> Chọn mã
+                    <i class="fa-solid fa-plus-circle me-1"></i> Chọn mã
                   </button>
                 </div>
-                <div class="text-end small text-muted fst-italic">
-                  {{
-                    !hoaDon ||
-                    !hoaDon.khachHang ||
-                    hoaDon.khachHang.hoTen === "Khách lẻ"
-                      ? "*Chọn khách hàng thành viên"
-                      : "Chưa áp dụng mã nào"
-                  }}
+
+                <div class="text-end small fst-italic text-muted">
+                  Chưa áp dụng mã nào
                 </div>
               </div>
 
@@ -840,7 +847,7 @@
                   hoaDon &&
                   (!hoaDon.khachHang || hoaDon.khachHang.hoTen === 'Khách lẻ')
                 "
-                class="text-muted small fst-italic text-end"
+                class="text-muted small fst-italic text-end mt-1"
               >
                 <i class="fa-solid fa-circle-info me-1"></i>
                 *Chọn khách hàng thành viên để dùng mã
@@ -1080,6 +1087,7 @@ const {
   tongTienHang,
   tongTienSauGiam,
   soTienGiamGia,
+  syncMoneyFromBackend,
   handleThemSanPham,
   handleUpdateTempSoLuong,
   handleCapNhatSoLuong,
@@ -1146,7 +1154,8 @@ const {
   tongTienSauGiam,
   isBanGiaoHang,
   phiShip,
-  thongTinNguoiNhan
+  thongTinNguoiNhan,
+  syncMoneyFromBackend
 );
 
 // 6. Sản phẩm (Mới)

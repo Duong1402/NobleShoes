@@ -1221,6 +1221,7 @@ async function saveKhachHang() {
 
     // Load lại dữ liệu để đồng bộ ID mới của các địa chỉ vừa thêm
     await loadKhachHang();
+    router.push({ name: "khachHang" });
   } catch (err) {
     console.error("❌ Lỗi Save:", err);
     const msg = err?.response?.data?.message || "Cập nhật thất bại!";

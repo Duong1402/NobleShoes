@@ -18,10 +18,8 @@ public interface PhieuGiamGiaRepository extends JpaRepository<PhieuGiamGia, UUID
     @Query(value = """
                 SELECT p.* FROM phieu_giam_gia p
                 WHERE 
-                -- 👇 SỬA Ở ĐÂY: Thêm CAST cho cột p.ngay_bat_dau luôn
                 CAST(p.ngay_bat_dau AS DATE) <= CAST(GETDATE() AS DATE) 
                 
-                -- 👇 SỬA Ở ĐÂY: Thêm CAST cho cột p.ngay_ket_thuc luôn (cho chắc ăn)
                 AND CAST(p.ngay_ket_thuc AS DATE) >= CAST(GETDATE() AS DATE)
                 
                 AND p.trang_thai = 1

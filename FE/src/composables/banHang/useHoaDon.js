@@ -118,6 +118,8 @@ export function useHoaDon(notify, idNhanVien, resetGiaoHangCallback) {
     }
 
     try {
+      const maPhieuCu = hoaDon.value.phieuGiamGia?.ma;
+
       // Gọi API
       const res = await apDungKhuyenMaiTuDong(selectedHoaDonId.value);
 
@@ -126,24 +128,18 @@ export function useHoaDon(notify, idNhanVien, resetGiaoHangCallback) {
 
       // Xử lý kết quả trả về
       // TH1: Backend trả về String (Ví dụ: "Không có mã phù hợp")
-      if (typeof res.data === "string") {
-        notify.info(res.data);
-        // Nếu BE reset phiếu về null, ta cũng nên reset UI thủ công hoặc reload lại hóa đơn
-        // Nhưng tốt nhất là BE nên trả về Object HoaDon kể cả khi không tìm thấy (trả về HD đã reset)
-      }
-      // TH2: Backend trả về Object Hóa Đơn (Đã cập nhật tiền giảm) - KHUYÊN DÙNG
-      else if (typeof res.data === "object" && res.data.id) {
+      if (typeof res.data === "object" && res.data.id) {
         const updatedHoaDon = res.data;
 
-        // 1. Cập nhật vào view chi tiết
-        // Giữ lại danh sách sản phẩm ở FE để tránh bị mất thông tin hiển thị (size/màu) nếu BE trả thiếu
+        // A. Cập nhật vào view chi tiết (Giữ lại list SP để không mất hiển thị ảnh/tên)
         hoaDon.value = {
-          ...hoaDon.value, // Giữ cái cũ
-          ...updatedHoaDon, // Đè cái mới (tongTienSauGiam, phieuGiamGia)
-          sanPhamList: hoaDon.value.sanPhamList, // Ưu tiên giữ list SP đang hiển thị tốt ở FE
+          ...hoaDon.value, // Giữ data cũ
+          ...updatedHoaDon, // Đè data mới (tongTien, tongTienSauGiam, phieuGiamGia)
+          sanPhamList: hoaDon.value.sanPhamList,
+          phieuGiamGia: updatedHoaDon.phieuGiamGia
         };
 
-        // 2. Cập nhật vào danh sách chờ (để sidebar cập nhật số tiền)
+        // B. Cập nhật vào danh sách chờ (Sidebar)
         const index = hoaDonChoList.value.findIndex(
           (h) => h.id === updatedHoaDon.id
         );
@@ -151,13 +147,30 @@ export function useHoaDon(notify, idNhanVien, resetGiaoHangCallback) {
           hoaDonChoList.value[index] = {
             ...hoaDonChoList.value[index],
             ...updatedHoaDon,
-            sanPhamList: hoaDonChoList.value[index].sanPhamList, // Giữ list SP
+            sanPhamList: hoaDonChoList.value[index].sanPhamList,
           };
         }
 
-        notify.success(
-          `Đã áp dụng mã: ${updatedHoaDon.phieuGiamGia?.ten || "Ưu đãi"}`
-        );
+        // C. 🔥 LOGIC THÔNG BÁO THÔNG MINH 🔥
+        const pggMoi = updatedHoaDon.phieuGiamGia;
+
+        if (pggMoi) {
+          // Nếu có phiếu mới
+          if (pggMoi.ma !== maPhieuCu) {
+            // TH: Tìm được mã mới tốt hơn (hoặc trước đó chưa có mã)
+            notify.success(`Đã áp dụng mã ưu đãi: ${pggMoi.ten}`);
+          } else {
+            // TH: Mã cũ vẫn đang là mã tốt nhất
+            notify.info(`Mã hiện tại (${pggMoi.ten}) đang là tốt nhất!`);
+          }
+        } else {
+          // TH: Backend trả về hóa đơn nhưng không có phiếu (đã gỡ phiếu do không đủ điều kiện)
+          notify.warning("Hiện không có mã giảm giá nào phù hợp.");
+        }
+      }
+      // Trường hợp 2: Backend trả về String (ít gặp nhưng cứ giữ để safe)
+      else if (typeof res.data === "string") {
+        notify.info(res.data);
       }
     } catch (err) {
       console.error(err);

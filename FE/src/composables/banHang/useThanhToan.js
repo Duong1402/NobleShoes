@@ -20,7 +20,8 @@ export function useThanhToan(
   tongTienSauGiam,
   isBanGiaoHang,
   phiShip,
-  thongTinNguoiNhan
+  thongTinNguoiNhan,
+  handleSyncMoney
 ) {
   const router = useRouter();
   const phuongThucThanhToan = ref("TIEN_MAT");
@@ -206,8 +207,48 @@ export function useThanhToan(
 
       router.push({ name: "ChiTietHD", params: { id: completedId } });
     } catch (err) {
-      console.error(err);
-      notify.error(err.response?.data?.message || "Thanh toán thất bại!");
+      // 1. Lấy thông báo lỗi chuẩn từ Backend
+      let errorMessage = "Thanh toán thất bại!";
+      const resData = err.response?.data;
+
+      if (resData) {
+        if (typeof resData === "string") {
+          errorMessage = resData;
+        } else if (resData.message) {
+          errorMessage = resData.message; // "Phiếu giảm giá... hết hạn..."
+        } else if (resData.error) {
+          errorMessage = resData.error;
+        }
+      }
+
+      // 2. Hiển thị thông báo lỗi (Màu đỏ)
+      notify.error(errorMessage);
+
+      // 🔥 3. LOGIC MỚI: TỰ ĐỘNG LOAD LẠI TIỀN NẾU LỖI LIÊN QUAN ĐẾN PHIẾU
+      // (Backend đã tự gỡ phiếu và tính lại tiền rồi, FE cần load lại để hiện số mới)
+      const keyword = errorMessage.toLowerCase();
+
+      console.log("🔥 Đã bắt được lỗi thanh toán:", errorMessage);
+
+      if (
+        keyword.includes("phiếu") ||
+        keyword.includes("giảm giá") ||
+        keyword.includes("kiểm tra lại") ||
+        keyword.includes("tổng tiền") ||
+        keyword.includes("hết hạn")
+      ) {
+        console.log("👉 Đang gọi hàm syncMoneyFromBackend...");
+
+        if (typeof handleSyncMoney === "function") {
+          await handleSyncMoney();
+          console.log("✅ Đã sync xong!");
+        } else {
+          console.error(
+            "❌ Lỗi: handleSyncMoney không phải là function!",
+            handleSyncMoney
+          );
+        }
+      }
     }
   };
 

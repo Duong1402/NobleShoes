@@ -42,8 +42,6 @@ public interface HoaDonChiTietRepository extends JpaRepository<HoaDonChiTiet, UU
             Pageable pageable
     );
 
-    Optional<HoaDonChiTiet> findByHoaDonIdAndChiTietSanPhamId(UUID idHoaDon, UUID idChiTietSanPham);
-
     List<HoaDonChiTiet> findByHoaDonId(UUID idHoaDon);
 
     void deleteByHoaDonIdAndChiTietSanPhamId(UUID idHoaDon, UUID idChiTietSanPham);
@@ -51,5 +49,17 @@ public interface HoaDonChiTietRepository extends JpaRepository<HoaDonChiTiet, UU
     @Query("SELECT COALESCE(SUM(hdct.thanhTien), 0) FROM HoaDonChiTiet hdct " +
             "WHERE hdct.hoaDon.id = :idHoaDon AND hdct.trangThai <> 0")
     BigDecimal tongTienHoaDon(@Param("idHoaDon") UUID idHoaDon);
+
+    // 1. Tìm chính xác sản phẩm có giá đó chưa
+    @Query("SELECT hdct FROM HoaDonChiTiet hdct " +
+            "WHERE hdct.hoaDon.id = :idHoaDon " +
+            "AND hdct.chiTietSanPham.id = :idSp " +
+            "AND hdct.donGia = :donGia")
+    Optional<HoaDonChiTiet> findByIdAndDonGia(@Param("idHoaDon") UUID idHoaDon,
+                                              @Param("idSp") UUID idSp,
+                                              @Param("donGia") BigDecimal donGia);
+
+    // 2. Tìm danh sách các sản phẩm cùng ID (để check xem có giá cũ không)
+    List<HoaDonChiTiet> findByHoaDonIdAndChiTietSanPhamId(UUID idHoaDon, UUID idChiTietSanPham);
 
 }

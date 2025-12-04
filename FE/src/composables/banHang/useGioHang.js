@@ -53,35 +53,90 @@ export function useGioHang(notify, hoaDon, hoaDonChoList) {
   // Helper: Đồng bộ lại tiền nong từ Backend mà KHÔNG làm mất thông tin hiển thị
   const syncMoneyFromBackend = async () => {
     try {
-      // Gọi song song 2 API: Lấy chi tiết sp & Lấy thông tin hóa đơn (để lấy tiền giảm)
       const [resChiTiet, resHoaDon] = await Promise.all([
         getChiTietHoaDon(hoaDon.value.id),
         getHoaDonById(hoaDon.value.id),
       ]);
 
-      const listMoi = resChiTiet.data;
-      const hoaDonMoi = resHoaDon.data; // Dữ liệu hóa đơn chuẩn từ BE
+      const rawList = resChiTiet.data || [];
+      const hoaDonMoi = resHoaDon.data;
 
-      // 1. Cập nhật lại tiền cho từng sản phẩm (Giữ nguyên logic của bạn để không mất hiển thị)
-      gioHang.value = gioHang.value.map((itemFE) => {
-        const itemBE = listMoi.find((i) => i.id === itemFE.id);
-        if (itemBE) {
+      // 1. LỌC SƠ BỘ (Chỉ lọc trạng thái xóa)
+      // Giữ lại tất cả dòng khác để hiển thị
+      const listMoi = rawList.filter((item) => item.trangThai !== 0);
+
+      // 2. MAP DỮ LIỆU
+      if (listMoi) {
+        const mappedList = listMoi.map((itemBE) => {
+          // Tìm dữ liệu cũ đang hiển thị trên UI để lấy thông tin ảnh/tên/tồn kho bù đắp
+          const oldItem = gioHang.value.find((g) => g.id === itemBE.id);
+
+          // Lấy thông tin từ BE
+          const ctsp = itemBE.chiTietSanPham;
+
+          // 🔥 LOGIC TÍNH TỒN KHO "BẤT TỬ" (Quan trọng nhất)
+          // Ưu tiên 1: Lấy từ BE trả về (ctsp.soLuongTon)
+          // Ưu tiên 2: Lấy từ dữ liệu cũ trên FE (oldItem.soLuongTon)
+          // Mặc định: 0
+          let realStock = 0;
+
+          if (
+            ctsp &&
+            ctsp.soLuongTon !== undefined &&
+            ctsp.soLuongTon !== null
+          ) {
+            realStock = ctsp.soLuongTon;
+          } else if (oldItem && oldItem.soLuongTon !== undefined) {
+            realStock = oldItem.soLuongTon;
+          }
+
           return {
-            ...itemFE,
-            donGia: itemBE.donGia,
-            thanhTien: itemBE.thanhTien,
-            soLuong: itemBE.soLuong,
-          };
-        }
-        return itemFE;
-      });
+            ...itemBE, // Giữ ID, đơn giá, số lượng gốc
 
-      // 2. CẬP NHẬT TIỀN TỔNG & GIẢM GIÁ (Đây là chỗ sửa lỗi của bạn)
-      // Thay vì tự tính bằng reduce, ta lấy luôn số BE đã tính
+            tenSanPham:
+              itemBE.tenSanPham ||
+              ctsp?.sanPham?.ten ||
+              oldItem?.tenSanPham ||
+              "Đang cập nhật...",
+
+            mauSac: itemBE.mauSac || ctsp?.mauSac?.ten || oldItem?.mauSac,
+
+            kichThuoc:
+              itemBE.kichThuoc ||
+              ctsp?.kichThuoc?.ten ||
+              ctsp?.kichThuoc?.giaTri ||
+              oldItem?.kichThuoc,
+
+            hinhAnhUrl:
+              itemBE.hinhAnhUrl || ctsp?.hinhAnh?.url || oldItem?.hinhAnhUrl,
+
+            tenXuatXu:
+              itemBE.tenXuatXu ||
+              ctsp?.sanPham?.xuatXu?.ten ||
+              oldItem?.tenXuatXu,
+
+            // Quan trọng: Phải lấy được ID sản phẩm gốc
+            idChiTietSP:
+              ctsp?.id || itemBE.idChiTietSanPham || oldItem?.idChiTietSP,
+
+            // 🔥 GÁN SỐ LƯỢNG TỒN ĐÃ TÍNH TOÁN VÀO ĐÂY
+            soLuongTon: realStock,
+          };
+        });
+
+        // 3. 🔥 LỌC LẦN CUỐI (CHỐT CHẶN AN TOÀN)
+        // Loại bỏ những dòng lỗi không tìm thấy ID sản phẩm gốc (tránh hiện N/A)
+        gioHang.value = mappedList.filter((item) => item.idChiTietSP);
+
+        hoaDon.value.sanPhamList = gioHang.value;
+      }
+
+      // 4. Cập nhật tiền
       if (hoaDonMoi) {
         hoaDon.value.tongTien = hoaDonMoi.tongTien;
-        hoaDon.value.tongTienSauGiam = hoaDonMoi.tongTienSauGiam; // 🔥 Số này đã được BE trừ khuyến mãi chuẩn
-        hoaDon.value.phieuGiamGia = hoaDonMoi.phieuGiamGia; // Cập nhật lại phiếu (để nếu không đủ điều kiện BE tự gỡ thì FE cũng gỡ)
+        hoaDon.value.tongTienSauGiam = hoaDonMoi.tongTienSauGiam;
+        hoaDon.value.phieuGiamGia = hoaDonMoi.phieuGiamGia;
+        hoaDon.value.soTienGiamGia = hoaDonMoi.soTienGiamGia;
       }
 
       updateHoaDonChoCount();
@@ -99,10 +154,17 @@ export function useGioHang(notify, hoaDon, hoaDonChoList) {
       // B1: Gọi API thêm
       const res = await themSanPhamVaoHoaDon(hoaDon.value.id, sp.id, 1);
 
-      // Backend trả về chi tiết SP vừa thêm (hoặc Hóa đơn tùy bạn sửa controller)
-      // Giả sử Controller của bạn đang trả về HoaDonChiTiet
-      const newItemBE = res.data;
+      // 1: Lấy data từ cấu trúc mới { hoaDonChiTiet, message }
+      const { hoaDonChiTiet, message } = res.data;
 
+      if (message) {
+        notify.info(message); // Màu xanh dương nếu có thay đổi giá
+      } else {
+        notify.success("Đã thêm sản phẩm!"); // Màu xanh lá nếu bình thường
+      }
+
+      // Gán đối tượng chi tiết để dùng cho logic phía dưới
+      const newItemBE = hoaDonChiTiet;
       // B2: Tạo item hiển thị (Kết hợp dữ liệu BE và thông tin từ 'sp')
       const displayItem = {
         ...newItemBE, // ID, Giá, Thành tiền từ BE
@@ -113,6 +175,7 @@ export function useGioHang(notify, hoaDon, hoaDonChoList) {
         kichThuoc: sp.kichThuoc, // Lấy ngay cái size bạn vừa chọn
         tenXuatXu: sp.tenXuatXu,
         hinhAnhUrl: sp.hinhAnhUrl,
+        soLuongTon: sp.soLuongTon,
         idChiTietSP: sp.id, // Lưu lại ID gốc để sau này update
       };
 
@@ -121,34 +184,44 @@ export function useGioHang(notify, hoaDon, hoaDonChoList) {
 
       // Nếu Backend trả về ID mới (thêm mới)
       if (idx === -1) {
+        // Nếu là dòng mới (hoặc dòng mới được tách ra do đổi giá) -> Thêm vào cuối
         gioHang.value.push(displayItem);
       } else {
-        // Nếu Backend trả về ID cũ (cộng dồn)
+        // Nếu là cộng dồn -> Cập nhật dòng cũ
         gioHang.value[idx] = { ...gioHang.value[idx], ...displayItem };
       }
 
       // Cập nhật lại list vào hóa đơn để đồng bộ
       hoaDon.value.sanPhamList = gioHang.value;
 
-      notify.success("Đã thêm sản phẩm!");
-
-      // B4: Gọi hàm đồng bộ tiền (chạy ngầm để update tổng tiền và khuyến mãi)
-      // (Nếu bạn đã sửa Controller trả về HoaDon thì bước này có thể tối ưu hơn)
       await syncMoneyFromBackend();
+
+      //Thông báo thay đổi giá
+      if (message) {
+        // Tìm lại đúng dòng sản phẩm vừa thêm/update trong giỏ hàng mới
+        const targetItem = gioHang.value.find(
+          (item) => item.id === hoaDonChiTiet.id
+        );
+
+        if (targetItem) {
+          // Gán message vào một thuộc tính riêng để hiển thị ở UI
+          targetItem.warningMessage = message;
+
+          // Tùy chọn: Tự động tắt thông báo sau 5 giây nếu muốn
+          // setTimeout(() => { targetItem.warningMessage = null; }, 5000);
+        }
+      }
     } catch (err) {
       let msg = "Không thể thêm sản phẩm!";
       const responseData = err.response?.data;
 
       if (typeof responseData === "string") {
-        msg = responseData; // Lỗi là chuỗi thuần
+        msg = responseData;
       } else if (responseData?.message) {
-        msg = responseData.message; // Lỗi có trường message
+        msg = responseData.message;
       } else if (responseData?.error) {
-        msg = responseData.error; // Lỗi có trường error
-      }
-      // Trường hợp lỗi 500/RuntimeException, thông báo có thể nằm trong body
-      else if (responseData && typeof responseData === "object") {
-        // Thử tìm trong các trường chứa lỗi khác
+        msg = responseData.error;
+      } else if (responseData && typeof responseData === "object") {
         const errorContent =
           responseData.exception ||
           responseData.trace ||
@@ -158,7 +231,10 @@ export function useGioHang(notify, hoaDon, hoaDonChoList) {
         }
       }
 
-      if (msg.includes("Số lượng tồn không đủ")) {
+      if (
+        msg.toLowerCase().includes("tồn") ||
+        msg.toLowerCase().includes("số lượng")
+      ) {
         notify.warning(msg);
       } else {
         notify.error(msg);
@@ -187,72 +263,97 @@ export function useGioHang(notify, hoaDon, hoaDonChoList) {
   };
 
   const handleCapNhatSoLuong = async (idChiTietHoaDon, newSoLuongRaw) => {
-    if (!hoaDon.value) return notify.warning("Chưa chọn hóa đơn!"); // 1. Validate và tìm item
+    if (!hoaDon.value) return notify.warning("Chưa chọn hóa đơn!");
+
+    const idx = gioHang.value.findIndex((i) => i.id === idChiTietHoaDon);
+    if (idx === -1) return;
+
+    const currentSp = gioHang.value[idx];
+    const oldSoLuong = currentSp.soLuong;
+
+    // Lấy tồn kho (quan trọng: phải lấy từ syncMoney đã map, mặc định 0 nếu lỗi)
+    const soLuongTonKhaDung =
+      currentSp.soLuongTon !== undefined ? currentSp.soLuongTon : 0;
+    // const soLuongTonKhaDung = 100;
 
     let newSoLuong = parseInt(newSoLuongRaw);
-    const spGioHangIndex = gioHang.value.findIndex(
-      (i) => i.id === idChiTietHoaDon
-    );
-    if (spGioHangIndex === -1) return;
 
-    const currentSp = gioHang.value[spGioHangIndex]; // 🔥 Lấy tham chiếu trực tiếp
-    const oldSoLuong = currentSp.soLuong; // Nếu nhập bậy bạ (chữ, số âm, số 0) -> Reset về 1
+    // =================================================================
+    // 1. HÀM HELPER NỘI BỘ: Cập nhật UI & Ép Vue vẽ lại (Reactivity)
+    // =================================================================
+    const updateUI = (val) => {
+      const item = gioHang.value[idx];
+      item.soLuong = val;
+      item.thanhTien = item.donGia * val;
+      // Gán đè object mới để Vue phát hiện thay đổi trên ô input
+      gioHang.value[idx] = { ...item };
+      hoaDon.value.sanPhamList = gioHang.value;
+    };
 
+    // =================================================================
+    // 2. VALIDATE DỮ LIỆU
+    // =================================================================
+
+    // Check 1: Số lượng không hợp lệ hoặc <= 0
     if (isNaN(newSoLuong) || newSoLuong < 1) {
-      notify.warning("Số lượng phải lớn hơn 0!"); // Đảm bảo UI reset về giá trị cũ (nếu có lỗi nhập)
-      currentSp.soLuong = oldSoLuong; // Reset về số cũ
-      return;
+      notify.warning("Số lượng tối thiểu là 1!");
+      // Reset về 1 ngay lập tức
+      updateUI(1);
+
+      // Nếu số cũ khác 1 thì mới gọi API sửa về 1, còn không thì dừng
+      if (oldSoLuong === 1) return;
+      newSoLuong = 1; // Gán lại để chạy logic delta bên dưới
     }
 
-    const delta = newSoLuong - oldSoLuong; // Nếu không thay đổi gì thì thôi
+    // Tính lượng thay đổi
+    const delta = newSoLuong - oldSoLuong;
 
-    if (delta === 0) return; // Optimistic Update: Cập nhật hiển thị ngay lập tức
+    if (delta === 0) return; // Không đổi thì thôi
 
-    currentSp.soLuong = newSoLuong;
-    currentSp.thanhTien = currentSp.donGia * newSoLuong; // Cần thiết lập lại list trên hoaDon để kích hoạt watcher/computed phụ thuộc
-    hoaDon.value.sanPhamList = gioHang.value;
+    // Check 2: Kiểm tra tồn kho (Chỉ check khi TĂNG số lượng)
+    if (delta > 0) {
+      // console.log(`[Check Kho] Muốn thêm: ${delta}, Kho còn: ${soLuongTonKhaDung}`);
 
-    const idKho = currentSp.idChiTietSP || currentSp.chiTietSanPham?.id;
+      if (delta > soLuongTonKhaDung) {
+        notify.warning(`Kho chỉ còn thêm được ${soLuongTonKhaDung} sản phẩm!`);
+        // Reset về số cũ (Rollback UI)
+        updateUI(oldSoLuong);
+        return; // Dừng ngay, không gọi API
+      }
+    }
+
+    // =================================================================
+    // 3. CẬP NHẬT & GỌI API (INLINE)
+    // =================================================================
+
+    // Cập nhật UI tạm thời (Optimistic Update)
+    updateUI(newSoLuong);
+
+    const idKho = currentSp.idChiTietSP;
 
     try {
-      // Gọi API
-      await themSanPhamVaoHoaDon(hoaDon.value.id, idKho, delta); // Đồng bộ tiền
+      // Gọi API thêm/bớt
+      await themSanPhamVaoHoaDon(hoaDon.value.id, idKho, delta);
 
-      await syncMoneyFromBackend(); // Hàm này sẽ cập nhật lại soLuong và thanhTien từ BE
+      // Đồng bộ lại tiền & tồn kho mới nhất
+      await syncMoneyFromBackend();
 
       notify.success("Cập nhật thành công!");
     } catch (err) {
-      console.error(err); // 5. Xử lý lỗi (Rollback và Bắt lỗi) // 🔥 LOGIC BẮT LỖI
-      let msg = "Không thể cập nhật số lượng!";
-      const responseData = err.response?.data;
+      console.error(err);
 
-      if (typeof responseData === "string") {
-        msg = responseData;
-      } else if (responseData?.message) {
-        msg = responseData.message;
-      } else if (responseData?.error) {
-        msg = responseData.error;
-      } else if (responseData && typeof responseData === "object") {
-        const errorContent =
-          responseData.exception ||
-          responseData.trace ||
-          JSON.stringify(responseData);
-        if (errorContent.includes("Số lượng tồn không đủ")) {
-          msg = "Số lượng tồn không đủ!";
-        }
-      } // 🔥 Khôi phục số lượng trên FE về giá trị cũ (Rollback trực tiếp) // currentSp vẫn là item trong gioHang.value
+      // 🔥 ROLLBACK NẾU LỖI: Quay về số lượng cũ & Sync lại
+      updateUI(oldSoLuong);
+      await syncMoneyFromBackend();
 
-      currentSp.soLuong = oldSoLuong;
-      currentSp.thanhTien = currentSp.donGia * oldSoLuong;
-      // Force update (để UI chắc chắn cập nhật)
-      gioHang.value[spGioHangIndex] = { ...currentSp };
-      hoaDon.value.sanPhamList = gioHang.value; // Cập nhật tổng số lượng hóa đơn chờ
-      updateHoaDonChoCount();
-
-      if (msg.includes("Số lượng tồn không đủ")) {
+      const msg = err.response?.data?.message || "Lỗi cập nhật";
+      if (
+        typeof msg === "string" &&
+        (msg.includes("tồn") || msg.includes("đủ"))
+      ) {
         notify.warning(msg);
       } else {
-        notify.error(msg);
+        notify.error("Lỗi cập nhật số lượng");
       }
     }
   };
@@ -269,8 +370,9 @@ export function useGioHang(notify, hoaDon, hoaDonChoList) {
       gioHang.value = gioHang.value.filter((i) => i.id !== idChiTietHoaDon);
       hoaDon.value.sanPhamList = gioHang.value;
 
-      await syncMoneyFromBackend(); // Tính lại tiền
       notify.success("Đã xóa sản phẩm!");
+
+      await syncMoneyFromBackend(); // Tính lại tiền
     } catch (e) {
       notify.error("Xóa thất bại");
     }
@@ -284,5 +386,6 @@ export function useGioHang(notify, hoaDon, hoaDonChoList) {
     handleCapNhatSoLuong,
     handleUpdateTempSoLuong,
     handleXoaSanPham,
+    syncMoneyFromBackend,
   };
 }

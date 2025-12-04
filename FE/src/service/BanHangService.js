@@ -78,6 +78,6 @@ export const timKhachHangDaDangKy = (keyword) => {
 };
 
 
-export const getHoaDonById = (id) => {
-  return axios.get(`${API_URL}/hoa-don/${id}`); 
+export const getHoaDonById = (idHoaDon) => {
+  return axios.get(`${API_URL}/hoa-don/${idHoaDon}`); 
 };
