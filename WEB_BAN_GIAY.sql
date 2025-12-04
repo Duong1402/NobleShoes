@@ -317,6 +317,23 @@ CREATE TABLE lich_su_hoa_don (
     FOREIGN KEY (id_hoa_don) REFERENCES hoa_don(id)
 );
 
+CREATE TABLE password_reset_token (
+    id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+    token VARCHAR(255) UNIQUE NOT NULL, 
+    tai_khoan VARCHAR(100) NOT NULL,    
+    user_type VARCHAR(20) NOT NULL,     
+    expiry_date DATETIME NOT NULL  
+);
+
+CREATE TABLE lich_su_hoa_don (
+    id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
+    id_hoa_don UNIQUEIDENTIFIER,
+    thoi_gian DATETIME,
+    nguoi_thuc_hien NVARCHAR(100),
+    ghi_chu NVARCHAR(100),
+    FOREIGN KEY (id_hoa_don) REFERENCES hoa_don(id)
+);
+
 -----------------------------------------------------------------------------------------------------------------------------------------
 -- Mục đích sử dụng
 INSERT INTO muc_dich_su_dung (ma, ten) VALUES
