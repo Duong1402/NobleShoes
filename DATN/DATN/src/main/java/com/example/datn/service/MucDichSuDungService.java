@@ -3,10 +3,9 @@ package com.example.datn.service;
 import com.example.datn.entity.MucDichSuDung;
 import com.example.datn.repository.MucDichSuDungRepository;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
+import java.util.Optional;
 
 @Service
 public class MucDichSuDungService {
@@ -20,7 +19,6 @@ public class MucDichSuDungService {
     // ----------------------------------------------------
     // 1. CREATE: Thêm logic tự động sinh mã 'ma' và đồng bộ hóa
     // ----------------------------------------------------
-
     /**
      * Thêm mới Mục Đích Sử Dụng, tự động sinh mã và đảm bảo đồng bộ hóa
      * bằng 'synchronized'.

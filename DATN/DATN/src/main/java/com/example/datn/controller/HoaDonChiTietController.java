@@ -12,15 +12,10 @@ import java.util.UUID;
 @RequestMapping("/api/hoa-don-chi-tiet")
 public class HoaDonChiTietController {
     private final HoaDonChiTietService service;
-
-    public HoaDonChiTietController(HoaDonChiTietService service) {
-        this.service = service;
-    }
+    public HoaDonChiTietController(HoaDonChiTietService service) { this.service = service; }
 
     @GetMapping
-    public List<HoaDonChiTiet> all() {
-        return service.findAll();
-    }
+    public List<HoaDonChiTiet> all() { return service.findAll(); }
 
     @GetMapping("/{id}")
     public HoaDonChiTiet one(@PathVariable UUID id) {
@@ -28,9 +23,7 @@ public class HoaDonChiTietController {
     }
 
     @PostMapping
-    public HoaDonChiTiet create(@RequestBody HoaDonChiTiet obj) {
-        return service.save(obj);
-    }
+    public HoaDonChiTiet create(@RequestBody HoaDonChiTiet obj) { return service.save(obj); }
 
     @PutMapping("/{id}")
     public HoaDonChiTiet update(@PathVariable UUID id, @RequestBody HoaDonChiTiet obj) {
@@ -39,7 +32,5 @@ public class HoaDonChiTietController {
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable UUID id) {
-        service.deleteById(id);
-    }
+    public void delete(@PathVariable UUID id) { service.deleteById(id); }
 }

@@ -1,5 +1,6 @@
 <template>
-  <div class="container-fluid mt-4 px-5">
+  <div class="container-fluid mt-4 px-1">
+    <!-- Tiêu đề -->
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
         <div class="page-header d-flex align-items-center justify-content-between">
@@ -11,15 +12,17 @@
       </div>
     </div>
 
+    <!-- Form thêm sản phẩm -->
     <div class="card shadow p-4 mt-3">
       <form @submit.prevent="confirmSave">
         <div class="row g-3">
+          <!-- Tên sản phẩm -->
           <div class="col-md-6">
             <label class="form-label">Tên sản phẩm</label>
-            <input v-model="form.tenSanPham" type="text" class="form-control"
-                   placeholder="Nhập tên sản phẩm" required />
+            <input v-model="form.tenSanPham" type="text" class="form-control" placeholder="Nhập tên sản phẩm" />
           </div>
 
+          <!-- Mục đích sử dụng -->
           <div class="col-md-6">
             <label class="form-label">Mục đích sử dụng</label>
             <select v-model="form.mucDichSuDungId" class="form-select">
@@ -30,9 +33,10 @@
             </select>
           </div>
 
+          <!-- Danh mục -->
           <div class="col-md-6">
             <label class="form-label">Danh mục</label>
-            <select v-model="form.danhMucId" class="form-select" required>
+            <select v-model="form.danhMucId" class="form-select">
               <option disabled value="">-- Chọn danh mục --</option>
               <option v-for="dm in danhMucList" :key="dm.id" :value="dm.id">
                 {{ dm.ten }}
@@ -40,9 +44,10 @@
             </select>
           </div>
 
+          <!-- Thương hiệu -->
           <div class="col-md-6">
             <label class="form-label">Thương hiệu</label>
-            <select v-model="form.thuongHieuId" class="form-select" required>
+            <select v-model="form.thuongHieuId" class="form-select">
               <option disabled value="">-- Chọn thương hiệu --</option>
               <option v-for="th in thuongHieuList" :key="th.id" :value="th.id">
                 {{ th.ten }}
@@ -50,6 +55,7 @@
             </select>
           </div>
 
+          <!-- Đế giày -->
           <div class="col-md-6">
             <label class="form-label">Đế giày</label>
             <select v-model="form.deGiayId" class="form-select">
@@ -60,6 +66,7 @@
             </select>
           </div>
 
+          <!-- Dây giày -->
           <div class="col-md-6">
             <label class="form-label">Dây giày</label>
             <select v-model="form.dayGiayId" class="form-select">
@@ -70,6 +77,7 @@
             </select>
           </div>
 
+          <!-- Chất liệu -->
           <div class="col-md-6">
             <label class="form-label">Chất liệu</label>
             <select v-model="form.chatLieuId" class="form-select">
@@ -80,6 +88,7 @@
             </select>
           </div>
 
+          <!-- Xuất xứ -->
           <div class="col-md-6">
             <label class="form-label">Xuất xứ</label>
             <select v-model="form.xuatXuId" class="form-select">
@@ -88,14 +97,17 @@
             </select>
           </div>
 
+          <!-- Mô tả sản phẩm -->
           <div class="col-12">
             <label class="form-label">Mô tả sản phẩm</label>
             <textarea v-model="form.moTa" class="form-control" rows="3"
-                      placeholder="Nhập mô tả chi tiết sản phẩm"></textarea>
+              placeholder="Nhập mô tả chi tiết sản phẩm"></textarea>
           </div>
         </div>
 
+        <!-- Màu sắc & kích thước (giao diện giống Huy) -->
         <div class="row g-3 mt-4">
+          <!-- Màu sắc -->
           <div class="col-md-6">
             <label class="form-label">Màu sắc</label>
             <div class="d-flex gap-2 align-items-center flex-wrap">
@@ -103,41 +115,46 @@
                 class="d-flex align-items-center gap-1 border rounded px-2 py-1" style="cursor: pointer;">
                 <div :style="{ backgroundColor: m.ma, width: '25px', height: '25px', borderRadius: '4px' }"></div>
                 <span>{{ m.ten }}</span>
-                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" @click="removeSelectedColor(index)">x</button>
+                <button type="button" class="btn btn-sm btn-outline-danger"
+                  @click="removeSelectedColor(index)">x</button>
               </div>
-              <button type="button" class="btn btn-outline-primary btn-sm" @click="showColorModal = true">+ Chọn màu</button>
+              <button type="button" class="btn btn-outline-primary btn-sm" @click="showColorModal = true">+ Chọn
+                màu</button>
             </div>
           </div>
 
+          <!-- Kích thước -->
           <div class="col-md-6">
             <label class="form-label">Kích thước</label>
             <div class="d-flex gap-2 align-items-center flex-wrap">
               <div v-for="(k, index) in selectedKichThuoc" :key="index"
                 class="border rounded px-3 py-1 d-flex align-items-center gap-1" style="cursor: pointer;">
                 <span>{{ k.ten }}</span>
-                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" @click="removeSelectedSize(index)">x</button>
+                <button type="button" class="btn btn-sm btn-outline-danger"
+                  @click="removeSelectedSize(index)">x</button>
               </div>
-              <button type="button" class="btn btn-outline-primary btn-sm" @click="showSizeModal = true">+ Chọn kích thước</button>
+              <button type="button" class="btn btn-outline-primary btn-sm" @click="showSizeModal = true">+ Chọn kích
+                thước</button>
             </div>
           </div>
         </div>
 
-        <div v-if="showColorModal" class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <!-- ===== MODAL CHỌN MÀU ===== -->
+        <div v-if="showColorModal" class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.4);">
           <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content p-3">
               <h5 class="text-center fw-bold mb-3">Chọn màu sắc</h5>
 
+              <!-- Danh sách màu -->
               <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
                 <div v-for="m in mauSacList" :key="m.id"
-                  class="position-relative p-2 rounded d-flex justify-content-center align-items-center"
-                  :style="{
+                  class="position-relative p-2 rounded d-flex justify-content-center align-items-center" :style="{
                     backgroundColor: m.ma,
                     width: '80px',
                     height: '40px',
                     cursor: 'pointer',
                     border: selectedMauSac.some(c => c.id === m.id) ? '3px solid #007bff' : '1px solid #ccc'
-                  }"
-                  @click="selectColor(m)">
+                  }" @click="selectColor(m)">
                   <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 p-0 px-1"
                     @click.stop="deleteColor(m)">x</button>
                 </div>
@@ -148,6 +165,7 @@
                 <button class="btn btn-primary" @click="showAddColorForm = true">Thêm mới</button>
               </div>
 
+              <!-- Form thêm màu -->
               <div v-if="showAddColorForm" class="border rounded p-3 mt-3">
                 <h6 class="fw-bold text-center mb-2">Thêm màu mới</h6>
                 <div class="d-flex gap-2 mb-2">
@@ -163,7 +181,8 @@
           </div>
         </div>
 
-        <div v-if="showSizeModal" class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);">
+        <!-- ===== MODAL CHỌN KÍCH THƯỚC ===== -->
+        <div v-if="showSizeModal" class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.4);">
           <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content p-3">
               <h5 class="text-center fw-bold mb-3">Chọn kích thước</h5>
@@ -173,7 +192,8 @@
                   :class="{ 'border-2 border-primary': selectedKichThuoc.some(s => s.id === k.id) }"
                   style="cursor:pointer" @click="selectSize(k)">
                   {{ k.ten }}
-                  <button type="button" class="btn btn-sm btn-danger ms-2 py-0 px-1" @click.stop="deleteSize(k)">x</button>
+                  <button type="button" class="btn btn-sm btn-danger ms-2 py-0 px-1"
+                    @click.stop="deleteSize(k)">x</button>
                 </div>
               </div>
 
@@ -182,6 +202,7 @@
                 <button class="btn btn-primary" @click="showAddSizeForm = true">Thêm mới</button>
               </div>
 
+              <!-- Form thêm kích thước -->
               <div v-if="showAddSizeForm" class="border rounded p-3 mt-3">
                 <h6 class="fw-bold text-center mb-2">Thêm kích thước mới</h6>
                 <div class="d-flex gap-2 mb-2">
@@ -196,6 +217,7 @@
           </div>
         </div>
 
+        <!-- Biến thể -->
         <div v-if="bienTheList.length" class="mt-4">
           <h5 class="fw-bold text-secondary mb-3">Danh sách sản phẩm biến thể</h5>
           <div class="table-responsive">
@@ -221,6 +243,7 @@
                   <td><input v-model.number="bt.gia" type="number" class="form-control" min="0" /></td>
                   <td><input v-model.number="bt.soLuong" type="number" class="form-control" min="0" /></td>
 
+                  <!-- Ảnh Cloudinary -->
                   <td>
                     <div class="d-flex flex-wrap gap-2">
                       <div v-for="(img, i) in bt.imagePreviews" :key="i" class="position-relative">
@@ -230,14 +253,15 @@
                       </div>
 
                       <label v-if="bt.imagePreviews.length < 3"
-                             class="border rounded d-flex justify-content-center align-items-center"
-                             style="width: 70px; height: 70px; cursor: pointer;">
+                        class="border rounded d-flex justify-content-center align-items-center"
+                        style="width: 70px; height: 70px; cursor: pointer;">
                         <input type="file" accept="image/*" @change="onImageChange($event, bt)" hidden />
                         <span class="text-muted">+</span>
                       </label>
                     </div>
                   </td>
 
+                  <!-- Nút xoá biến thể -->
                   <td class="text-center">
                     <button class="btn btn-outline-danger btn-sm" type="button" @click="removeBienThe(index)">❌</button>
                   </td>
@@ -247,6 +271,7 @@
           </div>
         </div>
 
+        <!-- Nút -->
         <div class="mt-4 text-end">
           <router-link to="/admin/san-pham" class="btn btn-secondary me-2">
             <i class="fa fa-arrow-left me-1"></i> Quay lại
@@ -257,6 +282,17 @@
         </div>
       </form>
     </div>
+
+    <!-- Modal chọn màu (component) -->
+    <SelectMauSacModal v-if="showMauSacModal" :mauSacList="mauSacList" :selected="selectedMauSac"
+      @update="(val) => { selectedMauSac = val; generateVariants(); }" @refresh="loadData"
+      @close="showMauSacModal = false" />
+
+    <!-- Modal chọn kích thước (component) -->
+    <SelectKichThuocModal v-if="showKichThuocModal" :kichThuocList="kichThuocList" :selected="selectedKichThuoc"
+      @update="(val) => { selectedKichThuoc = val; generateVariants(); }" @refresh="loadData"
+      @close="showKichThuocModal = false" />
+
   </div>
 </template>
 
@@ -266,12 +302,13 @@ import { useRouter } from "vue-router";
 import Breadcrumb from "@/components/common/Breadcrumb.vue";
 import { useNotify } from "@/composables/useNotify";
 import Swal from "sweetalert2";
-import axios from "axios"; // ✅ IMPORT AXIOS (quan trọng nhất)
+// import SelectMauSacModal from "@/components/sanPham/SelectMauSacModal.vue";
+// import SelectKichThuocModal from "@/components/sanPham/SelectKichThuocModal.vue";
 
 const router = useRouter();
 const notify = useNotify();
 
-// Form chính
+// Form chính (giữ nguyên tất cả fields)
 const form = reactive({
   tenSanPham: "",
   mucDichSuDungId: "",
@@ -309,53 +346,36 @@ const showColorModal = ref(false);
 const showSizeModal = ref(false);
 const showAddColorForm = ref(false);
 const showAddSizeForm = ref(false);
+const showMauSacModal = ref(false); // keep existing component states (if you still use components)
+const showKichThuocModal = ref(false);
 
 const newColorName = ref("");
 const newColorCode = ref("#000000");
 const newSizeName = ref("");
 
-// ----------------- Logic Biến Thể (Thông minh hơn) -----------------
+// ----------------- generateVariants (bảo vệ khi chưa chọn) -----------------
 const generateVariants = () => {
   if (!selectedMauSac.value.length || !selectedKichThuoc.value.length) {
-    // Nếu bỏ chọn hết, có thể xóa hoặc giữ tùy ý. Ở đây xóa cho an toàn logic.
     bienTheList.value = [];
     return;
   }
-
-  // 1. Tạo danh sách biến thể mới dựa trên lựa chọn
-  const newVariants = [];
-  
+  bienTheList.value = [];
   for (let mau of selectedMauSac.value) {
     for (let size of selectedKichThuoc.value) {
-      // 2. Kiểm tra xem biến thể này đã tồn tại trong danh sách cũ chưa
-      // (Để giữ lại giá, số lượng, ảnh đã nhập)
-      const existing = bienTheList.value.find(
-        old => old.mauSac.id === mau.id && old.kichThuoc.id === size.id
-      );
-
-      if (existing) {
-        // Nếu có rồi -> Dùng lại
-        newVariants.push(existing);
-      } else {
-        // Nếu chưa có -> Tạo mới
-        newVariants.push({
-          ten: `${form.tenSanPham || "Sản phẩm"} - ${mau.ten} - ${size.ten}`,
-          mauSac: mau,
-          kichThuoc: size,
-          gia: 0,
-          soLuong: 0,
-          images: [],
-          imagePreviews: [],
-        });
-      }
+      bienTheList.value.push({
+        ten: `${form.tenSanPham || "Sản phẩm"} - ${mau.ten} - ${size.ten}`,
+        mauSac: mau,
+        kichThuoc: size,
+        gia: 0,
+        soLuong: 0,
+        images: [],
+        imagePreviews: [],
+      });
     }
   }
-  
-  // 3. Cập nhật danh sách
-  bienTheList.value = newVariants;
 };
 
-// ----------------- Cloudinary upload (Dùng fetch cho Cloudinary là ok vì ko cần token) -----------------
+// ----------------- Cloudinary upload -----------------
 const onImageChange = async (event, bt) => {
   const file = event.target.files[0];
   if (!file) return;
@@ -389,40 +409,38 @@ const removeBienThe = (index) => {
   bienTheList.value.splice(index, 1);
 };
 
-// ----------------- Load data (Đã sửa dùng AXIOS) -----------------
+// ----------------- Load data comboboxs -----------------
 const loadData = async () => {
   try {
     const [
       mdRes, dmRes, thRes, msRes, ktRes, dgRes, dyRes, clRes, xxRes
     ] = await Promise.all([
-      axios.get("http://localhost:8080/admin/muc-dich-su-dung"),
-      axios.get("http://localhost:8080/admin/danh-muc"),
-      axios.get("http://localhost:8080/admin/thuong-hieu"),
-      axios.get("http://localhost:8080/admin/mau-sac"),
-      axios.get("http://localhost:8080/admin/kich-thuoc"),
-      axios.get("http://localhost:8080/admin/de-giay"),
-      axios.get("http://localhost:8080/admin/day-giay"),
-      axios.get("http://localhost:8080/admin/chat-lieu"),
-      axios.get("http://localhost:8080/admin/xuat-xu"),
+      fetch("http://localhost:8080/admin/muc-dich-su-dung"),
+      fetch("http://localhost:8080/admin/danh-muc"),
+      fetch("http://localhost:8080/admin/thuong-hieu"),
+      fetch("http://localhost:8080/admin/mau-sac"),
+      fetch("http://localhost:8080/admin/kich-thuoc"),
+      fetch("http://localhost:8080/admin/de-giay"),
+      fetch("http://localhost:8080/admin/day-giay"),
+      fetch("http://localhost:8080/admin/chat-lieu"),
+      fetch("http://localhost:8080/admin/xuat-xu"),
     ]);
 
-    // Axios trả data trong .data
-    mucDichList.value = mdRes.data;
-    danhMucList.value = dmRes.data;
-    thuongHieuList.value = thRes.data;
-    mauSacList.value = msRes.data;
-    kichThuocList.value = ktRes.data;
-    deGiayList.value = dgRes.data;
-    dayGiayList.value = dyRes.data;
-    chatLieuList.value = clRes.data;
-    xuatXuList.value = xxRes.data;
+    mucDichList.value = await mdRes.json();
+    danhMucList.value = await dmRes.json();
+    thuongHieuList.value = await thRes.json();
+    mauSacList.value = await msRes.json();
+    kichThuocList.value = await ktRes.json();
+    deGiayList.value = await dgRes.json();
+    dayGiayList.value = await dyRes.json();
+    chatLieuList.value = await clRes.json();
+    xuatXuList.value = await xxRes.json();
   } catch (err) {
     console.error("Lỗi load dữ liệu:", err);
-    notify.error("Lỗi tải danh mục, vui lòng thử lại.");
   }
 };
 
-// ----------------- Thêm sản phẩm (Đã sửa dùng AXIOS) -----------------
+// ----------------- Thêm sản phẩm -----------------
 const addSanPham = async () => {
   try {
     const payload = {
@@ -445,29 +463,93 @@ const addSanPham = async () => {
       }))
     };
 
-    // Dùng axios.post
-    await axios.post("http://localhost:8080/admin/san-pham", payload);
+    const res = await fetch("http://localhost:8080/admin/san-pham", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    // 🚨 PHẦN NÀY CẦN SỬA ĐỂ BẮT LỖI TỪ BODY JSON CỦA BACK-END
+    if (!res.ok) {
+      let errorData = { message: "Đã xảy ra lỗi không xác định từ Server." };
+      try {
+        // Cố gắng đọc body JSON (nơi chứa thông báo chi tiết)
+        errorData = await res.json();
+      } catch (e) {
+        console.warn("Lỗi đọc JSON từ phản hồi:", e);
+      }
+      // Ném lỗi với thông báo chi tiết từ Back-end
+      throw new Error(errorData.message || `Lỗi Server (${res.status}): ${errorData.error || errorData.title || "Lỗi không rõ"}`);
+    }
 
     notify.success("Thêm sản phẩm thành công!");
     router.push("/admin/san-pham");
   } catch (err) {
-    console.error(err);
-    const msg = err.response?.data?.message || "Thêm thất bại, vui lòng thử lại!";
-    notify.error(msg);
+    console.error("Lỗi khi thêm sản phẩm:", err.message);
+    // Hiển thị thông báo chi tiết vừa được ném từ khối if (!res.ok)
+    notify.error(err.message);
   }
 };
 
 // ----------------- Validate & confirm -----------------
 const validateForm = () => {
-  if (!form.tenSanPham.trim()) { notify.error("Tên sản phẩm không được để trống!"); return false; }
-  if (!form.danhMucId) { notify.error("Vui lòng chọn danh mục!"); return false; }
-  if (!form.thuongHieuId) { notify.error("Vui lòng chọn thương hiệu!"); return false; }
-  if (!bienTheList.value.length) { notify.error("Vui lòng chọn ít nhất 1 màu sắc và kích thước!"); return false; }
-  
-  for (const bt of bienTheList.value) {
-    if (bt.gia <= 0) { notify.error(`Giá sản phẩm "${bt.ten}" phải lớn hơn 0!`); return false; }
-    if (bt.soLuong <= 0) { notify.error(`Số lượng sản phẩm "${bt.ten}" phải lớn hơn 0!`); return false; }
+  // 1. Kiểm tra trường Tên sản phẩm (TEXT INPUT)
+  if (!form.tenSanPham.trim()) {
+    notify.error("Tên sản phẩm không được để trống!");
+    return false;
   }
+
+  // 2. Kiểm tra các trường SELECT (COMBOBOX)
+  // Các trường bắt buộc phải có giá trị (không phải null, undefined, hoặc "")
+  if (!form.danhMucId) {
+    notify.error("Vui lòng chọn Danh mục!");
+    return false;
+  }
+  if (!form.thuongHieuId) {
+    notify.error("Vui lòng chọn Thương hiệu!");
+    return false;
+  }
+  if (!form.mucDichSuDungId) {
+    notify.error("Vui lòng chọn Mục đích sử dụng!");
+    return false;
+  }
+  if (!form.deGiayId) {
+    notify.error("Vui lòng chọn Đế giày!");
+    return false;
+  }
+  if (!form.dayGiayId) {
+    notify.error("Vui lòng chọn Dây giày!");
+    return false;
+  }
+  if (!form.chatLieuId) {
+    notify.error("Vui lòng chọn Chất liệu!");
+    return false;
+  }
+  if (!form.xuatXuId) {
+    notify.error("Vui lòng chọn Xuất xứ!");
+    return false;
+  }
+
+  // 3. Kiểm tra Biến thể đã được tạo chưa
+  if (!bienTheList.value.length) {
+    notify.error("Vui lòng chọn ít nhất 1 Màu sắc và Kích thước để tạo biến thể!");
+    return false;
+  }
+
+  // 4. Kiểm tra từng biến thể (Giá và Số lượng)
+  for (const bt of bienTheList.value) {
+    if (bt.gia <= 0) {
+      notify.error(`Giá sản phẩm biến thể "${bt.ten}" phải lớn hơn 0!`);
+      return false;
+    }
+    if (bt.soLuong <= 0) {
+      notify.error(`Số lượng sản phẩm biến thể "${bt.ten}" phải lớn hơn 0!`);
+      return false;
+    }
+    // Có thể thêm kiểm tra cho tên biến thể nếu muốn:
+    // if (!bt.ten.trim()) { notify.error("Tên biến thể không được để trống!"); return false; }
+  }
+
   return true;
 };
 
@@ -490,14 +572,20 @@ const confirmSave = async () => {
   }
 };
 
-// ----------------- Thêm màu/kích thước (Sửa dùng AXIOS) -----------------
+// ----------------- Thêm màu/kích thước (lưu SQL) -----------------
 const addNewColor = async () => {
   if (!newColorName.value.trim()) return alert("Vui lòng nhập tên màu!");
   try {
-    await axios.post("http://localhost:8080/admin/mau-sac", {
-      ten: newColorName.value,
-      ma: newColorCode.value,
+    const res = await fetch("http://localhost:8080/admin/mau-sac", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ten: newColorName.value,
+        ma: newColorCode.value,
+      }),
     });
+    if (!res.ok) throw new Error("Thêm màu thất bại");
+    // refresh danh sách từ server để có ID thật
     await loadData();
     newColorName.value = "";
     newColorCode.value = "#000000";
@@ -509,26 +597,46 @@ const addNewColor = async () => {
 };
 
 const addNewSize = async () => {
-  if (!newSizeName.value.trim()) return alert("Vui lòng nhập tên kích thước!");
+  if (!newSizeName.value.trim()) return notify.error("Vui lòng nhập tên kích thước!"); // Dùng notify thay vì alert
   try {
-    await axios.post("http://localhost:8080/admin/kich-thuoc", {
-      ten: newSizeName.value,
+    const res = await fetch("http://localhost:8080/admin/kich-thuoc", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ten: newSizeName.value,
+      }),
     });
+
+    // 💡 LOGIC SỬA LỖI: Bắt thông báo chi tiết từ Back-end
+    if (!res.ok) {
+      let errorData = {};
+      try {
+        errorData = await res.json();
+      } catch (e) {
+        // Không làm gì nếu không đọc được JSON
+      }
+      // Ném lỗi với thông báo chi tiết (vd: "Kích thước đã tồn tại!")
+      throw new Error(errorData.message || `Lỗi Server (${res.status}): Không thể thêm kích thước.`);
+    }
+
+    notify.success("Thêm kích thước thành công!"); // Dùng notify
     await loadData();
     newSizeName.value = "";
     showAddSizeForm.value = false;
   } catch (err) {
     console.error(err);
-    alert("Không thể thêm kích thước mới!");
+    notify.error(err.message); // ⬅️ Hiển thị lỗi chi tiết
   }
 };
 
-// ----------------- Xóa màu/kích thước (Sửa dùng AXIOS) -----------------
+// ----------------- Xóa màu/kích thước -----------------
 const deleteColor = async (mau) => {
   if (!confirm(`Bạn có chắc muốn xóa màu "${mau.ten}"?`)) return;
   try {
-    await axios.delete(`http://localhost:8080/admin/mau-sac/${mau.id}`);
+    const res = await fetch(`http://localhost:8080/admin/mau-sac/${mau.id}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("Xóa thất bại");
     await loadData();
+    // nếu màu đã chọn thì loại khỏi selected
     selectedMauSac.value = selectedMauSac.value.filter(c => c.id !== mau.id);
     generateVariants();
   } catch (err) {
@@ -540,17 +648,31 @@ const deleteColor = async (mau) => {
 const deleteSize = async (size) => {
   if (!confirm(`Bạn có chắc muốn xóa kích thước "${size.ten}"?`)) return;
   try {
-    await axios.delete(`http://localhost:8080/admin/kich-thuoc/${size.id}`);
+    const res = await fetch(`http://localhost:8080/admin/kich-thuoc/${size.id}`, { method: "DELETE" });
+
+    // 💡 LOGIC SỬA LỖI: Bắt thông báo chi tiết từ Back-end
+    if (!res.ok) {
+      let errorData = {};
+      try {
+        errorData = await res.json();
+      } catch (e) {
+        // Không làm gì nếu không đọc được JSON
+      }
+      // Ném lỗi với thông báo chi tiết (vd: "Không thể xóa vì đã có sản phẩm sử dụng.")
+      throw new Error(errorData.message || `Lỗi Server (${res.status}): Xóa kích thước thất bại.`);
+    }
+
+    notify.success("Xóa kích thước thành công!"); // Dùng notify
     await loadData();
     selectedKichThuoc.value = selectedKichThuoc.value.filter(s => s.id !== size.id);
     generateVariants();
   } catch (err) {
     console.error(err);
-    alert("Không thể xóa kích thước!");
+    notify.error(err.message); // ⬅️ Hiển thị lỗi chi tiết
   }
 };
 
-// ----------------- Logic chọn màu/size -----------------
+// ----------------- Chọn / bỏ chọn màu & size (toggle, không đóng modal) -----------------
 const selectColor = (mau) => {
   const exists = selectedMauSac.value.find(c => c.id === mau.id);
   if (exists) {
@@ -589,8 +711,15 @@ onMounted(loadData);
 </script>
 
 <style scoped>
-.form-label { font-weight: 600; }
-.card { border-radius: 12px; }
-/* Fix lỗi modal đè nhau nếu dùng Bootstrap */
-/* .modal { display: block; } <-- XÓA DÒNG NÀY ĐI NẾU DÙNG v-if */
+.form-label {
+  font-weight: 600;
+}
+
+.card {
+  border-radius: 12px;
+}
+
+.modal {
+  display: block;
+}
 </style>

@@ -14,7 +14,7 @@ export const useAuthStore = defineStore('auth', {
         const decoded = jwtDecode(token);
         userType = decoded.userType; // Lấy userType từ payload token
         username = decoded.sub;      // Lấy username
-        console.log("♻️ Đã khôi phục trạng thái đăng nhập:", { userType, username });
+        console.log("Đã khôi phục trạng thái đăng nhập:", { userType, username });
       } catch (error) {
         console.error("Token lỗi, đăng xuất...", error);
         localStorage.removeItem('user_token'); // Token rác, xóa đi

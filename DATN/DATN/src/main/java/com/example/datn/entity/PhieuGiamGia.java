@@ -1,5 +1,6 @@
 package com.example.datn.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -17,6 +18,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(name = "phieu_giam_gia")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class PhieuGiamGia {
     @Id
     @GeneratedValue

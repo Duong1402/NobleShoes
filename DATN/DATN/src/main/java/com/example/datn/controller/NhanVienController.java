@@ -44,7 +44,6 @@ public class NhanVienController {
 
     @PostMapping
     public ResponseEntity<NhanVien> create(@RequestBody NhanVien nhanVien) throws MessagingException {
-
         NhanVien created = nhanVienService.create(nhanVien);
         return ResponseEntity.status(201).body(created);
     }

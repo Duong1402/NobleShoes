@@ -1,9 +1,7 @@
 package com.example.datn.dto;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.util.List;
@@ -39,14 +37,10 @@ public class SanPhamRequest {
     @NotNull(message = "Xuất xứ không được để trống")
     private UUID idXuatXu;
 
-    /**
-     * 🆕 THÊM DÒNG NÀY: Cho phép bật/tắt sản phẩm
-     **/
+    /** 🆕 THÊM DÒNG NÀY: Cho phép bật/tắt sản phẩm **/
     private Boolean trangThai = true;
 
-    /**
-     * 🆕 CHO PHÉP ĐỂ TRỐNG khi update không cần chi tiết
-     **/
+    /** 🆕 CHO PHÉP ĐỂ TRỐNG khi update không cần chi tiết **/
     @Valid
     private List<ChiTietSanPhamRequest> chiTietSanPham;
 }

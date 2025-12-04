@@ -3,14 +3,11 @@ package com.example.datn.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -89,8 +86,6 @@ public class ChiTietSanPham {
     @Column(name = "mo_ta", length = 100)
     @Size(max = 100, message = "Mô tả không được vượt quá 100 ký tự")
     private String moTa;
-    @Transient // Không lưu vào DB
-    private String hinhAnhUrl;
 
     @PrePersist
     public void prePersist() {
@@ -98,6 +93,9 @@ public class ChiTietSanPham {
             ngayTao = LocalDate.now();
         }
     }
+
+    @Transient // Không lưu vào DB
+    private String hinhAnhUrl;
 
 
 }

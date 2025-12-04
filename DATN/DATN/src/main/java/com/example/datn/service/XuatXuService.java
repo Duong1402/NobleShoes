@@ -3,10 +3,9 @@ package com.example.datn.service;
 import com.example.datn.entity.XuatXu;
 import com.example.datn.repository.XuatXuRepository;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
+import java.util.Optional;
 
 @Service
 public class XuatXuService {
@@ -20,7 +19,6 @@ public class XuatXuService {
     // ----------------------------------------------------
     // 1. CREATE: Thêm logic tự động sinh mã 'ma' và đồng bộ hóa
     // ----------------------------------------------------
-
     /**
      * Thêm mới Xuất Xứ, tự động sinh mã và đảm bảo đồng bộ hóa
      * bằng 'synchronized' để tránh Race Condition khi sinh mã.

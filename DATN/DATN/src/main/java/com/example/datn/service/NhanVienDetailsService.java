@@ -1,5 +1,6 @@
 package com.example.datn.service;
 
+import com.example.datn.entity.NhanVien;
 import com.example.datn.repository.NhanVienRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -14,7 +15,10 @@ public class NhanVienDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        return nhanVienRepository.findByTaiKhoan(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy Nhân Viên: " + username));
+        NhanVien nv = nhanVienRepository.findByTaiKhoan(username);
+        if (nv == null){
+            throw new RuntimeException("Lỗi hệ thống: Không tìm thấy nhân viên.");
+        }
+        return nv;
     }
 }

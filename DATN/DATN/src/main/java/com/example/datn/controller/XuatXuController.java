@@ -3,12 +3,13 @@ package com.example.datn.controller;
 import com.example.datn.entity.XuatXu;
 import com.example.datn.service.XuatXuService;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatus; // Thêm import HttpStatus
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional; // Thêm import Optional
 
 @RestController
 @RequestMapping("/admin/xuat-xu")
@@ -43,7 +44,7 @@ public class XuatXuController {
     // 3. CREATE (201 CREATED)
     // ----------------------------------------------------
     @PostMapping
-    public ResponseEntity<XuatXu> create(@RequestBody XuatXu xx) { // THÊM @Valid
+    public ResponseEntity<XuatXu> create( @RequestBody XuatXu xx) { // THÊM @Valid
         XuatXu created = service.create(xx);
         // Trả về 201 Created là chuẩn RESTful cho thao tác tạo mới thành công
         return ResponseEntity.status(HttpStatus.CREATED).body(created);

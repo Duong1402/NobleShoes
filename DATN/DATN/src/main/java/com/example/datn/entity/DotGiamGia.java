@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.UUID;
 
@@ -39,7 +40,7 @@ public class DotGiamGia {
     @NotNull(message = "Không được để trống")
     @DecimalMin(value = "0.01", message = "Giá trị giảm phải lớn hơn 0")
     @Column(name = "so_tien_giam_toi_da")
-    private Double soTienGiamToiDa;
+    private BigDecimal soTienGiamToiDa;
 
     @NotNull(message = "Không được để trống")
     @Column(name = "ngay_bat_dau")
@@ -50,5 +51,5 @@ public class DotGiamGia {
     private Date ngayKetThuc;
 
     @Column(name = "trang_thai")
-    private Boolean trangThai;
+    private Integer trangThai;
 }

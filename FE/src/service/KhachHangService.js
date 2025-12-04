@@ -1,23 +1,18 @@
-import axios from "axios";
+import instance from "./axios"; 
 
-// Định nghĩa URL gốc
-const BASE_URL = "http://localhost:8080/admin/khach-hang";
+const API_BASE_URL = "/admin/khach-hang"; 
 
-// Sử dụng trực tiếp 'axios' để tận dụng Interceptor đã config bên main.js
-export const getAllKhachHang = (params) => axios.get(BASE_URL, { params });
 
-export const getKhachHangById = (id) => axios.get(`${BASE_URL}/${id}`);
-
-export const createKhachHang = (data) => axios.post(BASE_URL, data);
-
-export const updateKhachHang = (id, data) => axios.put(`${BASE_URL}/${id}`, data);
-
-export const deleteKhachHang = (id) => axios.delete(`${BASE_URL}/${id}`);
+export const getAllKhachHang = (params) => instance.get(API_BASE_URL, { params });
+export const getKhachHangById = (id) => instance.get(`${API_BASE_URL}/${id}`);
+export const createKhachHang = (data) => instance.post(API_BASE_URL, data);
+export const updateKhachHang = (id, data) => instance.put(`${API_BASE_URL}/${id}`, data);
+export const deleteKhachHang = (id) => instance.delete(`${API_BASE_URL}/${id}`);
 
 export default {
-  getAllKhachHang,
-  getKhachHangById,
-  createKhachHang,
-  updateKhachHang,
-  deleteKhachHang,
+  getAllKhachHang,
+  getKhachHangById,
+  createKhachHang,
+  updateKhachHang,
+  deleteKhachHang,
 };

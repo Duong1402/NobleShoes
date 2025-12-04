@@ -1,5 +1,6 @@
 package com.example.datn.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,10 +10,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Getter
 @Setter
@@ -20,6 +18,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(name = "khach_hang")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class KhachHang implements UserDetails {
     @Id
     @GeneratedValue
@@ -74,6 +73,26 @@ public class KhachHang implements UserDetails {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_chuc_vu")
     private ChucVu chucVu;
+
+    @OneToMany(mappedBy = "khachHang", fetch = FetchType.LAZY,
+            cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    private List<DiaChi> danhSachDiaChi = new ArrayList<>();
+
+    @PrePersist
+    protected void onCreate() {
+        // Chỉ set ngày tạo nếu chưa có
+        if (this.ngayTao == null) {
+            this.ngayTao = new Date();
+        }
+
+        if (this.ma == null || this.ma.trim().isEmpty()) {
+            this.ma = "TEMP_KH" + UUID.randomUUID().toString().substring(0, 5);
+        }
+
+        if (this.trangThai == null) {
+            this.trangThai = 1;
+        }
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

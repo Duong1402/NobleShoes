@@ -8,10 +8,10 @@ export async function getAllPhieuGiamGia(page = 0, size = 10) {
     // Gọi 2 API song song (đều đang trả về dữ liệu có content)
     const [resChung, resCaNhan] = await Promise.all([
       axios.get(`${API_URL}/phieu-giam-gia`, {
-        params: { page: page, size: size },
+        params: { page: 0, size: 1000 },
       }), // lấy full để gộp
       axios.get(`${API_URL}/phieu-giam-gia-ca-nhan`, {
-        params: { page: page, size: size },
+        params: { page: 0, size: 1000 },
       }),
     ]);
 

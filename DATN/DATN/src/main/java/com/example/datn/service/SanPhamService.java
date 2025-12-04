@@ -2,9 +2,7 @@ package com.example.datn.service;
 
 import com.example.datn.dto.ChiTietSanPhamRequest;
 import com.example.datn.dto.SanPhamRequest;
-import com.example.datn.entity.ChiTietSanPham;
-import com.example.datn.entity.HinhAnh;
-import com.example.datn.entity.SanPham;
+import com.example.datn.entity.*;
 import com.example.datn.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +33,11 @@ public class SanPhamService {
 
     @Transactional
     public SanPham saveSanPham(SanPhamRequest req) {
+        //Kiểm tra Trùng lặp Tên sản phẩm
+        if (sanPhamRepository.existsByTen(req.getTen())) {
+            // Ném lỗi Nghiệp vụ
+            throw new RuntimeException("Lỗi: Tên sản phẩm đã tồn tại!");
+        }
 
         // 1. Lưu Hình ảnh cho sản phẩm (lấy từ biến thể đầu tiên nếu có)
         HinhAnh hinhAnh = new HinhAnh();
@@ -69,8 +72,27 @@ public class SanPhamService {
 
         // 3. Lưu chi tiết sản phẩm (biến thể) - KHÔNG gán HinhAnh
         List<ChiTietSanPham> chiTietList = new ArrayList<>();
+
+        int currentMaxNumber = 0;
+        String maxMa = chiTietSanPhamRepository.findMaxMaCTSP();
+        if (maxMa != null && maxMa.startsWith("CTSP")) {
+            try {
+                currentMaxNumber = Integer.parseInt(maxMa.substring(4));
+            } catch (NumberFormatException e) {
+                currentMaxNumber = 0;
+            }
+        }
+
         for (ChiTietSanPhamRequest ctReq : req.getChiTietSanPham()) {
+
+            currentMaxNumber++;
+
             ChiTietSanPham ct = new ChiTietSanPham();
+
+            String formattedNumber = String.format("%02d", currentMaxNumber);
+            String maCTSP = "CTSP" + formattedNumber;
+            ct.setMa(maCTSP);
+
             ct.setSanPham(saved);
             ct.setGiaBan(ctReq.getGiaBan());
             ct.setSoLuongTon(ctReq.getSoLuongTon());

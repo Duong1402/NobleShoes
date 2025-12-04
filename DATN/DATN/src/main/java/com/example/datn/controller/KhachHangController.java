@@ -10,6 +10,7 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @CrossOrigin(origins = {"http://localhost:5173", "http://127.0.0.1:5173"})
+
 @RestController
 @RequestMapping("/admin/khach-hang")
 public class KhachHangController {

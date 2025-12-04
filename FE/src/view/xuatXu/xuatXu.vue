@@ -90,22 +90,33 @@ const editItem = (item) => {
 
 // --- Validate ---
 const validateForm = () => {
-  if (selectedXuatXu.value.id) {
-    if (!selectedXuatXu.value.ma?.trim()) {
-      notify.warning("Vui lòng nhập mã xuất xứ!");
-      return false;
-    }
-  }
-  if (!selectedXuatXu.value.ten?.trim()) {
+  const ten = selectedXuatXu.value.ten?.trim(); // lấy tên để validate
+
+  if (!ten) {
     notify.warning("Vui lòng nhập tên xuất xứ!");
     return false;
   }
-  if (selectedXuatXu.value.ten.length < 3) {
+
+  if (ten.length < 3) {
     notify.warning("Tên xuất xứ phải có ít nhất 3 ký tự!");
     return false;
   }
+
+  // check trùng
+  const duplicate = xuatXus.value.some(
+    (d) =>
+      d.ten.trim().toLowerCase() === ten.toLowerCase() &&
+      d.id !== selectedXuatXu.value.id 
+  );
+
+  if (duplicate) {
+    notify.warning("Tên xuất xứ đã tồn tại, vui lòng chọn tên khác!");
+    return false;
+  }
+
   return true;
 };
+
 
 // --- Lưu ---
 const saveItem = async () => {
@@ -176,7 +187,7 @@ const goToPage = (page) => {
 </script>
 
 <template>
-  <div class="container-fluid mt-4 px-5">
+  <div class="container-fluid mt-4 px-1">
     <!-- Tiêu đề -->
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">

@@ -1,8 +1,10 @@
 <template>
-  <div class="container-fluid mt-4 px-5">
+  <div class="container-fluid mt-4 px-1">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
-        <div class="page-header d-flex align-items-center justify-content-between">
+        <div
+          class="page-header d-flex align-items-center justify-content-between"
+        >
           <div>
             <h3 class="fw-bold text-warning mb-1">Thêm nhân viên</h3>
             <Breadcrumb class="mt-1 mb-0" />
@@ -14,18 +16,28 @@
     <div class="card shadow p-4 mt-3">
       <form @submit.prevent="confirmSave">
         <div class="row g-3">
+          <!-- Ảnh đại diện -->
           <div class="col-md-12 text-center">
+            <!-- Vòng tròn chọn ảnh -->
             <div
               class="position-relative d-inline-block rounded-circle border border-2 border-secondary-subtle bg-light"
-              style="width: 140px; height: 140px; cursor: pointer; overflow: hidden;"
+              style="
+                width: 140px;
+                height: 140px;
+                cursor: pointer;
+                overflow: hidden;
+              "
               @click="$refs.fileInput.click()"
             >
+              <!-- Nếu có preview -->
               <img
                 v-if="previewUrl"
                 :src="previewUrl"
                 alt="Ảnh xem trước"
                 class="w-100 h-100 object-fit-cover"
               />
+
+              <!-- Nếu chưa chọn ảnh -->
               <div
                 v-else
                 class="d-flex flex-column justify-content-center align-items-center h-100 text-secondary"
@@ -42,11 +54,14 @@
                 @change="handleFileUpload"
               />
             </div>
+
+            <!-- Trạng thái upload -->
             <small v-if="uploading" class="text-secondary d-block mt-2">
               Đang tải ảnh lên...
             </small>
           </div>
 
+          <!-- Họ tên -->
           <div class="col-md-6">
             <label class="form-label">Họ tên</label>
             <input
@@ -61,6 +76,7 @@
             </small>
           </div>
 
+          <!-- Số điện thoại -->
           <div class="col-md-6">
             <label class="form-label">Số điện thoại</label>
             <input
@@ -69,15 +85,23 @@
               class="form-control"
               :class="{ 'is-invalid': v$.sdt.$error }"
               placeholder="Nhập số điện thoại"
+              @blur="v$.sdt.$touch()"
             />
-            <small v-if="v$.sdt.required.$invalid" class="text-danger">
+            <small
+              v-if="v$.sdt.$dirty && v$.sdt.required.$invalid"
+              class="text-danger"
+            >
               Vui lòng nhập số điện thoại
             </small>
-            <small v-else-if="v$.sdt.phone.$invalid" class="text-danger">
+            <small
+              v-else-if="v$.sdt.$dirty && v$.sdt.phone.$invalid"
+              class="text-danger"
+            >
               Số điện thoại không hợp lệ (phải có 10 số và bắt đầu bằng 0)
             </small>
           </div>
 
+          <!-- Email -->
           <div class="col-md-6">
             <label class="form-label">Email</label>
             <input
@@ -88,20 +112,27 @@
               placeholder="Nhập email nhân viên"
               @blur="v$.email.$touch()"
             />
-            <small v-if="v$.email.required.$invalid" class="text-danger">
+            <small
+              v-if="v$.email.$dirty && v$.email.required.$invalid"
+              class="text-danger"
+            >
               Vui lòng nhập email
             </small>
-            <small v-else-if="v$.email.email.$invalid" class="text-danger">
+            <small
+              v-else-if="v$.email.$dirty && v$.email.email.$invalid"
+              class="text-danger"
+            >
               Email không đúng định dạng
             </small>
-            <small v-else-if="v$.email.duplicate.$invalid" class="text-danger">
+            <small
+              v-else-if="v$.email.$dirty && v$.email.duplicate.$invalid"
+              class="text-danger"
+            >
               Email đã tồn tại, vui lòng nhập email khác
-            </small>
-            <small v-else-if="isCheckingEmail" class="text-muted">
-              Đang kiểm tra email...
             </small>
           </div>
 
+          <!-- CCCD (chỉ phần input + nút vẫn giữ) -->
           <div class="col-md-6">
             <label class="form-label">CCCD</label>
             <div class="input-group">
@@ -111,7 +142,9 @@
                 class="form-control"
                 :class="{ 'is-invalid': v$.cccd.$error }"
                 placeholder="Nhập CCCD nhân viên"
+                @blur="v$.cccd.$touch()"
               />
+              <!-- Bấm sẽ mở modal và bắt đầu scan -->
               <button
                 type="button"
                 class="btn btn-outline-warning"
@@ -121,23 +154,36 @@
                 <i class="fa-solid fa-qrcode"></i>
               </button>
             </div>
-            <small v-if="v$.cccd.required.$invalid" class="text-danger">
+
+            <!-- Thông báo lỗi -->
+            <small
+              v-if="v$.cccd.$dirty && v$.cccd.required.$invalid"
+              class="text-danger"
+            >
               Vui lòng nhập CCCD
             </small>
-            <small v-else-if="v$.cccd.cccd.$invalid" class="text-danger">
+            <small
+              v-else-if="v$.cccd.$dirty && v$.cccd.cccd.$invalid"
+              class="text-danger"
+            >
               CCCD phải có 12 số
             </small>
 
+            <!-- Modal quét CCCD đơn giản -->
             <div
               v-if="scanning"
               class="modal fade show"
               style="display: block; background: rgba(0, 0, 0, 0.6)"
             >
-              <div class="modal-dialog modal-dialog-centered" style="max-width: 420px">
+              <div
+                class="modal-dialog modal-dialog-centered"
+                style="max-width: 420px"
+              >
                 <div class="modal-content border-0">
                   <div class="modal-header bg-dark text-white py-2">
                     <h6 class="mb-0">
-                      <i class="fa-solid fa-id-card me-2 text-warning"></i>Quét CCCD
+                      <i class="fa-solid fa-id-card me-2 text-warning"></i>Quét
+                      CCCD
                     </h6>
                     <button
                       type="button"
@@ -164,6 +210,22 @@
             </div>
           </div>
 
+          <!-- Tài khoản -->
+          <!-- <div class="col-md-6">
+            <label class="form-label">Tài khoản</label>
+            <input
+              v-model="form.taiKhoan"
+              type="text"
+              class="form-control"
+              :class="{ 'is-invalid': v$.taiKhoan.$error }"
+              placeholder="Nhập tài khoản nhân viên"
+            />
+            <small v-if="v$.taiKhoan.$error" class="text-danger">
+              Vui lòng nhập tài khoản
+            </small>
+          </div> -->
+
+          <!-- Giới tính -->
           <div class="col-md-6">
             <label class="form-label d-block">Giới tính</label>
             <div class="d-flex gap-3">
@@ -190,6 +252,7 @@
             </div>
           </div>
 
+          <!-- Ngày sinh -->
           <div class="col-md-6">
             <label class="form-label">Ngày sinh</label>
             <input
@@ -203,7 +266,10 @@
             </small>
           </div>
 
+          <!-- Địa chỉ -->
           <div class="row g-3">
+            <!-- Địa chỉ: Tỉnh/Thành phố, Quận/Huyện, Xã/Phường -->
+            <!-- Tỉnh/Thành phố -->
             <div class="col-md-4">
               <label class="form-label">Tỉnh/Thành phố</label>
               <select
@@ -218,6 +284,7 @@
               </select>
             </div>
 
+            <!-- Quận/Huyện -->
             <div class="col-md-4">
               <label class="form-label">Quận/Huyện</label>
               <select
@@ -233,6 +300,7 @@
               </select>
             </div>
 
+            <!-- Xã/Phường -->
             <div class="col-md-4">
               <label class="form-label">Xã/Phường</label>
               <select
@@ -247,6 +315,7 @@
               </select>
             </div>
 
+            <!-- Địa chỉ cụ thể -->
             <div class="col-12 mt-2">
               <label class="form-label">Địa chỉ cụ thể</label>
               <input
@@ -258,6 +327,7 @@
             </div>
           </div>
 
+          <!-- Chức vụ -->
           <div class="col-md-6">
             <label class="form-label">Chức vụ</label>
             <select
@@ -276,6 +346,7 @@
           </div>
         </div>
 
+        <!-- Nút hành động -->
         <div class="mt-4 text-end">
           <router-link
             :to="{ name: 'nhanVien' }"
@@ -293,7 +364,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, nextTick, onBeforeUnmount, shallowRef } from "vue";
+import { reactive, ref, onMounted, nextTick, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import Breadcrumb from "@/components/common/Breadcrumb.vue";
 import { useNotify } from "@/composables/useNotify";
@@ -302,13 +373,15 @@ import useVuelidate from "@vuelidate/core";
 import { required, email, helpers } from "@vuelidate/validators";
 import { getProvinces, getDistricts, getWards } from "vietnam-provinces";
 import axios from "axios";
-import { debounce } from "lodash";
+import { BrowserMultiFormatReader } from "@zxing/browser";
+import { error } from "jquery";
 
 const router = useRouter();
 const chucVuList = ref([]);
 const notify = useNotify();
 const uploading = ref(false);
 const previewUrl = ref("");
+const errorEmail = ref("");
 const isCheckingEmail = ref(false);
 
 // Form thêm nhân viên
@@ -324,22 +397,26 @@ const form = reactive({
   chiTiet: "",
   cccd: "",
   chucVu: { id: "" },
+  // taiKhoan: "",
   urlAnh: "",
 });
 
-// 1. ✅ Check trùng email (Dùng Axios để gửi Token)
+// check trùng email
 const checkDuplicateEmail = async (value) => {
-  if (!value) return true;
+  if (!value) return true; // bỏ qua nếu chưa nhập
   isCheckingEmail.value = true;
   try {
-    const res = await axios.get('http://localhost:8080/admin/nhan-vien/check-email', {
-        params: { email: value }
-    });
-    const data = res.data;
+    const res = await fetch(
+      `http://localhost:8080/admin/nhan-vien/check-email?email=${encodeURIComponent(
+        value
+      )}`
+    );
+    const data = await res.json();
+    // BE trả về { exists: true/false }
     return !data.exists;
   } catch (e) {
     console.error("Lỗi kiểm tra email:", e);
-    return true; // Không chặn nếu lỗi mạng/server
+    return true; // tránh chặn khi có lỗi mạng
   } finally {
     isCheckingEmail.value = false;
   }
@@ -363,6 +440,7 @@ const rules = {
     required,
     cccd: helpers.regex(/^\d{12}$/),
   },
+  // taiKhoan: { required },
   ngaySinh: { required },
   chucVu: { id: { required } },
 };
@@ -371,24 +449,27 @@ const v$ = useVuelidate(rules, form);
 // Quét CCCD
 const scanning = ref(false);
 const decodeError = ref(null);
-const decoded = ref(false);
+const decoded = ref(false); // 🧩 cờ chống lặp
 let codeReader = null;
 let videoElem = null;
 
+// Mở camera để quét
 const openScanner = async () => {
   scanning.value = true;
   decodeError.value = null;
-  decoded.value = false;
+  decoded.value = false; // reset trạng thái
   await nextTick();
 
   try {
-    const { BrowserMultiFormatReader } = await import("@zxing/browser");
     codeReader = new BrowserMultiFormatReader();
+
     const devices = await BrowserMultiFormatReader.listVideoInputDevices();
     if (!devices.length) {
       decodeError.value = "Không tìm thấy camera.";
       return;
     }
+
+    // Ưu tiên camera sau nếu có
     const selectedDeviceId =
       devices.find((d) => d.label.toLowerCase().includes("back"))?.deviceId ||
       devices[0].deviceId;
@@ -404,10 +485,9 @@ const openScanner = async () => {
           console.log("✅ ĐÃ QUÉT:", result.getText());
           handleDecodedCCCD(result.getText());
           stopScan();
-        } 
-        // ✅ Fix: Chặn lỗi rác console
-        else if (err && !err.message.includes("No MultiFormat Readers")) {
-          // console.warn("⚠️ Lỗi đọc:", err);
+        } else if (err && err.name !== "NotFoundException") {
+          console.warn("⚠️ Lỗi đọc:", err);
+          decodeError.value = "Lỗi đọc mã: " + err.message;
         }
       }
     );
@@ -417,38 +497,36 @@ const openScanner = async () => {
   }
 };
 
+// Dừng quét
 const stopScan = () => {
   scanning.value = false;
   decodeError.value = null;
 
-  // 1. Dừng thư viện decode
   if (codeReader) {
     try {
-      codeReader.reset(); // Quan trọng: Reset reader để nó nhả resource
-    } catch (e) {
-      console.error(e);
-    }
+      codeReader.reset();
+    } catch {}
     codeReader = null;
   }
 
-  // 2. Dừng Camera vật lý (Hardware)
   const vid = document.getElementById("video");
   if (vid && vid.srcObject) {
-    const tracks = vid.srcObject.getTracks();
-    tracks.forEach((track) => {
-      track.stop(); // Bắt buộc phải stop từng track
-      vid.srcObject.removeTrack(track);
-    });
+    vid.srcObject.getTracks().forEach((t) => t.stop());
     vid.srcObject = null;
   }
 };
 
+// Xử lý dữ liệu CCCD sau khi quét
 const handleDecodedCCCD = async (text) => {
   try {
+    // Ví dụ mã QR CCCD: "001203047337|Nguyen Van A|15081999|Nam|Thôn X, Xã Y, Huyện Z, Hà Nội"
     const parts = text.split("|").filter((x) => x.trim() !== "");
+
+    // Gán dữ liệu cơ bản
     form.cccd = parts[0]?.trim() || "";
     form.hoTen = parts[1]?.trim() || "";
 
+    // Xử lý ngày sinh
     const ngaySinhRaw = parts[2]?.trim() || "";
     if (/^\d{8}$/.test(ngaySinhRaw)) {
       const d = ngaySinhRaw.substring(0, 2);
@@ -459,20 +537,61 @@ const handleDecodedCCCD = async (text) => {
       form.ngaySinh = "";
     }
 
+    // Giới tính (radio Nam/Nữ)
     const gioiTinhRaw = (parts[3] || "").trim().toLowerCase();
     form.gioiTinh = gioiTinhRaw === "nam" || gioiTinhRaw === "male";
 
+    // 📍 Địa chỉ tổng (phần còn lại sau | thứ 4)
     const fullAddress = parts.slice(4).join(", ").trim();
-    form.chiTiet = fullAddress.split(",")[0]?.trim() || "";
+    form.diaChi = fullAddress;
+
+    // Tách địa chỉ nếu có định dạng "Thôn..., Xã..., Huyện..., Tỉnh..."
+    // (Tùy từng mã CCCD QR mà có hoặc không)
+    const addrParts = fullAddress.split(",").map((a) => a.trim());
+    form.chiTiet = addrParts[0] || "";
+
+    // Cố gắng tìm và tự chọn tỉnh / huyện / xã dựa theo danh sách bạn đã load
+    if (addrParts.length >= 4) {
+      const xaName = addrParts[1];
+      const huyenName = addrParts[2];
+      const tinhName = addrParts[3];
+
+      // Tự động chọn Tỉnh nếu trùng tên
+      const province = provinces.value.find(
+        (p) => tinhName && p.name.toLowerCase().includes(tinhName.toLowerCase())
+      );
+      if (province) {
+        selectedProvince.value = province.code;
+        await onProvinceChange(); // load danh sách quận/huyện
+
+        // Tự động chọn Huyện
+        const district = districts.value.find(
+          (d) =>
+            huyenName && d.name.toLowerCase().includes(huyenName.toLowerCase())
+        );
+        if (district) {
+          selectedDistrict.value = district.code;
+          await onDistrictChange(); // load danh sách xã/phường
+
+          // Tự động chọn Xã
+          const ward = wards.value.find(
+            (w) => xaName && w.name.toLowerCase().includes(xaName.toLowerCase())
+          );
+          if (ward) selectedWard.value = ward.code;
+        }
+      }
+    }
 
     notify.success("Quét QR thành công");
-    scanning.value = false;
+    scanning.value = false; // Đóng modal sau khi quét
   } catch (e) {
     console.error("❌ Lỗi phân tích CCCD:", e);
+    decodeError.value = "Không thể đọc được dữ liệu CCCD!";
     notify.error("Không thể đọc được dữ liệu CCCD!");
   }
 };
 
+// Khi rời trang
 onBeforeUnmount(stopScan);
 
 // Upload ảnh
@@ -486,10 +605,11 @@ const handleFileUpload = async (event) => {
   uploading.value = true;
 
   try {
-    const res = await axios.post("http://localhost:8080/api/upload", formData, {
+    const res = await axios.post("http://localhost:8080/admin/upload", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     form.urlAnh = res.data;
+    console.log("Ảnh đã upload:", form.urlAnh);
   } catch (err) {
     notify.error("Upload ảnh thất bại!");
     console.error(err);
@@ -498,10 +618,10 @@ const handleFileUpload = async (event) => {
   }
 };
 
-// Địa chỉ
-const provinces = shallowRef([]);
-const districts = shallowRef([]);
-const wards = shallowRef([]);
+// Load địa chỉ hành chính
+const provinces = ref([]);
+const districts = ref([]);
+const wards = ref([]);
 const selectedProvince = ref("");
 const selectedDistrict = ref("");
 const selectedWard = ref("");
@@ -517,38 +637,49 @@ const onDistrictChange = () => {
   selectedWard.value = "";
 };
 
-// 2. ✅ Load chức vụ (Dùng Axios để gửi Token)
+// 📚 Load chức vụ
 const loadChucVu = async () => {
   try {
-    const res = await axios.get("http://localhost:8080/admin/chuc-vu");
-    chucVuList.value = res.data;
+    const res = await fetch("http://localhost:8080/admin/chuc-vu");
+    const data = await res.json();
+    chucVuList.value = data;
   } catch (err) {
     console.error("Lỗi khi tải chức vụ:", err);
   }
 };
 
-// 3. ✅ Thêm nhân viên (Dùng Axios để gửi Token)
+// Lưu nhân viên
 const addNhanVien = async () => {
   try {
-    form.tinh = provinces.value.find((p) => p.code === selectedProvince.value)?.name || "";
-    form.huyen = districts.value.find((d) => d.code === selectedDistrict.value)?.name || "";
-    form.xa = wards.value.find((w) => w.code === selectedWard.value)?.name || "";
+    form.tinh =
+      provinces.value.find((p) => p.code === selectedProvince.value)?.name ||
+      "";
+    form.huyen =
+      districts.value.find((d) => d.code === selectedDistrict.value)?.name ||
+      "";
+    form.xa =
+      wards.value.find((w) => w.code === selectedWard.value)?.name || "";
 
     form.diaChi = `${form.chiTiet || ""}, ${form.xa || ""}, ${
       form.huyen || ""
     }, ${form.tinh || ""}`.replace(/(^[,\s]+)|([,\s]+$)/g, "");
 
-    const res = await axios.post("http://localhost:8080/admin/nhan-vien", form);
+    const res = await fetch("http://localhost:8080/admin/nhan-vien", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
 
+    if (!res.ok) throw new Error("Lỗi khi thêm nhân viên");
     notify.success("Thêm nhân viên thành công!");
     router.push({ name: "nhanVien" });
   } catch (err) {
     console.error("Lỗi khi thêm nhân viên:", err);
-    const errorMsg = err.response?.data?.message || "Thêm thất bại, vui lòng thử lại!";
-    notify.error(errorMsg);
+    notify.error("Thêm thất bại, vui lòng thử lại!");
   }
 };
 
+// Xác nhận lưu
 const confirmSave = async () => {
   v$.value.$touch();
   if (v$.value.$invalid) {
@@ -573,19 +704,7 @@ const confirmSave = async () => {
   }
 };
 
-const debouncedCheckEmail = debounce(async (value, resolve) => {
-    try {
-        const res = await axios.get('http://localhost:8080/admin/nhan-vien/check-email', {
-            params: { email: value }
-        });
-        resolve(!res.data.exists); // Trả về true (hợp lệ) hoặc false (trùng)
-    } catch (e) {
-        resolve(true); // Lỗi mạng thì cho qua
-    }
-}, 500);
-
-
-
+// Khi trang load
 onMounted(() => {
   provinces.value = getProvinces();
   loadChucVu();
@@ -605,11 +724,12 @@ onMounted(() => {
 .text-danger {
   font-size: 0.875rem;
 }
+/* Khi focus vào input, select, textarea — đổi viền sang màu vàng */
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: #ffc107 !important;
-  box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+  border-color: #ffc107 !important; /* Màu warning của Bootstrap */
+  box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25); /* Hiệu ứng sáng nhẹ */
   outline: none !important;
 }
 </style>
