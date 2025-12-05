@@ -1,57 +1,36 @@
 package com.example.datn.controller;
 
 import com.example.datn.dto.SanPhamRequest;
-import com.example.datn.entity.SanPham;
 import com.example.datn.service.SanPhamService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/admin/san-pham")
-@CrossOrigin(origins = "http://localhost:5173")
 @RequiredArgsConstructor
 public class SanPhamController {
 
     private final SanPhamService sanPhamService;
 
-//    @GetMapping
-//    public List<SanPham> getAll() {
-//        return sanPhamService.getAll();
-//    }
-
+    // POST: /admin/san-pham
     @PostMapping
     public ResponseEntity<?> addSanPham(@Valid @RequestBody SanPhamRequest request) {
         sanPhamService.saveSanPham(request);
         return ResponseEntity.ok("Thêm sản phẩm thành công!");
     }
 
-//    @PutMapping("/{id}")
-//    public SanPham update(@PathVariable UUID id, @Valid @RequestBody SanPham sp) {
-//        return sanPhamService.update(id, sp);
-//    }
-
-
-    // 🆕 API mới: Lấy danh sách sản phẩm + số lượng chi tiết
+    // GET: /admin/san-pham/all
     @GetMapping("/all")
-    public ResponseEntity<?> getAll() {
+    public ResponseEntity<?> getAllAdmin() {
         return ResponseEntity.ok(sanPhamService.getAll());
     }
-//    @PatchMapping("/{id}/trang-thai")
-//    public ResponseEntity<?> updateTrangThai(
-//            @PathVariable UUID id,
-//            @RequestParam("value") boolean value) {
-//        sanPhamService.updateTrangThai(id, value);
-//        return ResponseEntity.ok("Cập nhật trạng thái thành công!");
-//    }
 
-
-    // nhận request param (giữ nguyên)
+    // PATCH: /admin/san-pham/{id}/trang-thai?value=true
     @PatchMapping("/{id}/trang-thai")
     public ResponseEntity<?> updateTrangThaiParam(
             @PathVariable UUID id,
@@ -60,7 +39,7 @@ public class SanPhamController {
         return ResponseEntity.ok("Cập nhật trạng thái thành công!");
     }
 
-    // nhận body JSON: { "value": true }
+    // PATCH: /admin/san-pham/{id}/trang-thai-body  body: { "value": true }
     @PatchMapping("/{id}/trang-thai-body")
     public ResponseEntity<?> updateTrangThaiBody(
             @PathVariable UUID id,
@@ -69,6 +48,4 @@ public class SanPhamController {
         sanPhamService.updateTrangThai(id, value);
         return ResponseEntity.ok("Cập nhật trạng thái thành công (body)!");
     }
-
-
 }

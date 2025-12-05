@@ -12,48 +12,73 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/admin/chi-tiet-san-pham")
 @RequiredArgsConstructor
+@CrossOrigin(origins = {
+        "http://localhost:5173",  // FE admin
+        "http://localhost:5176"   // FE client
+})
 public class ChiTietSanPhamController {
 
     private final ChiTietSanPhamService chiTietSanPhamService;
 
-    // 1️⃣ Lấy tất cả chi tiết sản phẩm
-    @GetMapping
+    /* ============ PUBLIC API CHO CLIENT ============ */
+
+    /**
+     * Lấy danh sách chi tiết sản phẩm theo ID sản phẩm cho FE client.
+     * GET: http://localhost:8080/api/public/chi-tiet-san-pham/san-pham/{sanPhamId}
+     */
+    @GetMapping("/api/public/chi-tiet-san-pham/san-pham/{sanPhamId}")
+    public ResponseEntity<List<ChiTietSanPhamDTO>> getChiTietSanPhamBySanPhamIdPublic(
+            @PathVariable("sanPhamId") UUID sanPhamId
+    ) {
+        // 🔴 SAI: chiTietSanPhamService.getChiTietSanPhamPublicBySanPhamId(...)
+        // ✅ ĐÚNG: gọi đúng tên hàm có trong service
+        List<ChiTietSanPhamDTO> list =
+                chiTietSanPhamService.getChiTietSanPhamBySanPhamId(sanPhamId);
+        return ResponseEntity.ok(list);
+    }
+
+    /* ============ API ADMIN (GIỮ PATH CŨ) ============ */
+
+    /**
+     * Lấy tất cả chi tiết sản phẩm cho admin.
+     * GET: http://localhost:8080/admin/chi-tiet-san-pham
+     */
+    @GetMapping("/admin/chi-tiet-san-pham")
     public ResponseEntity<List<ChiTietSanPham>> getAllChiTietSanPham() {
         List<ChiTietSanPham> list = chiTietSanPhamService.getAllChiTietSanPham();
         return ResponseEntity.ok(list);
     }
 
-    // 2️⃣ Lấy chi tiết sản phẩm theo ID chi tiết
-//    @GetMapping("/{id}")
-//    public ResponseEntity<ChiTietSanPham> getChiTietSanPhamById(@PathVariable UUID id) {
-//        ChiTietSanPham ct = chiTietSanPhamService.getChiTietSanPhamById(id);
-//        return ResponseEntity.ok(ct);
-//    }
-
-    // 3️⃣ Lấy chi tiết sản phẩm theo ID sản phẩm
-    @GetMapping("/san-pham/{sanPhamId}")
-    public ResponseEntity<List<ChiTietSanPhamDTO>> getChiTietSanPhamBySanPhamId(@PathVariable UUID sanPhamId) {
-        List<ChiTietSanPhamDTO> list = chiTietSanPhamService.getChiTietSanPhamBySanPhamId(sanPhamId);
+    /**
+     * Lấy danh sách chi tiết theo ID sản phẩm cho admin.
+     * GET: http://localhost:8080/admin/chi-tiet-san-pham/san-pham/{sanPhamId}
+     */
+    @GetMapping("/admin/chi-tiet-san-pham/san-pham/{sanPhamId}")
+    public ResponseEntity<List<ChiTietSanPhamDTO>> getChiTietSanPhamBySanPhamIdAdmin(
+            @PathVariable("sanPhamId") UUID sanPhamId
+    ) {
+        List<ChiTietSanPhamDTO> list =
+                chiTietSanPhamService.getChiTietSanPhamBySanPhamId(sanPhamId);
         return ResponseEntity.ok(list);
     }
 
-
-    @PutMapping("/{id}")
+    /**
+     * Cập nhật chi tiết sản phẩm (admin).
+     * PUT: http://localhost:8080/admin/chi-tiet-san-pham/{id}
+     */
+    @PutMapping("/admin/chi-tiet-san-pham/{id}")
     public ResponseEntity<?> updateChiTietSanPham(
-            @PathVariable UUID id,
+            @PathVariable("id") UUID id,
             @RequestBody ChiTietSanPhamUpdateDTO dto
     ) {
         try {
             ChiTietSanPham updated = chiTietSanPhamService.updateChiTietSanPham(id, dto);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
-            e.printStackTrace(); // log chi tiết lỗi ra console
+            e.printStackTrace();
             return ResponseEntity.status(500).body(e.getMessage());
         }
     }
-
-
 
 }

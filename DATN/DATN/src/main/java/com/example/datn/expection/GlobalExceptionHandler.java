@@ -12,7 +12,6 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // Bắt lỗi validate @Valid
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<?> handleValidationErrors(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
@@ -24,10 +23,9 @@ public class GlobalExceptionHandler {
         response.put("code", "VALIDATION_ERROR");
         response.put("errors", errors);
 
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
-    // Bắt lỗi do bạn tự throw new ApiException
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<?> handleApiException(ApiException ex) {
         Map<String, Object> response = new HashMap<>();
@@ -35,18 +33,18 @@ public class GlobalExceptionHandler {
         response.put("code", ex.getCode());
         response.put("message", ex.getMessage());
 
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        return ResponseEntity.status(ex.getStatus()).body(response);
     }
 
-    // Bắt tất cả lỗi còn lại
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleAll(Exception ex) {
+        ex.printStackTrace(); // ✅ để xem full lỗi 500 ở console
+
         Map<String, Object> response = new HashMap<>();
         response.put("status", "FAILED");
         response.put("code", "INTERNAL_ERROR");
         response.put("message", ex.getMessage());
 
-        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
-
 }

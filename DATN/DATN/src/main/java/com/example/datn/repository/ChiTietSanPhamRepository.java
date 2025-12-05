@@ -18,7 +18,10 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
             "d.ten, t.ten, x.ten, dg.ten, dy.ten, md.ten, " +
             "ct.giaBan, ct.moTa, " +
             "m.ten, k.ten, cl.ten, " +
-            "h.urlAnh1, h.urlAnh2, h.urlAnh3) " +
+            "h.urlAnh1, h.urlAnh2, h.urlAnh3, " +
+            // 👇 THÊM ct.soLuongTon Ở CUỐI ĐÚNG THỨ TỰ CONSTRUCTOR
+            "ct.soLuongTon" +
+            ") " +
             "FROM ChiTietSanPham ct " +
             "JOIN ct.sanPham sp " +
             "LEFT JOIN sp.danhMuc d " +
@@ -34,6 +37,4 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
             "WHERE sp.id = :sanPhamId")
     List<ChiTietSanPhamDTO> findChiTietSanPhamDTOBySanPhamId(@Param("sanPhamId") UUID sanPhamId);
 
-    @Query("SELECT COUNT(ct) FROM ChiTietSanPham ct WHERE ct.sanPham.id = :sanPhamId")
-    int countBySanPhamId(UUID sanPhamId);
 }
