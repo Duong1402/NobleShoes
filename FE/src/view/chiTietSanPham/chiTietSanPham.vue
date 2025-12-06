@@ -179,6 +179,19 @@ const saveInline = async () => {
     return;
   }
 
+  // Hiển thị hộp xác nhận
+  const result = await Swal.fire({
+    title: 'Xác nhận',
+    text: `Bạn có chắc muốn lưu thay đổi cho "${editingCTSP.value.tenSP}" không?`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Có, lưu!',
+    cancelButtonText: 'Hủy',
+    reverseButtons: true
+  });
+
+  if (!result.isConfirmed) return; // Nếu người dùng hủy thì thoát
+
   const payload = {
     tenSP: editingCTSP.value.tenSP,
     danhMucId: editingCTSP.value.danhMucId,
@@ -203,6 +216,7 @@ const saveInline = async () => {
     notify.error("Cập nhật thất bại!");
   }
 };
+
 
 // QR code
 const downloadQR = async () => {
@@ -370,7 +384,7 @@ onMounted(async () => {
           </select>
         </div>
         <div class="col-md-3">
-          <label class="form-label">Số lượng tồn</label>
+          <label class="form-label">Số lượng</label>
           <input type="number" class="form-control" v-model="editingCTSP.soLuongTon" />
         </div>
         <div class="col-md-3">
@@ -426,7 +440,7 @@ onMounted(async () => {
               <th>Thương hiệu</th>
               <th>Xuất xứ</th>
               <th>Mục đích</th>
-              <th>Số lượng tồn</th>
+              <th>Số lượng</th>
               <th>Giá bán</th>
               <th>Màu sắc</th>
               <th>Kích thước</th>
@@ -452,7 +466,7 @@ onMounted(async () => {
               <td>{{ chatLieuList.find(c => c.id === ct.chatLieuId)?.ten }}</td>
               <td class="text-center">
                 <button class="btn btn-link text-info btn-lg p-0" @click="startEditing(ct)" title="Sửa chi tiết">
-                  <i class="fa fa-edit"></i>
+                  <i class="fa fa-eye fs-5"></i>
                 </button>
               </td>
             </tr>
@@ -486,9 +500,31 @@ onMounted(async () => {
   font-size: 0.85rem;
   padding: 0.3rem 0.5rem;
   vertical-align: middle;
+  text-align: center; 
 }
 
 .table thead th {
   font-weight: 600;
+  width: auto;
+}
+.table th:nth-child(1), .table td:nth-child(1) { width: 5%; } /* STT */
+.table th:nth-child(2), .table td:nth-child(2) { width: 7%; } /* Hình ảnh */
+.table th:nth-child(3), .table td:nth-child(3) { width: 12%; } /* Tên SP */
+.table th:nth-child(4), .table td:nth-child(4) { width: 9%; } /* Danh mục */
+.table th:nth-child(5), .table td:nth-child(5) { width: 9%; } /* Thương hiệu */
+.table th:nth-child(6), .table td:nth-child(6) { width: 8%; } /* Xuất xứ */
+.table th:nth-child(7), .table td:nth-child(7) { width: 8%; } /* Mục đích */
+.table th:nth-child(8), .table td:nth-child(8) { width: 7%; } /* Số lượng tồn */
+.table th:nth-child(9), .table td:nth-child(9) { width: 9%; } /* Giá bán */
+.table th:nth-child(10), .table td:nth-child(10) { width: 7%; } /* Màu sắc */
+.table th:nth-child(11), .table td:nth-child(11) { width: 7%; } /* Kích thước */
+.table th:nth-child(12), .table td:nth-child(12) { width: 7%; } /* Chất liệu */
+.table th:nth-child(13), .table td:nth-child(13) { width: 5%; } /* Thao tác */
+
+.table td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
 }
 </style>

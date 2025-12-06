@@ -1,55 +1,119 @@
 package com.example.datn.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Value;
+import com.example.datn.entity.ChiTietSanPham;
+import com.example.datn.entity.SanPham;
+import com.example.datn.repository.SanPhamRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.util.Map;
+import java.math.BigDecimal;
+import java.text.DecimalFormat;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @RestController
-@RequestMapping("/api/chat")
+@RequestMapping("/api")
 @CrossOrigin(origins = "http://localhost:5173")
 public class ChatController {
 
-    @Value("${openrouter.api.key}")
-    private String openRouterApiKey;
+    private final SanPhamRepository sanPhamRepository;
+    private static final DecimalFormat PRICE_FORMAT = new DecimalFormat("#,###");
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    public ChatController(SanPhamRepository sanPhamRepository) {
+        this.sanPhamRepository = sanPhamRepository;
+    }
 
-    @PostMapping
-    public ResponseEntity<?> chat(@RequestBody Map<String, Object> requestBody) {
-        try {
-            System.out.println("🚀 Nhận request từ frontend:");
-            System.out.println(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(requestBody));
+    @PostMapping("/chat")
+    public ResponseEntity<?> chat(@RequestBody Map<String, Object> body) {
+        String userText = extractUserMessage(body).toLowerCase().trim();
+        List<Map<String, Object>> results = new ArrayList<>();
+        boolean found = false;
 
-            HttpClient client = HttpClient.newHttpClient();
-
-            String json = objectMapper.writeValueAsString(requestBody);
-            System.out.println("📤 Gửi request đến OpenRouter:\n" + json);
-
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://openrouter.ai/api/v1/chat/completions"))
-                    .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer " + openRouterApiKey)
-                    .POST(HttpRequest.BodyPublishers.ofString(json))
-                    .build();
-
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-            System.out.println("📥 Nhận phản hồi từ OpenRouter:");
-            System.out.println(response.body());
-
-            return ResponseEntity.ok(objectMapper.readTree(response.body()));
-
-        } catch (Exception e) {
-            System.err.println("❌ Lỗi khi gọi API OpenRouter:");
-            e.printStackTrace();
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        // 1) Tìm theo ngân sách
+        double budgetValue = extractBudget(userText);
+        if (budgetValue > 0) {
+            BigDecimal budget = BigDecimal.valueOf(budgetValue);
+            List<SanPham> list = sanPhamRepository.findByChiTietSanPhamsGiaBanLessThanEqual(budget);
+            if (!list.isEmpty()) {
+                found = true;
+                results.add(Map.of(
+                        "type", "budget",
+                        "products", formatProducts(list)
+                ));
+            }
         }
+
+        // 2) Tìm kiếm đa trường
+        if (!found) {
+            List<SanPham> list = sanPhamRepository.searchByKeyword(userText);
+            if (!list.isEmpty()) {
+                found = true;
+                results.add(Map.of(
+                        "type", "search",
+                        "products", formatProducts(list)
+                ));
+            }
+        }
+
+        // 3) Không tìm thấy -> gợi ý
+        if (!found) {
+            List<SanPham> randomList = sanPhamRepository.findTop5Random();
+            results.add(Map.of(
+                    "type", "none",
+                    "products", formatProducts(randomList)
+            ));
+        }
+
+        return ResponseEntity.ok(Map.of("results", results));
+    }
+
+    // -----------------------------
+    // Lấy tin nhắn cuối cùng người dùng gửi
+    private String extractUserMessage(Map<String, Object> body) {
+        List<Map<String, Object>> messages = (List<Map<String, Object>>) body.get("messages");
+        return messages.get(messages.size() - 1).get("content").toString();
+    }
+
+    // -----------------------------
+    // Format sản phẩm đầy đủ thông tin
+    private List<Map<String, Object>> formatProducts(List<SanPham> list) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (SanPham sp : list) {
+            for (ChiTietSanPham ct : sp.getChiTietSanPhams()) {
+                Map<String, Object> p = new LinkedHashMap<>();
+                p.put("ten", sp.getTen());
+                p.put("gia", formatPrice(ct.getGiaBan().doubleValue()));
+                p.put("mauSac", ct.getMauSac().getTen());
+                p.put("kichThuoc", ct.getKichThuoc().getTen());
+                p.put("chatLieu", ct.getChatLieu().getTen());
+                p.put("thuongHieu", sp.getThuongHieu() != null ? sp.getThuongHieu().getTen() : "Không có");
+                p.put("danhMuc", sp.getDanhMuc().getTen());
+                result.add(p);
+            }
+        }
+        return result;
+    }
+
+    // -----------------------------
+    // Format giá tiền
+    private String formatPrice(double price) {
+        return PRICE_FORMAT.format(price) + " VND";
+    }
+
+    // -----------------------------
+    // Lấy số từ text
+    private double extractBudget(String text) {
+        try {
+            Pattern p = Pattern.compile("(\\d+[\\.,]?\\d*)");
+            Matcher m = p.matcher(text);
+            if (m.find()) {
+                double value = Double.parseDouble(m.group(1).replace(",", ""));
+                if (text.contains("k")) value *= 1000;
+                if (text.contains("triệu")) value *= 1_000_000;
+                return value;
+            }
+        } catch (Exception ignored) {}
+        return 0;
     }
 }

@@ -266,13 +266,6 @@ const goToPage = (page) => {
                     >
                       <i class="fa fa-eye"></i>
                     </button>
-                    <!-- <button
-                      class="btn btn-link text-danger btn-lg p-0"
-                      @click="confirmDelete(item.id)"
-                      title="Xóa"
-                    >
-                      <i class="fa fa-trash"></i>
-                    </button> -->
                   </div>
                 </td>
               </tr>
@@ -283,36 +276,18 @@ const goToPage = (page) => {
           </table>
 
           <!-- PHÂN TRANG -->
-          <nav v-if="totalPages > 1" aria-label="Page navigation">
+          <nav v-if="totalPages >= 1" aria-label="Page navigation">
             <ul class="pagination justify-content-end mt-3">
               <li class="page-item" :class="{ disabled: currentPage === 1 }">
-                <a
-                  class="page-link"
-                  href="#"
-                  @click.prevent="goToPage(currentPage - 1)"
-                  >Trước</a
-                >
+                <a class="page-link" href="#" @click.prevent="goToPage(currentPage - 1)">Trước</a>
               </li>
-              <li
-                class="page-item"
-                v-for="page in totalPages"
-                :key="page"
-                :class="{ active: currentPage === page }"
-              >
+              <li class="page-item" v-for="page in totalPages" :key="page" :class="{ active: currentPage === page }">
                 <a class="page-link" href="#" @click.prevent="goToPage(page)">{{
                   page
                 }}</a>
               </li>
-              <li
-                class="page-item"
-                :class="{ disabled: currentPage === totalPages }"
-              >
-                <a
-                  class="page-link"
-                  href="#"
-                  @click.prevent="goToPage(currentPage + 1)"
-                  >Sau</a
-                >
+              <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                <a class="page-link" href="#" @click.prevent="goToPage(currentPage + 1)">Sau</a>
               </li>
             </ul>
           </nav>
