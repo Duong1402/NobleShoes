@@ -1,5 +1,6 @@
 package com.example.datn.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -46,6 +47,7 @@ public class NhanVien implements UserDetails {
     private Boolean gioiTinh;
 
     @Column(name = "ngay_sinh")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate ngaySinh;
 
     @Column(name = "dia_chi", length = 100)
@@ -91,13 +93,9 @@ public class NhanVien implements UserDetails {
     }
 
     /**
-     * ✅ QUAN TRỌNG:
-     * Không dùng chucVu.ten (có dấu/space) -> role sai.
-     * Dùng chucVu.ma (CV01/CV02/CV03) -> map ra ROLE_* chuẩn.
-     *
+     * ✅ Dùng chucVu.ma để set ROLE cho chuẩn (tránh ten có dấu/khoảng trắng)
      * CV01 = ADMIN
-     * CV02 = EMPLOYEE (bán hàng)
-     * CV03 = EMPLOYEE (kho)
+     * CV02/CV03 = EMPLOYEE
      */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -106,40 +104,27 @@ public class NhanVien implements UserDetails {
         }
 
         String maCv = this.chucVu.getMa().trim().toUpperCase();
-
-        String role = switch (maCv) {
-            case "CV01" -> "ROLE_ADMIN";
-            case "CV02", "CV03" -> "ROLE_EMPLOYEE";
-            default -> "ROLE_EMPLOYEE";
-        };
+        String role;
+        switch (maCv) {
+            case "CV01" -> role = "ROLE_ADMIN";
+            case "CV02", "CV03" -> role = "ROLE_EMPLOYEE";
+            default -> role = "ROLE_EMPLOYEE";
+        }
 
         return List.of(new SimpleGrantedAuthority(role));
     }
 
-    @Override
-    public String getPassword() {
-        return this.matKhau;
-    }
+    @Override public String getPassword() { return this.matKhau; }
+    @Override public String getUsername() { return this.taiKhoan; }
 
-    @Override
-    public String getUsername() {
-        return this.taiKhoan;
-    }
-
-    @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
+    @Override public boolean isAccountNonExpired() { return true; }
 
     @Override
     public boolean isAccountNonLocked() {
         return this.trangThai != null && this.trangThai == 1;
     }
 
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
+    @Override public boolean isCredentialsNonExpired() { return true; }
 
     @Override
     public boolean isEnabled() {

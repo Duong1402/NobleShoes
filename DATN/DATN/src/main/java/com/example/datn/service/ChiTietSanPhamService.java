@@ -1,6 +1,7 @@
 package com.example.datn.service;
 
 import com.example.datn.dto.ChiTietSanPhamDTO;
+import com.example.datn.dto.ChiTietSanPhamResponse;
 import com.example.datn.dto.ChiTietSanPhamUpdateDTO;
 import com.example.datn.entity.*;
 import com.example.datn.repository.*;
@@ -8,8 +9,10 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,24 +33,19 @@ public class ChiTietSanPhamService {
         return chiTietSanPhamRepository.findAll();
     }
 
-    // 2️⃣ Lấy chi tiết sản phẩm theo ID sản phẩm -> trả về DTO
-    //    dùng cho cả FE client & admin (controller gọi method này)
+    // 2️⃣ Lấy chi tiết sản phẩm theo ID sản phẩm -> trả về DTO (dùng chung admin/client)
     public List<ChiTietSanPhamDTO> getChiTietSanPhamBySanPhamId(UUID sanPhamId) {
-        // ❌ KHÔNG dùng .map(ChiTietSanPhamDTO::new) nữa
-        // ✅ Dùng luôn query đã định nghĩa trong repository
         return chiTietSanPhamRepository.findChiTietSanPhamDTOBySanPhamId(sanPhamId);
     }
 
-    // 3️⃣ Cập nhật chi tiết sản phẩm (admin)
+    // 3️⃣ Cập nhật chi tiết sản phẩm (modal)
     @Transactional
     public ChiTietSanPham updateChiTietSanPham(UUID id, ChiTietSanPhamUpdateDTO dto) {
         ChiTietSanPham existing = chiTietSanPhamRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Chi tiết sản phẩm không tồn tại!"));
 
-        // Cập nhật thông tin chung của Sản phẩm
-        if (dto.getTenSP() != null) {
-            existing.getSanPham().setTen(dto.getTenSP());
-        }
+        // --- cập nhật thông tin Sản phẩm ---
+        if (dto.getTenSP() != null) existing.getSanPham().setTen(dto.getTenSP());
 
         if (dto.getDanhMucId() != null) {
             DanhMuc dm = danhMucRepository.findById(dto.getDanhMucId())
@@ -73,15 +71,9 @@ public class ChiTietSanPhamService {
             existing.getSanPham().setMucDichSuDung(md);
         }
 
-        // Cập nhật các trường của ChiTietSanPham
-        if (dto.getGiaBan() != null) {
-            existing.setGiaBan(dto.getGiaBan());
-        }
-
-        if (dto.getSoLuongTon() != null) {
-            existing.setSoLuongTon(dto.getSoLuongTon());
-        }
-
+        // --- cập nhật thông tin ChiTietSanPham ---
+        if (dto.getGiaBan() != null) existing.setGiaBan(dto.getGiaBan());
+        if (dto.getSoLuongTon() != null) existing.setSoLuongTon(dto.getSoLuongTon());
         existing.setMoTa(dto.getMoTa());
 
         if (dto.getMauSacId() != null) {
@@ -102,7 +94,7 @@ public class ChiTietSanPhamService {
             existing.setChatLieu(cl);
         }
 
-        // Hình ảnh
+        // --- hình ảnh (gắn vào SanPham.hinhAnh) ---
         if (dto.getHinhAnhUrl() != null && !dto.getHinhAnhUrl().isEmpty()) {
             HinhAnh ha = existing.getSanPham().getHinhAnh();
             if (ha == null) {
@@ -112,17 +104,33 @@ public class ChiTietSanPhamService {
                 existing.getSanPham().setHinhAnh(ha);
             }
 
-            if (ha.getUrlAnh1() == null || ha.getUrlAnh1().isEmpty()) {
-                ha.setUrlAnh1(dto.getHinhAnhUrl());
-            } else if (ha.getUrlAnh2() == null || ha.getUrlAnh2().isEmpty()) {
-                ha.setUrlAnh2(dto.getHinhAnhUrl());
-            } else {
-                ha.setUrlAnh3(dto.getHinhAnhUrl());
-            }
+            if (ha.getUrlAnh1() == null || ha.getUrlAnh1().isEmpty()) ha.setUrlAnh1(dto.getHinhAnhUrl());
+            else if (ha.getUrlAnh2() == null || ha.getUrlAnh2().isEmpty()) ha.setUrlAnh2(dto.getHinhAnhUrl());
+            else ha.setUrlAnh3(dto.getHinhAnhUrl());
+
             hinhAnhRepository.save(ha);
         }
 
         return chiTietSanPhamRepository.saveAndFlush(existing);
     }
 
+    // 4️⃣ Inline update giá bán & số lượng tồn (dùng cho table)
+    @Transactional
+    public void updateGiaBanVaSoLuong(UUID ctspId, BigDecimal giaBan, Integer soLuongTon) {
+        ChiTietSanPham ctsp = chiTietSanPhamRepository.findById(ctspId)
+                .orElseThrow(() -> new RuntimeException("Chi tiết sản phẩm không tồn tại!"));
+
+        if (giaBan != null && giaBan.compareTo(BigDecimal.ZERO) > 0) ctsp.setGiaBan(giaBan);
+        if (soLuongTon != null && soLuongTon >= 0) ctsp.setSoLuongTon(soLuongTon);
+
+        chiTietSanPhamRepository.save(ctsp);
+    }
+
+    // 5️⃣ API trả về response cho admin list (nếu controller đang gọi getAll())
+    public List<ChiTietSanPhamResponse> getAll() {
+        return chiTietSanPhamRepository.findAll()
+                .stream()
+                .map(ChiTietSanPhamResponse::new)
+                .collect(Collectors.toList());
+    }
 }

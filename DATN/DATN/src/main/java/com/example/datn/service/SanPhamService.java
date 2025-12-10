@@ -34,9 +34,14 @@ public class SanPhamService {
     @Transactional
     public SanPham saveSanPham(SanPhamRequest req) {
 
-        // 1. Lưu Hình ảnh cho sản phẩm (lấy từ biến thể đầu tiên nếu có)
+        // ✅ Giữ chức năng bản 1: Check trùng tên sản phẩm
+        if (sanPhamRepository.existsByTen(req.getTen())) {
+            throw new RuntimeException("Lỗi: Tên sản phẩm đã tồn tại!");
+        }
+
+        // 1) Lưu Hình ảnh cho sản phẩm (lấy từ biến thể đầu tiên nếu có)
         HinhAnh hinhAnh = new HinhAnh();
-        if (!req.getChiTietSanPham().isEmpty()) {
+        if (req.getChiTietSanPham() != null && !req.getChiTietSanPham().isEmpty()) {
             List<String> urls = req.getChiTietSanPham().get(0).getImages();
             if (urls != null) {
                 if (urls.size() > 0) hinhAnh.setUrlAnh1(urls.get(0));
@@ -47,7 +52,7 @@ public class SanPhamService {
         hinhAnh.setMa("HA" + System.currentTimeMillis());
         hinhAnhRepository.save(hinhAnh);
 
-        // 2. Lưu Sản phẩm
+        // 2) Lưu Sản phẩm
         SanPham sp = new SanPham();
         sp.setTen(req.getTen());
         sp.setMa(req.getMa() != null ? req.getMa() : "SP" + System.currentTimeMillis());
@@ -61,36 +66,48 @@ public class SanPhamService {
         sp.setDeGiay(deGiayRepository.findById(req.getIdDeGiay()).orElse(null));
         sp.setDayGiay(dayGiayRepository.findById(req.getIdDayGiay()).orElse(null));
         sp.setXuatXu(xuatXuRepository.findById(req.getIdXuatXu()).orElse(null));
-        sp.setHinhAnh(hinhAnh); // gán HinhAnh cho sản phẩm
+        sp.setHinhAnh(hinhAnh);
 
         SanPham saved = sanPhamRepository.save(sp);
 
-        // 3. Lưu chi tiết sản phẩm (biến thể) - KHÔNG gán HinhAnh
+        // 3) Lưu chi tiết sản phẩm (biến thể) - KHÔNG gán HinhAnh
         List<ChiTietSanPham> chiTietList = new ArrayList<>();
-        for (ChiTietSanPhamRequest ctReq : req.getChiTietSanPham()) {
-            ChiTietSanPham ct = new ChiTietSanPham();
-            ct.setSanPham(saved);
-            ct.setGiaBan(ctReq.getGiaBan());
-            ct.setSoLuongTon(ctReq.getSoLuongTon());
-            ct.setMoTa(ctReq.getMoTa());
-            ct.setMauSac(mauSacRepository.findById(ctReq.getIdMauSac()).orElse(null));
-            ct.setKichThuoc(kichThuocRepository.findById(ctReq.getIdKichThuoc()).orElse(null));
-            ct.setChatLieu(chatLieuRepository.findById(ctReq.getIdChatLieu()).orElse(null));
-            chiTietList.add(ct);
-        }
-        chiTietSanPhamRepository.saveAll(chiTietList);
 
+        // ✅ Giữ chức năng bản 1: tự sinh mã CTSP theo max hiện có
+        int currentMaxNumber = 0;
+        String maxMa = chiTietSanPhamRepository.findMaxMaCTSP(); // ví dụ "CTSP09"
+        if (maxMa != null && maxMa.startsWith("CTSP")) {
+            try {
+                currentMaxNumber = Integer.parseInt(maxMa.substring(4));
+            } catch (NumberFormatException ignored) {
+                currentMaxNumber = 0;
+            }
+        }
+
+        if (req.getChiTietSanPham() != null) {
+            for (ChiTietSanPhamRequest ctReq : req.getChiTietSanPham()) {
+                currentMaxNumber++;
+
+                ChiTietSanPham ct = new ChiTietSanPham();
+
+                String formattedNumber = String.format("%02d", currentMaxNumber);
+                ct.setMa("CTSP" + formattedNumber);
+
+                ct.setSanPham(saved);
+                ct.setGiaBan(ctReq.getGiaBan());
+                ct.setSoLuongTon(ctReq.getSoLuongTon());
+                ct.setMoTa(ctReq.getMoTa());
+                ct.setMauSac(mauSacRepository.findById(ctReq.getIdMauSac()).orElse(null));
+                ct.setKichThuoc(kichThuocRepository.findById(ctReq.getIdKichThuoc()).orElse(null));
+                ct.setChatLieu(chatLieuRepository.findById(ctReq.getIdChatLieu()).orElse(null));
+
+                chiTietList.add(ct);
+            }
+        }
+
+        chiTietSanPhamRepository.saveAll(chiTietList);
         return saved;
     }
-
-//    public List<SanPham> getAll() {
-//        return sanPhamRepository.findAll();
-//    }
-
-//    public SanPham update(UUID id, SanPham sp) {
-//        sp.setId(id);
-//        return sanPhamRepository.save(sp);
-//    }
 
     public SanPham createSanPham(SanPham sp) {
         if (sp.getHinhAnh() == null) {
@@ -98,22 +115,22 @@ public class SanPhamService {
             hinhAnh.setMa("HA-" + UUID.randomUUID().toString().substring(0, 8));
             sp.setHinhAnh(hinhAnh);
         }
-        return sanPhamRepository.save(sp); // cascade sẽ lưu cả HinhAnh
+        return sanPhamRepository.save(sp); // cascade sẽ lưu cả HinhAnh (nếu mapping có cascade)
     }
+
     public List<Map<String, Object>> getAll() {
         return sanPhamRepository.getDanhSachSanPhamVaChiTiet();
     }
+
     @Transactional
     public void updateSanPham(UUID id, SanPhamRequest req) {
         SanPham sp = sanPhamRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm!"));
 
-        // Cập nhật các trường cơ bản
         sp.setTen(req.getTen());
         sp.setTrangThai(req.getTrangThai());
         sp.setNgayCapNhat(LocalDate.now());
 
-        // Cập nhật các quan hệ
         sp.setDanhMuc(danhMucRepository.findById(req.getIdDanhMuc()).orElse(null));
         sp.setThuongHieu(thuongHieuRepository.findById(req.getIdThuongHieu()).orElse(null));
         sp.setXuatXu(xuatXuRepository.findById(req.getIdXuatXu()).orElse(null));
@@ -123,14 +140,11 @@ public class SanPhamService {
 
         sanPhamRepository.save(sp);
     }
+
     public void updateTrangThai(UUID id, boolean newValue) {
         SanPham sp = sanPhamRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm!"));
         sp.setTrangThai(newValue);
         sanPhamRepository.save(sp);
     }
-
-
-
-
 }

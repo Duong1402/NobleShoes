@@ -1,10 +1,12 @@
 package com.example.datn.service;
 
+import com.example.datn.entity.ChucVu;
 import com.example.datn.entity.NhanVien;
+import com.example.datn.repository.ChucVuRepository;
 import com.example.datn.repository.NhanVienRepository;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -18,13 +20,23 @@ import java.util.UUID;
 @Service
 public class NhanVienService {
 
-    @Autowired
-    private NhanVienRepository nhanVienRepository;
+    private final NhanVienRepository nhanVienRepository;
+    private final ChucVuRepository chucVuRepository;
+    private final JavaMailSender mailSender;
 
-    @Autowired
-    private JavaMailSender mailSender;
-    //
+    private final Object maLock = new Object();
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
+    // đổi link này theo FE của bạn (bản 1: /login-employee, bản 2: /login)
+    private static final String EMPLOYEE_LOGIN_URL = "http://localhost:5173/login-employee";
+
+    public NhanVienService(NhanVienRepository nhanVienRepository,
+                           ChucVuRepository chucVuRepository,
+                           JavaMailSender mailSender) {
+        this.nhanVienRepository = nhanVienRepository;
+        this.chucVuRepository = chucVuRepository;
+        this.mailSender = mailSender;
+    }
 
     public List<NhanVien> getAll() {
         return nhanVienRepository.findAllOrderByMaDesc();
@@ -35,13 +47,21 @@ public class NhanVienService {
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy nhân viên có ID: " + id));
     }
 
+    @Transactional
     public NhanVien create(NhanVien nv) {
-        // Sinh mã tự động
-        String latestMa = nhanVienRepository.findLatestMa();
-        String newMa = generateNextMa(latestMa);
-        nv.setMa(newMa);
+        // ===== 1) Sinh mã tự động (NV00001...) + chống trùng =====
+        synchronized (maLock) {
+            String latestMa = getLatestMaFromDb(); // lấy mã mới nhất từ DB (dựa trên findAllOrderByMaDesc)
+            String newMa = generateNextMa(latestMa);
 
-        // Tự động sinh tài khoản và mật khẩu
+            // nếu DB có trường hợp trùng do dữ liệu/đồng bộ, tăng tiếp cho đến khi không trùng
+            while (nhanVienRepository.existsByMa(newMa)) {
+                newMa = generateNextMa(newMa);
+            }
+            nv.setMa(newMa);
+        }
+
+        // ===== 2) Tự sinh tài khoản + mật khẩu =====
         String taiKhoan = generateUsernameFromName(nv.getHoTen());
         String matKhauRaw = generateRandomPassword();
         String matKhauMaHoa = encoder.encode(matKhauRaw);
@@ -49,11 +69,18 @@ public class NhanVienService {
         nv.setTaiKhoan(taiKhoan);
         nv.setMatKhau(matKhauMaHoa);
 
-        // Lưu trước để có ID rồi mới gửi mail
+        // ===== 3) Validate chức vụ (nếu FE gửi) =====
+        if (nv.getChucVu() != null && nv.getChucVu().getId() != null) {
+            ChucVu cv = chucVuRepository.findById(nv.getChucVu().getId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Chức vụ không tồn tại"));
+            nv.setChucVu(cv);
+        }
+
+        // ===== 4) Lưu =====
         NhanVien saved = nhanVienRepository.save(nv);
 
-        // Gửi email thông báo
-        if (nv.getEmail() != null && !nv.getEmail().isEmpty()) {
+        // ===== 5) Gửi email tài khoản =====
+        if (nv.getEmail() != null && !nv.getEmail().trim().isEmpty()) {
             try {
                 sendAccountEmail(nv.getEmail(), nv.getHoTen(), taiKhoan, matKhauRaw);
             } catch (MessagingException e) {
@@ -64,11 +91,101 @@ public class NhanVienService {
         return saved;
     }
 
+    public NhanVien update(UUID id, NhanVien updated) {
+        NhanVien existing = nhanVienRepository.findById(id).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy nhân viên có ID: " + id));
+
+        // Giữ nguyên mã nhân viên (theo bản 2)
+        updated.setMa(existing.getMa());
+
+        // Check email trùng (theo bản 1)
+        if (updated.getEmail() != null
+                && !updated.getEmail().equals(existing.getEmail())
+                && nhanVienRepository.existsByEmail(updated.getEmail())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email này đã được sử dụng!");
+        }
+
+        existing.setHoTen(updated.getHoTen());
+        existing.setSdt(updated.getSdt());
+        existing.setEmail(updated.getEmail());
+        existing.setGioiTinh(updated.getGioiTinh());
+        existing.setNgaySinh(updated.getNgaySinh());
+        existing.setDiaChi(updated.getDiaChi());
+        existing.setCccd(updated.getCccd());
+
+        // urlAnh: nếu FE gửi null thì giữ nguyên; nếu gửi "" thì clear về null
+        if (updated.getUrlAnh() != null) {
+            String v = updated.getUrlAnh().trim();
+            existing.setUrlAnh(v.isEmpty() ? null : v);
+        }
+
+        // trangThai: chỉ cập nhật khi có gửi (theo bản 1)
+        if (updated.getTrangThai() != null) {
+            existing.setTrangThai(updated.getTrangThai());
+        }
+
+        // nguoiSua (theo bản 2) - nếu entity có field này
+        if (updated.getNguoiSua() != null) {
+            existing.setNguoiSua(updated.getNguoiSua());
+        }
+
+        // taiKhoan: chỉ đổi khi FE gửi (giữ chức năng bản 2 nhưng an toàn hơn)
+        if (updated.getTaiKhoan() != null && !updated.getTaiKhoan().trim().isEmpty()) {
+            String newTk = updated.getTaiKhoan().trim();
+            if (!newTk.equals(existing.getTaiKhoan()) && nhanVienRepository.existsByTaiKhoan(newTk)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tài khoản đã tồn tại!");
+            }
+            existing.setTaiKhoan(newTk);
+        }
+
+        // matKhau: nếu FE gửi thì cập nhật; hỗ trợ raw hoặc đã hash
+        if (updated.getMatKhau() != null && !updated.getMatKhau().trim().isEmpty()) {
+            String pw = updated.getMatKhau().trim();
+            if (pw.startsWith("$2a$") || pw.startsWith("$2b$") || pw.startsWith("$2y$") || pw.startsWith("$2$")) {
+                existing.setMatKhau(pw); // đã là BCrypt
+            } else {
+                existing.setMatKhau(encoder.encode(pw)); // raw -> encode
+            }
+        }
+
+        // Chức vụ: validate theo id (theo bản 1)
+        if (updated.getChucVu() != null && updated.getChucVu().getId() != null) {
+            ChucVu cv = chucVuRepository.findById(updated.getChucVu().getId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Chức vụ không tồn tại"));
+            existing.setChucVu(cv);
+        } else if (updated.getChucVu() != null) {
+            // nếu FE gửi cả object chucVu không có id: vẫn set (giữ hành vi bản 2)
+            existing.setChucVu(updated.getChucVu());
+        }
+
+        return nhanVienRepository.save(existing);
+    }
+
+    public void delete(UUID id) {
+        if (!nhanVienRepository.existsById(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy nhân viên để xóa");
+        }
+        nhanVienRepository.deleteById(id);
+    }
+
+    // ================== Helpers ==================
+
+    private String getLatestMaFromDb() {
+        List<NhanVien> list = nhanVienRepository.findAllOrderByMaDesc();
+        if (list == null || list.isEmpty() || list.get(0).getMa() == null) return null;
+        return list.get(0).getMa();
+    }
+
     private String generateNextMa(String latestMa) {
-        if (latestMa == null || latestMa.isEmpty()) {
+        if (latestMa == null || latestMa.isEmpty() || latestMa.length() < 3) {
             return "NV00001";
         }
-        int number = Integer.parseInt(latestMa.substring(2));
+        // lấy phần số sau "NV"
+        String numPart = latestMa.substring(2).replaceAll("[^0-9]", "");
+        int number = 0;
+        try {
+            number = Integer.parseInt(numPart);
+        } catch (Exception ignored) { }
         return String.format("NV%05d", number + 1);
     }
 
@@ -77,35 +194,29 @@ public class NhanVienService {
             return "user" + System.currentTimeMillis();
         }
 
-        // Bỏ dấu tiếng Việt, chuyển về không dấu + lowercase
         String normalized = java.text.Normalizer.normalize(hoTen, java.text.Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
-                .replaceAll("đ", "d")
-                .replaceAll("Đ", "d")
+                .replace("đ", "d")
+                .replace("Đ", "d")
                 .toLowerCase();
 
         String[] parts = normalized.trim().split("\\s+");
-        String ten = parts[parts.length - 1]; // tên chính (từ cuối)
+        String ten = parts[parts.length - 1];
         StringBuilder prefix = new StringBuilder();
-
         for (int i = 0; i < parts.length - 1; i++) {
-            prefix.append(parts[i].charAt(0));
+            if (!parts[i].isEmpty()) prefix.append(parts[i].charAt(0));
         }
 
-        String baseUsername = ten + prefix;
-
-        // Đảm bảo không trùng trong DB
-        String finalUsername = baseUsername;
+        String base = ten + prefix;
+        String finalUsername = base;
         int count = 1;
 
         while (nhanVienRepository.existsByTaiKhoan(finalUsername)) {
-            int rand = (int) (Math.random() * 900 + 100); // số ngẫu nhiên 100–999
-            finalUsername = baseUsername + rand + (count++);
+            int rand = (int) (Math.random() * 900 + 100); // 100–999
+            finalUsername = base + rand + (count++);
         }
-
         return finalUsername;
     }
-
 
     private String generateRandomPassword() {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -133,43 +244,12 @@ public class NhanVienService {
                     <li><b>Tài khoản:</b> %s</li>
                     <li><b>Mật khẩu:</b> %s</li>
                   </ul>
-                  <p>👉 <a href="http://localhost:5173/login" style="color: #28a745; font-weight: bold;">Đăng nhập ngay</a></p>
+                  <p>👉 <a href="%s" style="color: #28a745; font-weight: bold;">Đăng nhập ngay</a></p>
                   <p style="margin-top: 20px;">Trân trọng,<br>Phòng Nhân sự</p>
                 </div>
-                """.formatted(name, username, password);
+                """.formatted(name, username, password, EMPLOYEE_LOGIN_URL);
 
         helper.setText(htmlContent, true);
         mailSender.send(message);
-    }
-
-    public NhanVien update(UUID id, NhanVien updated) {
-        NhanVien existing = nhanVienRepository.findById(id).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy nhân viên có ID: " + id));
-
-        // Giữ nguyên mã nhân viên
-        updated.setMa(existing.getMa());
-        existing.setHoTen(updated.getHoTen());
-        existing.setSdt(updated.getSdt());
-        existing.setEmail(updated.getEmail());
-        existing.setUrlAnh(updated.getUrlAnh());
-        existing.setGioiTinh(updated.getGioiTinh());
-        existing.setNgaySinh(updated.getNgaySinh());
-        existing.setDiaChi(updated.getDiaChi());
-        existing.setCccd(updated.getCccd());
-        existing.setTaiKhoan(updated.getTaiKhoan());
-        existing.setMatKhau(updated.getMatKhau());
-        existing.setNguoiSua(updated.getNguoiSua());
-        existing.setTrangThai(updated.getTrangThai());
-        existing.setChucVu(updated.getChucVu());
-
-        // @PreUpdate trong entity sẽ tự thêm ngaySua
-        return nhanVienRepository.save(existing);
-    }
-
-    public void delete(UUID id) {
-        if (!nhanVienRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy nhân viên để xóa");
-        }
-        nhanVienRepository.deleteById(id);
     }
 }

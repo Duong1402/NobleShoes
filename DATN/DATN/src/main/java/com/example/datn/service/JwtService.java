@@ -34,8 +34,7 @@ public class JwtService {
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = extractAllClaims(token);
-        return claimsResolver.apply(claims);
+        return claimsResolver.apply(extractAllClaims(token));
     }
 
     public String generateToken(UserDetails userDetails, String userType) {
@@ -53,15 +52,14 @@ public class JwtService {
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+        return username != null
+                && username.equals(userDetails.getUsername())
+                && !isTokenExpired(token);
     }
 
     private boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
-    }
-
-    private Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
+        Date exp = extractClaim(token, Claims::getExpiration);
+        return exp == null || exp.before(new Date());
     }
 
     private Claims extractAllClaims(String token) {
@@ -73,12 +71,10 @@ public class JwtService {
     }
 
     /**
-     * FIX:
-     * - Nếu secret là Base64 thường => decode BASE64
-     * - Nếu secret là Base64URL (có '-' '_' ) => decode BASE64URL
-     * - Còn lại => dùng raw bytes UTF-8
-     *
-     * HS256 yêu cầu key >= 32 bytes (256-bit).
+     * HS256 yêu cầu key >= 32 bytes.
+     * - Base64 thường  => Decoders.BASE64
+     * - Base64URL      => Decoders.BASE64URL
+     * - Plain string   => UTF-8 bytes
      */
     private Key getSignInKey() {
         String sk = (secretKey == null) ? "" : secretKey.trim();
@@ -88,17 +84,14 @@ public class JwtService {
 
         byte[] keyBytes;
 
-        // Base64URL hay Base64 thường?
         boolean looksBase64 = sk.matches("^[A-Za-z0-9+/=\\r\\n]+$");
         boolean looksBase64Url = sk.matches("^[A-Za-z0-9\\-_]+$");
 
         if (looksBase64) {
             keyBytes = Decoders.BASE64.decode(sk);
         } else if (looksBase64Url) {
-            // nếu bạn dùng base64url (thường có '_' hoặc '-') thì decode base64url
             keyBytes = Decoders.BASE64URL.decode(sk);
         } else {
-            // secret string thường
             keyBytes = sk.getBytes(StandardCharsets.UTF_8);
         }
 

@@ -12,7 +12,11 @@ import java.util.UUID;
 
 @Repository
 public interface SanPhamRepository extends JpaRepository<SanPham, UUID> {
+
     Optional<SanPham> findTopByOrderByMaDesc();
+
+    // ✅ check trùng tên sản phẩm
+    boolean existsByTen(String ten);
 
     @Query(value = """
             SELECT 
@@ -34,9 +38,6 @@ public interface SanPhamRepository extends JpaRepository<SanPham, UUID> {
                 sp.id, sp.ma, sp.ten, sp.ngay_tao, sp.trang_thai,
                 th.ten, dm.ten, xx.ten
             ORDER BY sp.ngay_tao DESC
-            """,
-            nativeQuery = true)
+            """, nativeQuery = true)
     List<Map<String, Object>> getDanhSachSanPhamVaChiTiet();
-
-
 }

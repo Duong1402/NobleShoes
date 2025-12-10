@@ -1,7 +1,9 @@
-// src/main/java/com/example/datn/model/Response/HoaDonChiTietResponse.java
 package com.example.datn.model.Response;
 
+import com.example.datn.entity.ChiTietSanPham;
+import com.example.datn.entity.HinhAnh;
 import com.example.datn.entity.HoaDonChiTiet;
+import com.example.datn.entity.SanPham;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,17 +14,28 @@ import java.util.UUID;
 @Setter
 public class HoaDonChiTietResponse {
 
+    // ====== BẢN MỚI (snapshot / id) ======
     private UUID id;
     private UUID chiTietSanPhamId;
 
-    private String tenSanPham;
-    private String size;
+    // ====== THÔNG TIN CHUNG ======
+    private String maSanPhamChiTiet; // ctsp.ma
+    private String maSanPham;        // sp.ma
+    private String tenSanPham;       // ưu tiên snapshot, fallback sp.ten
+
     private Integer soLuong;
     private BigDecimal donGia;
     private BigDecimal thanhTien;
 
-    // ✅ FE lấy ảnh từ đây
+    private String size;       // ưu tiên snapshot, fallback kichThuoc.ten
+    private String mauSac;     // mauSac.ten
+    private String kichThuoc;  // kichThuoc.ten
+    private String tenXuatXu;  // xuatXu.ten
+
+    // ====== ẢNH ======
+    // FE mới cần urlAnh1, FE cũ cần hinhAnhUrl -> mình giữ cả 2
     private String urlAnh1;
+    private String hinhAnhUrl;
 
     public HoaDonChiTietResponse() {}
 
@@ -30,15 +43,59 @@ public class HoaDonChiTietResponse {
         if (ct == null) return;
 
         this.id = ct.getId();
-        this.tenSanPham = ct.getTenSanPham();
-        this.size = ct.getSize();
         this.soLuong = ct.getSoLuong();
         this.donGia = ct.getDonGia();
         this.thanhTien = ct.getThanhTien();
 
-        if (ct.getChiTietSanPham() != null) {
-            this.chiTietSanPhamId = ct.getChiTietSanPham().getId();
+        // snapshot (nếu bạn có cột tenSanPham/size trong HoaDonChiTiet)
+        try { this.tenSanPham = ct.getTenSanPham(); } catch (Exception ignore) {}
+        try { this.size = ct.getSize(); } catch (Exception ignore) {}
+
+        ChiTietSanPham ctsp = ct.getChiTietSanPham();
+        if (ctsp != null) {
+            this.chiTietSanPhamId = ctsp.getId();
+            this.maSanPhamChiTiet = ctsp.getMa();
+
+            if (ctsp.getMauSac() != null) {
+                this.mauSac = ctsp.getMauSac().getTen();
+            }
+            if (ctsp.getKichThuoc() != null) {
+                this.kichThuoc = ctsp.getKichThuoc().getTen();
+                if (this.size == null || this.size.isBlank()) {
+                    this.size = this.kichThuoc; // fallback size
+                }
+            }
+
+            SanPham sp = ctsp.getSanPham();
+            if (sp != null) {
+                this.maSanPham = sp.getMa();
+                if (this.tenSanPham == null || this.tenSanPham.isBlank()) {
+                    this.tenSanPham = sp.getTen();
+                }
+
+                if (sp.getXuatXu() != null) {
+                    this.tenXuatXu = sp.getXuatXu().getTen();
+                }
+
+                // ảnh từ SanPham.hinhAnh
+                HinhAnh ha = sp.getHinhAnh();
+                if (ha != null) {
+                    String u = ha.getUrlAnh1();
+                    if (u != null && !u.isBlank()) {
+                        this.hinhAnhUrl = u;
+                        if (this.urlAnh1 == null || this.urlAnh1.isBlank()) {
+                            this.urlAnh1 = u;
+                        }
+                    }
+                }
+            }
         }
-        // urlAnh1 sẽ được service bơm vào: r.setUrlAnh1(...)
+
+        // nếu service bơm urlAnh1 riêng thì setUrlAnh1(...) sẽ override ok
+        if (this.hinhAnhUrl == null || this.hinhAnhUrl.isBlank()) {
+            this.hinhAnhUrl = this.urlAnh1;
+        } else if (this.urlAnh1 == null || this.urlAnh1.isBlank()) {
+            this.urlAnh1 = this.hinhAnhUrl;
+        }
     }
 }

@@ -10,12 +10,27 @@ import java.util.UUID;
 
 @Service
 public class PhuongThucThanhToanService {
+
     private final PhuongThucThanhToanRepository repo;
 
-    public PhuongThucThanhToanService(PhuongThucThanhToanRepository repo) { this.repo = repo; }
+    public PhuongThucThanhToanService(PhuongThucThanhToanRepository repo) {
+        this.repo = repo;
+    }
 
-    public List<PhuongThucThanhToan> findAll() { return repo.findAll(); }
-    public Optional<PhuongThucThanhToan> findById(UUID id) { return repo.findById(id); }
-    public PhuongThucThanhToan save(PhuongThucThanhToan obj) { return repo.save(obj); }
-    public void deleteById(UUID id) { repo.deleteById(id); }
+    public List<PhuongThucThanhToan> findAll() {
+        return repo.findAll();
+    }
+
+    // ✅ method Controller đang gọi
+    public Optional<PhuongThucThanhToan> findById(UUID id) {
+        return repo.findById(id);
+    }
+
+    public PhuongThucThanhToan save(PhuongThucThanhToan obj) {
+        return repo.save(obj);
+    }
+
+    public void deleteById(UUID id) {
+        repo.deleteById(id);
+    }
 }

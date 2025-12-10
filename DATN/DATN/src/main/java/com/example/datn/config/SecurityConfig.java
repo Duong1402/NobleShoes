@@ -54,24 +54,24 @@ public class SecurityConfig {
                 .authenticationProvider(employeeProvider)
 
                 .authorizeHttpRequests(auth -> auth
-                        // preflight
+                        // ✅ preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // static + swagger + error
+                        // ✅ static + swagger + error (nếu có)
                         .requestMatchers(
                                 "/images/**", "/uploads/**", "/favicon.ico",
                                 "/swagger-ui/**", "/v3/api-docs/**", "/error"
                         ).permitAll()
 
-                        // public
+                        // ✅ public
                         .requestMatchers("/api/public/**", "/public/**").permitAll()
 
-                        // ✅ auth: CHỈ permit login/register (KHÔNG permitAll cả /api/auth/**)
+                        // ✅ auth: chỉ permit login/register
                         .requestMatchers(
                                 "/api/auth/login/**",
+                                "/api/auth/login/customer",
+                                "/api/auth/login/employee",
                                 "/api/auth/register"
-                                // nếu có refresh thì thêm:
-                                // ,"/api/auth/refresh"
                         ).permitAll()
 
                         // ✅ /me bắt buộc có token
@@ -80,6 +80,10 @@ public class SecurityConfig {
                         // ✅ admin APIs
                         .requestMatchers("/admin/**", "/api/admin/**")
                         .hasAnyRole("ADMIN", "EMPLOYEE")
+
+                        // ✅ customer APIs (giữ theo bản của bạn; thêm /api/... để đỡ lệch route)
+                        .requestMatchers("/cart/**", "/profile/**", "/api/cart/**", "/api/profile/**")
+                        .hasRole("CUSTOMER")
 
                         .anyRequest().authenticated()
                 )
@@ -93,7 +97,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
+
+        // ✅ Cho FE chạy mọi port localhost (5173/5175/5176/4173...)
         cfg.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
+
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         cfg.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
         cfg.setExposedHeaders(List.of("Authorization"));

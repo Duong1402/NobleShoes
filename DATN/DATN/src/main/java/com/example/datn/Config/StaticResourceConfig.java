@@ -1,4 +1,4 @@
-package com.example.datn.Config;
+package com.example.datn.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;

@@ -36,8 +36,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-
-        // ✅ public/auth/static -> khỏi parse token
         return path.startsWith("/api/auth/")
                 || path.startsWith("/api/public/")
                 || path.startsWith("/swagger-ui")
@@ -71,7 +69,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         try {
-            // Nếu đã có auth rồi thì thôi
+            // ✅ Nếu đã có auth rồi thì thôi
             if (SecurityContextHolder.getContext().getAuthentication() != null) {
                 filterChain.doFilter(request, response);
                 return;
@@ -85,10 +83,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             String userType = null;
             try {
-                userType = jwtService.extractUserType(jwt); // claim "userType"
+                userType = jwtService.extractUserType(jwt); // claim "userType" (CUSTOMER/EMPLOYEE)
             } catch (Exception ignore) {
-                // token cũ không có claim userType -> sẽ fallback phía dưới
+                // token cũ không có claim userType -> fallback phía dưới
             }
+
+            // ✅ DEBUG nhẹ (cần thì giữ, không cần thì xoá)
+            // System.out.println(">>> JWT FILTER: userType=" + userType + ", username=" + username);
 
             UserDetails userDetails = resolveUserDetails(request, username, userType);
 
@@ -99,7 +100,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                 null,
                                 userDetails.getAuthorities()
                         );
-
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
@@ -107,9 +107,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } catch (Exception ex) {
             // ✅ Không set auth nếu token lỗi
             SecurityContextHolder.clearContext();
-
-            // ✅ DEBUG nhanh (bạn có thể đổi sang logger)
-            System.out.println("[JWT FILTER] Token invalid: " + ex.getClass().getSimpleName() + " - " + ex.getMessage());
+            System.out.println("[JWT FILTER] Token invalid: "
+                    + ex.getClass().getSimpleName() + " - " + ex.getMessage());
         }
 
         filterChain.doFilter(request, response);
@@ -118,8 +117,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     /**
      * Resolve userDetails theo:
      * 1) userType trong token (CUSTOMER/EMPLOYEE)
-     * 2) nếu thiếu userType -> đoán theo URL (/api/admin -> EMPLOYEE)
-     * 3) cuối cùng fallback thử cả 2 service
+     * 2) nếu thiếu userType -> đoán theo URL (/admin hoặc /api/admin -> EMPLOYEE)
+     * 3) fallback thử cả 2 service
      */
     private UserDetails resolveUserDetails(HttpServletRequest request, String username, String userType) {
         // 1) Có userType rõ ràng
@@ -132,7 +131,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // 2) Không có userType -> đoán theo path
         String path = request.getServletPath();
-        if (path.startsWith("/api/admin/")) {
+        if (path.startsWith("/api/admin/") || path.startsWith("/admin/")) {
             UserDetails emp = tryLoad(employeeUserDetailsService, username);
             if (emp != null) return emp;
             return tryLoad(customerUserDetailsService, username);

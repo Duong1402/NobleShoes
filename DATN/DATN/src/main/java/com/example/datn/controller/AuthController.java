@@ -1,10 +1,15 @@
 package com.example.datn.controller;
 
+import com.example.datn.dto.*;
 import com.example.datn.entity.ChucVu;
 import com.example.datn.entity.KhachHang;
+import com.example.datn.entity.PasswordResetToken;
 import com.example.datn.repository.ChucVuRepository;
 import com.example.datn.repository.KhachHangRepository;
+import com.example.datn.repository.PasswordResetTokenRepository;
+import com.example.datn.service.EmailService;
 import com.example.datn.service.JwtService;
+import com.example.datn.service.UserService;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -26,9 +31,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Date;
 import java.util.Map;
+import java.util.Optional;
 
 @Validated
 @CrossOrigin(originPatterns = "http://localhost:*")
@@ -44,13 +51,20 @@ public class AuthController {
     private final ChucVuRepository chucVuRepository;
     private final PasswordEncoder passwordEncoder;
 
+    private final PasswordResetTokenRepository tokenRepository;
+    private final UserService userService;
+    private final EmailService emailService;
+
     public AuthController(
             JwtService jwtService,
             @Qualifier("customerAuthenticationProvider") AuthenticationProvider customerAuthProvider,
             @Qualifier("employeeAuthenticationProvider") AuthenticationProvider employeeAuthProvider,
             KhachHangRepository khachHangRepository,
             ChucVuRepository chucVuRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            PasswordResetTokenRepository tokenRepository,
+            UserService userService,
+            EmailService emailService
     ) {
         this.jwtService = jwtService;
         this.customerAuthProvider = customerAuthProvider;
@@ -58,9 +72,12 @@ public class AuthController {
         this.khachHangRepository = khachHangRepository;
         this.chucVuRepository = chucVuRepository;
         this.passwordEncoder = passwordEncoder;
+        this.tokenRepository = tokenRepository;
+        this.userService = userService;
+        this.emailService = emailService;
     }
 
-    // ===== DTOs =====
+    // ===== DTOs (login/register/me) =====
     @Data
     @NoArgsConstructor
     public static class LoginRequest {
@@ -90,7 +107,7 @@ public class AuthController {
     public static class LoginResponse {
         private String token;
         private String userType;
-        private UserResponse user; // ✅ thêm để FE header hiển thị ngay
+        private UserResponse user; // CUSTOMER có, EMPLOYEE có thể null
     }
 
     @Data
@@ -120,7 +137,6 @@ public class AuthController {
         private String matKhau;
     }
 
-    // ===== helpers =====
     private UserResponse toUserResponse(KhachHang kh) {
         if (kh == null) return null;
         return new UserResponse(
@@ -134,7 +150,7 @@ public class AuthController {
         );
     }
 
-    // ===== Exception handlers =====
+    // ===== Exception handlers (giữ như bản 2) =====
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<?> handleAuth(AuthenticationException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -179,7 +195,7 @@ public class AuthController {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String jwtToken = jwtService.generateToken(userDetails, "CUSTOMER");
 
-        // ✅ lấy user ngay để FE show header (không phụ thuộc /me)
+        // lấy user ngay để FE show header
         String username = userDetails.getUsername();
         KhachHang kh = khachHangRepository.findByTaiKhoan(username).orElse(null);
         if (kh == null) kh = khachHangRepository.findByEmail(username).orElse(null);
@@ -201,7 +217,6 @@ public class AuthController {
         return ResponseEntity.ok(new LoginResponse(jwtToken, "EMPLOYEE", null));
     }
 
-    // ✅ FE gọi API này => lấy user hiển thị header / profile
     @GetMapping("/me")
     public ResponseEntity<?> me(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -209,8 +224,6 @@ public class AuthController {
         }
 
         Object p = authentication.getPrincipal();
-
-        // ✅ Java 15 compatible
         String username;
         if (p instanceof UserDetails) {
             username = ((UserDetails) p).getUsername();
@@ -269,5 +282,56 @@ public class AuthController {
         khachHangRepository.save(kh);
 
         return ResponseEntity.ok(Map.of("message", "Đăng ký thành công!"));
+    }
+
+    // ===== Forgot / Reset password (giữ từ bản 1) =====
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> requestPasswordReset(@RequestBody ForgotPasswordRequest request) {
+        String taiKhoan = request.getTaiKhoan();
+
+        Optional<UserLookupResult> userOpt = userService.findByTaiKhoan(taiKhoan);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.ok("Nếu tài khoản tồn tại, mã OTP sẽ được gửi qua email.");
+        }
+
+        String otpCode = OtpUtil.generateOTP();
+        Date expiryDate = OtpUtil.calculateExpiryDate();
+
+        tokenRepository.deleteByTaiKhoan(taiKhoan);
+
+        PasswordResetToken newToken = new PasswordResetToken();
+        newToken.setTaiKhoan(taiKhoan);
+        newToken.setUserType(userOpt.get().getUserType());
+        newToken.setToken(otpCode);
+        newToken.setExpiryDate(expiryDate);
+        tokenRepository.save(newToken);
+
+        emailService.sendPasswordResetOtp(userOpt.get().getEmail(), otpCode);
+
+        return ResponseEntity.ok("Mã OTP (6 chữ số) đã được gửi đến email của bạn.");
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        String otp = request.getOtp();
+        String newPassword = request.getNewPassword();
+
+        PasswordResetToken token = tokenRepository.findByToken(otp)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã OTP không hợp lệ."));
+
+        if (token.getExpiryDate().before(new Date())) {
+            tokenRepository.delete(token);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới.");
+        }
+
+        String taiKhoan = token.getTaiKhoan();
+        String encodedPassword = passwordEncoder.encode(newPassword);
+
+        userService.updatePassword(taiKhoan, token.getUserType(), encodedPassword);
+
+        tokenRepository.delete(token);
+
+        return ResponseEntity.ok("Mật khẩu đã được đặt lại thành công!");
     }
 }

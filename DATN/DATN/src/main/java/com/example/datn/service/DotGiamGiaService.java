@@ -19,7 +19,7 @@ public class DotGiamGiaService {
 
 
     public Page<DotGiamGia> findAll(int page, int size, String sortBy) {
-        Pageable pageable = (Pageable) PageRequest.of(page, size, Sort.by(sortBy).ascending());
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).ascending());
         return repo.findAll(pageable);
     }
 
@@ -30,8 +30,7 @@ public class DotGiamGiaService {
     public DotGiamGia save(DotGiamGia obj) {
         if (obj.getNgayKetThuc().before(obj.getNgayBatDau())) {
             throw new IllegalArgumentException("Ngày kết thúc phải sau ngày bắt đầu");
-        }
-        else {
+        } else {
             if (obj.getMa() == null || obj.getMa().isEmpty()) {
                 obj.setMa(autoTaoMa());
             }

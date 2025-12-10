@@ -1,6 +1,7 @@
 package com.example.datn.controller;
 
 import com.example.datn.dto.ChiTietSanPhamDTO;
+import com.example.datn.dto.ChiTietSanPhamResponse;
 import com.example.datn.dto.ChiTietSanPhamUpdateDTO;
 import com.example.datn.entity.ChiTietSanPham;
 import com.example.datn.service.ChiTietSanPhamService;
@@ -8,68 +9,52 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
-@CrossOrigin(origins = {
-        "http://localhost:5173",  // FE admin
-        "http://localhost:5176"   // FE client
-})
+@CrossOrigin(originPatterns = "http://localhost:*")
+@RequestMapping
 public class ChiTietSanPhamController {
 
     private final ChiTietSanPhamService chiTietSanPhamService;
 
-    /* ============ PUBLIC API CHO CLIENT ============ */
+    /* ===================== PUBLIC (CLIENT) ===================== */
 
-    /**
-     * Lấy danh sách chi tiết sản phẩm theo ID sản phẩm cho FE client.
-     * GET: http://localhost:8080/api/public/chi-tiet-san-pham/san-pham/{sanPhamId}
-     */
+    // GET: /api/public/chi-tiet-san-pham/san-pham/{sanPhamId}
     @GetMapping("/api/public/chi-tiet-san-pham/san-pham/{sanPhamId}")
     public ResponseEntity<List<ChiTietSanPhamDTO>> getChiTietSanPhamBySanPhamIdPublic(
-            @PathVariable("sanPhamId") UUID sanPhamId
+            @PathVariable UUID sanPhamId
     ) {
-        // 🔴 SAI: chiTietSanPhamService.getChiTietSanPhamPublicBySanPhamId(...)
-        // ✅ ĐÚNG: gọi đúng tên hàm có trong service
-        List<ChiTietSanPhamDTO> list =
-                chiTietSanPhamService.getChiTietSanPhamBySanPhamId(sanPhamId);
+        List<ChiTietSanPhamDTO> list = chiTietSanPhamService.getChiTietSanPhamBySanPhamId(sanPhamId);
         return ResponseEntity.ok(list);
     }
 
-    /* ============ API ADMIN (GIỮ PATH CŨ) ============ */
+    /* ===================== ADMIN ===================== */
 
-    /**
-     * Lấy tất cả chi tiết sản phẩm cho admin.
-     * GET: http://localhost:8080/admin/chi-tiet-san-pham
-     */
+    // GET: /admin/chi-tiet-san-pham  (giữ kiểu response của bản 1)
     @GetMapping("/admin/chi-tiet-san-pham")
-    public ResponseEntity<List<ChiTietSanPham>> getAllChiTietSanPham() {
-        List<ChiTietSanPham> list = chiTietSanPhamService.getAllChiTietSanPham();
+    public ResponseEntity<List<ChiTietSanPhamResponse>> getAllChiTietSanPham() {
+        List<ChiTietSanPhamResponse> list = chiTietSanPhamService.getAll();
         return ResponseEntity.ok(list);
     }
 
-    /**
-     * Lấy danh sách chi tiết theo ID sản phẩm cho admin.
-     * GET: http://localhost:8080/admin/chi-tiet-san-pham/san-pham/{sanPhamId}
-     */
+    // GET: /admin/chi-tiet-san-pham/san-pham/{sanPhamId}
     @GetMapping("/admin/chi-tiet-san-pham/san-pham/{sanPhamId}")
     public ResponseEntity<List<ChiTietSanPhamDTO>> getChiTietSanPhamBySanPhamIdAdmin(
-            @PathVariable("sanPhamId") UUID sanPhamId
+            @PathVariable UUID sanPhamId
     ) {
-        List<ChiTietSanPhamDTO> list =
-                chiTietSanPhamService.getChiTietSanPhamBySanPhamId(sanPhamId);
+        List<ChiTietSanPhamDTO> list = chiTietSanPhamService.getChiTietSanPhamBySanPhamId(sanPhamId);
         return ResponseEntity.ok(list);
     }
 
-    /**
-     * Cập nhật chi tiết sản phẩm (admin).
-     * PUT: http://localhost:8080/admin/chi-tiet-san-pham/{id}
-     */
+    // PUT: /admin/chi-tiet-san-pham/{id}
     @PutMapping("/admin/chi-tiet-san-pham/{id}")
     public ResponseEntity<?> updateChiTietSanPham(
-            @PathVariable("id") UUID id,
+            @PathVariable UUID id,
             @RequestBody ChiTietSanPhamUpdateDTO dto
     ) {
         try {
@@ -81,4 +66,26 @@ public class ChiTietSanPhamController {
         }
     }
 
+    // PUT: /admin/chi-tiet-san-pham/inline/{ctspId}
+    @PutMapping("/admin/chi-tiet-san-pham/inline/{ctspId}")
+    public ResponseEntity<?> updateInline(
+            @PathVariable UUID ctspId,
+            @RequestBody Map<String, Object> payload
+    ) {
+        try {
+            BigDecimal giaBan = payload.get("giaBan") != null
+                    ? new BigDecimal(payload.get("giaBan").toString())
+                    : null;
+
+            Integer soLuongTon = payload.get("soLuongTon") != null
+                    ? Integer.parseInt(payload.get("soLuongTon").toString())
+                    : null;
+
+            chiTietSanPhamService.updateGiaBanVaSoLuong(ctspId, giaBan, soLuongTon);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(e.getMessage());
+        }
+    }
 }

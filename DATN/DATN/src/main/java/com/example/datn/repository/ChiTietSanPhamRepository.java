@@ -1,7 +1,10 @@
 package com.example.datn.repository;
 
 import com.example.datn.dto.ChiTietSanPhamDTO;
+import com.example.datn.dto.thongke.SanPhamSapHetHangDto;
 import com.example.datn.entity.ChiTietSanPham;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -19,9 +22,7 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
             "ct.giaBan, ct.moTa, " +
             "m.ten, k.ten, cl.ten, " +
             "h.urlAnh1, h.urlAnh2, h.urlAnh3, " +
-            // 👇 THÊM ct.soLuongTon Ở CUỐI ĐÚNG THỨ TỰ CONSTRUCTOR
-            "ct.soLuongTon" +
-            ") " +
+            "ct.soLuongTon) " +
             "FROM ChiTietSanPham ct " +
             "JOIN ct.sanPham sp " +
             "LEFT JOIN sp.danhMuc d " +
@@ -37,4 +38,18 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
             "WHERE sp.id = :sanPhamId")
     List<ChiTietSanPhamDTO> findChiTietSanPhamDTOBySanPhamId(@Param("sanPhamId") UUID sanPhamId);
 
+    @Query("SELECT COUNT(ct) FROM ChiTietSanPham ct WHERE ct.sanPham.id = :sanPhamId")
+    int countBySanPhamId(@Param("sanPhamId") UUID sanPhamId);
+
+    @Query(value = "SELECT TOP 1 ma FROM chi_tiet_san_pham " +
+            "WHERE ma LIKE 'CTSP%' " +
+            "ORDER BY CAST(SUBSTRING(ma, 5, 10) AS int) DESC", nativeQuery = true)
+    String findMaxMaCTSP();
+
+    @Query("SELECT new com.example.datn.dto.thongke.SanPhamSapHetHangDto(" +
+            "COALESCE(sp.hinhAnh.urlAnh1, ''), sp.ten, ctsp.soLuongTon, ctsp.giaBan) " +
+            "FROM ChiTietSanPham ctsp JOIN ctsp.sanPham sp " +
+            "WHERE ctsp.soLuongTon < 10 " +
+            "ORDER BY ctsp.soLuongTon ASC")
+    Page<SanPhamSapHetHangDto> findSanPhamSapHetHang(Pageable pageable);
 }

@@ -2,9 +2,7 @@
 package com.example.datn.service;
 
 import com.example.datn.common.HoaDonStatus;
-import com.example.datn.entity.ChiTietSanPham;
-import com.example.datn.entity.HoaDon;
-import com.example.datn.entity.HoaDonChiTiet;
+import com.example.datn.entity.*;
 import com.example.datn.model.Response.HoaDonChiTietResponse;
 import com.example.datn.model.Response.HoaDonDetailResponse;
 import com.example.datn.model.Response.HoaDonResponse;
@@ -12,11 +10,9 @@ import com.example.datn.model.request.CancelOrderRequest;
 import com.example.datn.model.request.HoaDonFilterRequest;
 import com.example.datn.model.request.TaoHoaDonRequest;
 import com.example.datn.model.request.UpdateHoaDonRequest;
-import com.example.datn.repository.ChiTietSanPhamRepository;
-import com.example.datn.repository.HoaDonChiTietRepository;
-import com.example.datn.repository.HoaDonRepository;
+import com.example.datn.repository.*;
 import com.example.datn.specification.HoaDonSpecification;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -25,46 +21,52 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class HoaDonService {
 
-    @Autowired
-    private HoaDonRepository hoaDonRepository;
+    private final HoaDonRepository hoaDonRepository;
+    private final HoaDonChiTietRepository hoaDonChiTietRepository;
+    private final LichSuHoaDonRepository lichSuHoaDonRepository;
+    private final ChiTietSanPhamRepository chiTietSanPhamRepository;
+    private final MailService mailService;
 
-    @Autowired
-    private HoaDonChiTietRepository hoaDonChiTietRepository;
-
-    @Autowired
-    private ChiTietSanPhamRepository chiTietSanPhamRepository;
-
-    @Autowired
-    private MailService mailService;
+    private static final Map<Integer, String> TRANG_THAI_MAP = Map.of(
+            HoaDonStatus.CHO_THANH_TOAN, "Chờ thanh toán",
+            HoaDonStatus.CHO_XAC_NHAN, "Chờ xác nhận",
+            HoaDonStatus.DA_XAC_NHAN, "Đã xác nhận",
+            HoaDonStatus.DANG_GIAO, "Đang giao",
+            HoaDonStatus.HOAN_THANH, "Hoàn thành",
+            HoaDonStatus.DA_HUY, "Đã hủy"
+    );
 
     /* ================== ADMIN: SEARCH ================== */
     public Page<HoaDonResponse> searchHoaDon(HoaDonFilterRequest filter, Pageable pageable) {
         Specification<HoaDon> spec = HoaDonSpecification.filter(filter);
-        Page<HoaDon> hoaDonPage = hoaDonRepository.findAll(spec, pageable);
-        return hoaDonPage.map(HoaDonResponse::new);
+        return hoaDonRepository.findAll(spec, pageable).map(HoaDonResponse::new);
     }
 
-    /* ================== ADMIN: DETAIL BY ID ================== */
+    /* ================== ADMIN: DETAIL BY ID (+ lịch sử) ================== */
     @Transactional(readOnly = true)
     public HoaDonDetailResponse getHoaDonDetail(UUID id) {
         HoaDon hoaDon = hoaDonRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn"));
 
-        List<HoaDonChiTiet> chiTietList =
-                hoaDonChiTietRepository.findAllByHoaDon_Id(hoaDon.getId());
+        // chạm vào danhSachDiaChi để tránh Lazy error nếu phía Response còn truy cập
+        if (hoaDon.getKhachHang() != null && hoaDon.getKhachHang().getDanhSachDiaChi() != null) {
+            hoaDon.getKhachHang().getDanhSachDiaChi().size();
+        }
 
+        List<HoaDonChiTiet> chiTietList = hoaDonChiTietRepository.findAllByHoaDon_Id(hoaDon.getId());
         List<HoaDonChiTietResponse> chiTietResponses = chiTietList.stream()
                 .map(ct -> {
                     HoaDonChiTietResponse r = new HoaDonChiTietResponse(ct);
@@ -73,90 +75,136 @@ public class HoaDonService {
                 })
                 .collect(Collectors.toList());
 
-        return new HoaDonDetailResponse(hoaDon, chiTietResponses);
+        List<LichSuHoaDon> lichSuList = lichSuHoaDonRepository.findAllByHoaDonId(id);
+
+        return buildDetailResponse(hoaDon, chiTietResponses, lichSuList);
     }
 
     /* ================== PUBLIC: DETAIL BY CODE ================== */
     @Transactional(readOnly = true)
     public HoaDonDetailResponse getHoaDonDetailByCode(String code) {
-        return hoaDonRepository.findByMa(code)
-                .map(hoaDon -> {
-                    List<HoaDonChiTiet> chiTietList =
-                            hoaDonChiTietRepository.findAllByHoaDon_Id(hoaDon.getId());
+        if (code == null || code.trim().isEmpty()) return null;
 
-                    List<HoaDonChiTietResponse> chiTietResponses = chiTietList.stream()
-                            .map(ct -> {
-                                HoaDonChiTietResponse r = new HoaDonChiTietResponse(ct);
-                                r.setUrlAnh1(pickImg(ct.getChiTietSanPham()));
-                                return r;
-                            })
-                            .collect(Collectors.toList());
+        HoaDon hoaDon = hoaDonRepository.findByMa(code.trim())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng"));
 
-                    return new HoaDonDetailResponse(hoaDon, chiTietResponses);
+        List<HoaDonChiTiet> chiTietList = hoaDonChiTietRepository.findAllByHoaDon_Id(hoaDon.getId());
+        List<HoaDonChiTietResponse> chiTietResponses = chiTietList.stream()
+                .map(ct -> {
+                    HoaDonChiTietResponse r = new HoaDonChiTietResponse(ct);
+                    r.setUrlAnh1(pickImg(ct.getChiTietSanPham()));
+                    return r;
                 })
-                .orElse(null);
+                .collect(Collectors.toList());
+
+        List<LichSuHoaDon> lichSuList = lichSuHoaDonRepository.findAllByHoaDonId(hoaDon.getId());
+
+        return buildDetailResponse(hoaDon, chiTietResponses, lichSuList);
     }
 
-    /* ================== CUSTOMER: LIST MY ORDERS (BY EMAIL) ✅ THÊM MỚI ================== */
+    /* ================== CUSTOMER: LIST MY ORDERS (BY EMAIL) ================== */
     @Transactional(readOnly = true)
     public List<HoaDonResponse> getMyOrdersByEmail(String email) {
         if (email == null || email.trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthenticated");
         }
-
-        List<HoaDon> list = hoaDonRepository
-                .findAllByEmailKhachHangIgnoreCaseOrderByNgayTaoDesc(email.trim());
-
-        return list.stream().map(HoaDonResponse::new).collect(Collectors.toList());
+        return hoaDonRepository
+                .findAllByEmailKhachHangIgnoreCaseOrderByNgayTaoDesc(email.trim())
+                .stream()
+                .map(HoaDonResponse::new)
+                .collect(Collectors.toList());
     }
 
-    /* ================== ADMIN: UPDATE ================== */
+    /* ================== ADMIN: UPDATE (+ lịch sử, + trừ kho khi cần) ================== */
     @Transactional
     public HoaDonResponse updateHoaDon(UUID id, UpdateHoaDonRequest request) {
         HoaDon hoaDon = hoaDonRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn"));
 
-        Integer oldStatus = hoaDon.getTrangThai();
-        Integer newStatus = request.getTrangThai();
-
-        hoaDon.setTrangThai(newStatus);
-        hoaDon.setSdt(request.getSdt());
-        hoaDon.setDiaChiGiaoHang(request.getDiaChiGiaoHang());
-
-        boolean wasConfirmedOrLater = (oldStatus != null && oldStatus >= HoaDonStatus.DA_XAC_NHAN);
-        boolean nowConfirmedOrLater = (newStatus != null && newStatus >= HoaDonStatus.DA_XAC_NHAN);
-
-        boolean needTruKho = !wasConfirmedOrLater && nowConfirmedOrLater;
-
-        HoaDon updatedHoaDon = hoaDonRepository.save(hoaDon);
-
-        if (needTruKho) {
-            truKhoChoHoaDon(updatedHoaDon);
+        if (request == null || request.getTrangThai() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Thiếu trạng thái cập nhật");
         }
 
-        return new HoaDonResponse(updatedHoaDon);
+        Integer trangThaiCu = hoaDon.getTrangThai();
+        String sdtCu = hoaDon.getSdt();
+        String diaChiCu = hoaDon.getDiaChiGiaoHang();
+
+        Integer trangThaiMoi = request.getTrangThai();
+
+        // Nếu FE không gửi hoặc gửi rỗng -> giữ nguyên giá trị cũ
+        String sdtMoi = (request.getSdt() == null || request.getSdt().trim().isEmpty())
+                ? sdtCu
+                : normalizePhone(request.getSdt());
+
+        String diaChiMoi = (request.getDiaChiGiaoHang() == null || request.getDiaChiGiaoHang().trim().isEmpty())
+                ? diaChiCu
+                : normalizeText(request.getDiaChiGiaoHang());
+
+        String loaiHD = hoaDon.getLoaiHoaDon();
+        boolean isOnline = loaiHD != null && "online".equalsIgnoreCase(loaiHD.trim());
+
+        if (isOnline && (diaChiMoi == null || diaChiMoi.isBlank())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Đơn hàng Online bắt buộc phải có địa chỉ giao hàng!"
+            );
+        }
+
+        boolean wasConfirmedOrLater =
+                trangThaiCu != null && trangThaiCu >= HoaDonStatus.DA_XAC_NHAN;
+        boolean nowConfirmedOrLater =
+                trangThaiMoi != null && trangThaiMoi >= HoaDonStatus.DA_XAC_NHAN;
+        boolean needTruKho = !wasConfirmedOrLater && nowConfirmedOrLater;
+
+        hoaDon.setTrangThai(trangThaiMoi);
+        hoaDon.setSdt(sdtMoi);
+        hoaDon.setDiaChiGiaoHang(diaChiMoi);
+
+        HoaDon saved = hoaDonRepository.save(hoaDon);
+
+        if (needTruKho) {
+            truKhoChoHoaDon(saved);
+        }
+
+        String actor = "Admin";
+        if (!Objects.equals(trangThaiCu, trangThaiMoi)) {
+            saveHistory(saved, actor,
+                    "Đổi trạng thái: "
+                            + TRANG_THAI_MAP.getOrDefault(trangThaiCu, "Cũ")
+                            + " -> "
+                            + TRANG_THAI_MAP.getOrDefault(trangThaiMoi, "Mới"));
+        }
+        if (!Objects.equals(sdtCu, sdtMoi)) {
+            saveHistory(saved, actor, "Đổi SĐT: " + nullToDash(sdtCu) + " -> " + nullToDash(sdtMoi));
+        }
+        if (!Objects.equals(diaChiCu, diaChiMoi)) {
+            saveHistory(saved, actor, "Đổi địa chỉ: " + nullToDash(diaChiCu) + " -> " + nullToDash(diaChiMoi));
+        }
+
+        return new HoaDonResponse(saved);
     }
 
     /* ================== PUBLIC: CREATE ORDER (Checkout) ================== */
     @Transactional
     public HoaDonDetailResponse createHoaDon(TaoHoaDonRequest req) {
-
         HoaDon hd = new HoaDon();
 
         String ma = (req.getMaDon() != null && !req.getMaDon().isBlank())
                 ? req.getMaDon()
                 : String.valueOf(System.currentTimeMillis());
-        hd.setMa(ma);
 
+        hd.setMa(ma);
         hd.setLoaiHoaDon("ONLINE");
         hd.setNgayTao(LocalDate.now());
-        hd.setTrangThai(HoaDonStatus.CHO_XAC_NHAN);
+
+        // ✅ MẶC ĐỊNH: CHỜ THANH TOÁN (0)
+        hd.setTrangThai(HoaDonStatus.CHO_THANH_TOAN);
 
         hd.setTenKhachHang(req.getHoTen());
         hd.setEmailKhachHang(req.getEmail());
-        hd.setSdt(req.getSdt());
-        hd.setDiaChiGiaoHang(req.getDiaChi());
-        hd.setGhiChu(req.getGhiChu());
+        hd.setSdt(normalizePhone(req.getSdt()));
+        hd.setDiaChiGiaoHang(normalizeText(req.getDiaChi()));
+        hd.setGhiChu(normalizeText(req.getGhiChu()));
 
         BigDecimal tamTinh = safe(req.getTamTinh());
         BigDecimal phiShip = safe(req.getPhiVanChuyen());
@@ -170,22 +218,20 @@ public class HoaDonService {
 
         HoaDon hoaDonSaved = hoaDonRepository.save(hd);
 
-        List<HoaDonChiTietResponse> chiTietResponses = new ArrayList<>();
         List<HoaDonChiTiet> savedItems = new ArrayList<>();
+        List<HoaDonChiTietResponse> chiTietResponses = new ArrayList<>();
 
         if (req.getItems() != null) {
             for (TaoHoaDonRequest.Item item : req.getItems()) {
                 HoaDonChiTiet ct = new HoaDonChiTiet();
                 ct.setHoaDon(hoaDonSaved);
 
-                ChiTietSanPham chiTietSanPham = null;
+                ChiTietSanPham ctsp = null;
                 if (item.getChiTietSanPhamId() != null) {
-                    chiTietSanPham = chiTietSanPhamRepository
-                            .findById(item.getChiTietSanPhamId())
-                            .orElse(null);
+                    ctsp = chiTietSanPhamRepository.findById(item.getChiTietSanPhamId()).orElse(null);
                 }
-                ct.setChiTietSanPham(chiTietSanPham);
 
+                ct.setChiTietSanPham(ctsp);
                 ct.setTenSanPham(item.getTenSanPham());
                 ct.setSize(item.getSize());
 
@@ -194,9 +240,7 @@ public class HoaDonService {
 
                 BigDecimal donGia = item.getDonGia() != null
                         ? item.getDonGia()
-                        : (chiTietSanPham != null && chiTietSanPham.getGiaBan() != null
-                        ? chiTietSanPham.getGiaBan()
-                        : BigDecimal.ZERO);
+                        : (ctsp != null && ctsp.getGiaBan() != null ? ctsp.getGiaBan() : BigDecimal.ZERO);
 
                 ct.setDonGia(donGia);
                 ct.setThanhTien(donGia.multiply(BigDecimal.valueOf(soLuong)));
@@ -206,10 +250,13 @@ public class HoaDonService {
                 savedItems.add(savedCt);
 
                 HoaDonChiTietResponse r = new HoaDonChiTietResponse(savedCt);
-                r.setUrlAnh1(pickImg(chiTietSanPham));
+                r.setUrlAnh1(pickImg(ctsp));
                 chiTietResponses.add(r);
             }
         }
+
+        // ghi lịch sử: trạng thái khởi tạo là CHỜ THANH TOÁN
+        saveHistory(hoaDonSaved, "SYSTEM", "Tạo đơn hàng ONLINE (Chờ thanh toán)");
 
         try {
             mailService.sendOrderConfirmation(hoaDonSaved, savedItems);
@@ -217,10 +264,11 @@ public class HoaDonService {
             e.printStackTrace();
         }
 
-        return new HoaDonDetailResponse(hoaDonSaved, chiTietResponses);
+        // trả detail + items + history rỗng (vì vừa tạo lịch sử 1 bản ghi, nếu muốn trả luôn thì query lại)
+        return buildDetailResponse(hoaDonSaved, chiTietResponses, Collections.emptyList());
     }
 
-    /* ================== PUBLIC: CANCEL ORDER BY CODE (NO LOGIN) ✅ THÊM MỚI ================== */
+    /* ================== PUBLIC: CANCEL ORDER BY CODE (NO LOGIN) ================== */
     @Transactional
     public void cancelPublicByCode(String code, CancelOrderRequest req) {
         if (code == null || code.trim().isEmpty()) {
@@ -230,17 +278,16 @@ public class HoaDonService {
         HoaDon hd = hoaDonRepository.findByMa(code.trim())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng"));
 
-        Integer st = hd.getTrangThai();
-        if (st == null) st = HoaDonStatus.CHO_XAC_NHAN;
+        int st = hd.getTrangThai() == null ? HoaDonStatus.CHO_THANH_TOAN : hd.getTrangThai();
 
-        // ✅ chỉ cho hủy khi: 0 (Chờ thanh toán) hoặc CHO_XAC_NHAN
-        boolean allowCancel = (st == 0 || st == HoaDonStatus.CHO_XAC_NHAN);
-
-        // Nếu bạn có constant CHO_THANH_TOAN thì mở thêm dòng này:
-        // allowCancel = allowCancel || st == HoaDonStatus.CHO_THANH_TOAN;
-
+        // chỉ cho hủy khi: CHO_THANH_TOAN hoặc CHO_XAC_NHAN
+        boolean allowCancel = (st == HoaDonStatus.CHO_THANH_TOAN || st == HoaDonStatus.CHO_XAC_NHAN);
         if (!allowCancel) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Đơn hàng không thể hủy ở trạng thái hiện tại");
+        }
+
+        if (st == HoaDonStatus.DA_HUY) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Đơn hàng đã hủy trước đó");
         }
 
         String reqEmail = normEmail(req != null ? req.getEmail() : null);
@@ -256,27 +303,66 @@ public class HoaDonService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Email/SĐT không khớp với đơn hàng");
         }
 
-        // ✅ 5 = Đã hủy (theo FE map của bạn)
-        hd.setTrangThai(5);
-
-        // (tuỳ bạn) lưu lý do vào ghi chú nếu muốn
-        // String reason = (req != null ? req.getReason() : null);
-        // if (reason != null && !reason.isBlank()) {
-        //     String old = hd.getGhiChu() == null ? "" : hd.getGhiChu();
-        //     hd.setGhiChu((old.isBlank() ? "" : (old + " | ")) + "[HỦY] " + reason.trim());
-        // }
-
+        hd.setTrangThai(HoaDonStatus.DA_HUY);
         hoaDonRepository.save(hd);
 
-        // NOTE: Vì chỉ cho hủy ở trạng thái 0/CHO_XAC_NHAN => chưa trừ kho => không cần hoàn kho.
+        saveHistory(hd, "CUSTOMER", "Khách hủy đơn (public)");
+        // Nếu trước đó chưa trừ kho (chưa xác nhận) => không cần hoàn kho.
     }
 
     /* ================== PRIVATE HELPERS ================== */
+    private void saveHistory(HoaDon hoaDon, String actor, String note) {
+        LichSuHoaDon ls = new LichSuHoaDon();
+        ls.setHoaDon(hoaDon);
+        ls.setThoiGian(LocalDateTime.now());
+        ls.setNguoiThucHien(actor);
+        ls.setGhiChu(note);
+        lichSuHoaDonRepository.save(ls);
+    }
 
     private BigDecimal safe(BigDecimal v) {
         return v == null ? BigDecimal.ZERO : v;
     }
 
+    private String nullToDash(String s) {
+        return (s == null || s.isBlank()) ? "N/A" : s;
+    }
+
+    private String normalizeText(String s) {
+        if (s == null) return null;
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
+    }
+
+    private String normalizePhone(String s) {
+        if (s == null) return null;
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
+    }
+
+    private void truKhoChoHoaDon(HoaDon hoaDon) {
+        List<HoaDonChiTiet> chiTietList = hoaDonChiTietRepository.findAllByHoaDon_Id(hoaDon.getId());
+        if (chiTietList.isEmpty()) return;
+
+        for (HoaDonChiTiet cthd : chiTietList) {
+            ChiTietSanPham ctsp = cthd.getChiTietSanPham();
+            if (ctsp == null) continue;
+
+            int soLuongDat = cthd.getSoLuong() == null ? 0 : cthd.getSoLuong();
+            int tonHienTai = ctsp.getSoLuongTon() == null ? 0 : ctsp.getSoLuongTon();
+
+            if (soLuongDat <= 0) continue;
+            if (tonHienTai < soLuongDat) {
+                throw new RuntimeException("Không đủ số lượng hàng trong kho cho sản phẩm: "
+                        + (cthd.getTenSanPham() != null ? cthd.getTenSanPham() : "Không rõ"));
+            }
+
+            ctsp.setSoLuongTon(tonHienTai - soLuongDat);
+            chiTietSanPhamRepository.save(ctsp);
+        }
+    }
+
+    // ====== pick img ======
     private String pickImg(ChiTietSanPham ctsp) {
         if (ctsp == null) return null;
 
@@ -284,9 +370,9 @@ public class HoaDonService {
                 readString(ctsp, "urlAnh1", "urlAnh", "anh1", "anh", "image", "hinhAnhUrl", "anhSanPham", "duongDanAnh"),
                 readStringNested(ctsp, "hinhAnh", "urlAnh1"),
                 readStringNested(ctsp, "hinhAnh", "urlAnh"),
-                readStringNested(ctsp, "sanPham", "urlAnh1"),
                 readStringNested(ctsp, "sanPham", "hinhAnh", "urlAnh1"),
-                readStringNested(ctsp, "sanPham", "hinhAnh", "urlAnh")
+                readStringNested(ctsp, "sanPham", "hinhAnh", "urlAnh"),
+                readStringNested(ctsp, "sanPham", "urlAnh1")
         );
         return normalizeImg(raw);
     }
@@ -307,7 +393,8 @@ public class HoaDonService {
         for (String p : props) {
             Object v = readProperty(obj, p);
             if (v instanceof String) {
-                String s = ((String) v).trim();
+                String str = (String) v;
+                String s = str.trim();
                 if (!s.isEmpty()) return s;
             }
         }
@@ -321,7 +408,8 @@ public class HoaDonService {
             cur = readProperty(cur, p);
         }
         if (cur instanceof String) {
-            String s = ((String) cur).trim();
+            String str = (String) cur;
+            String s = str.trim();
             if (!s.isEmpty()) return s;
         }
         return null;
@@ -336,24 +424,28 @@ public class HoaDonService {
         try {
             Method m = c.getMethod("get" + up);
             return m.invoke(obj);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         try {
             Method m = c.getMethod("is" + up);
             return m.invoke(obj);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         try {
             Field f = c.getDeclaredField(prop);
             f.setAccessible(true);
             return f.get(obj);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         return null;
     }
 
     private String normalizeImg(String raw) {
         if (raw == null) return null;
+
         String s = raw.trim().replace("\\", "/");
         if (s.isEmpty()) return null;
 
@@ -383,28 +475,26 @@ public class HoaDonService {
         return s.trim().replaceAll("[\\s.\\-()]", "");
     }
 
-    private void truKhoChoHoaDon(HoaDon hoaDon) {
-        List<HoaDonChiTiet> chiTietList =
-                hoaDonChiTietRepository.findAllByHoaDon_Id(hoaDon.getId());
-
-        if (chiTietList.isEmpty()) return;
-
-        for (HoaDonChiTiet cthd : chiTietList) {
-            ChiTietSanPham ctsp = cthd.getChiTietSanPham();
-            if (ctsp == null) continue;
-
-            int soLuongDat = cthd.getSoLuong() == null ? 0 : cthd.getSoLuong();
-            int tonHienTai = ctsp.getSoLuongTon() == null ? 0 : ctsp.getSoLuongTon();
-
-            if (soLuongDat <= 0) continue;
-
-            if (tonHienTai < soLuongDat) {
-                throw new RuntimeException("Không đủ số lượng hàng trong kho cho sản phẩm: " +
-                        (cthd.getTenSanPham() != null ? cthd.getTenSanPham() : "Không rõ"));
+    /**
+     * Tương thích với HoaDonDetailResponse có constructor:
+     * - (HoaDon, List<HoaDonChiTietResponse>, List<LichSuHoaDon>)
+     * - hoặc (HoaDon, List<HoaDonChiTietResponse>)
+     */
+    private HoaDonDetailResponse buildDetailResponse(HoaDon hd,
+                                                     List<HoaDonChiTietResponse> items,
+                                                     List<LichSuHoaDon> history) {
+        try {
+            Constructor<HoaDonDetailResponse> c3 =
+                    HoaDonDetailResponse.class.getConstructor(HoaDon.class, List.class, List.class);
+            return c3.newInstance(hd, items, history);
+        } catch (Exception ignore) {
+            try {
+                Constructor<HoaDonDetailResponse> c2 =
+                        HoaDonDetailResponse.class.getConstructor(HoaDon.class, List.class);
+                return c2.newInstance(hd, items);
+            } catch (Exception e2) {
+                throw new RuntimeException("Không khởi tạo được HoaDonDetailResponse (thiếu constructor phù hợp)", e2);
             }
-
-            ctsp.setSoLuongTon(tonHienTai - soLuongDat);
-            chiTietSanPhamRepository.save(ctsp);
         }
     }
 }
