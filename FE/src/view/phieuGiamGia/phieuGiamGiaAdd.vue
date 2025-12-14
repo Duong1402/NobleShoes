@@ -75,11 +75,11 @@ const addPhieuGiamGia = async () => {
       };
 
       // 3️⃣ Gửi dữ liệu cá nhân
-       res = await createPhieuGiamGiaCaNhan(payloadCaNhan);
+       res.value = await createPhieuGiamGiaCaNhan(payloadCaNhan);
        if (!res) throw new Error("Lỗi khi thêm đợt giảm giá cá nhân");
     } else {
       // 🔹 Nếu là phiếu chung
-      res = await createPhieuGiamGia(JSON.parse(JSON.stringify(payload)));
+      res.value = await createPhieuGiamGia(JSON.parse(JSON.stringify(payload)));
       if (!res) throw new Error("Lỗi khi thêm đợt giảm giá");
     }
 
@@ -121,7 +121,7 @@ const confirmSave = async () => {
 };
 </script>
 <template>
-  <div class="container-fluid mt-4 px-1">
+  <div class="container-fluid mt-4">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
         <div

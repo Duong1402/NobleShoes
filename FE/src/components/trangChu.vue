@@ -1,6 +1,6 @@
 <script setup></script>
 <template>
-  <div class="container-fluid mt-4 px-1">
+  <div class="container-fluid mt-4">
     <div
       class="d-flex align-items-left align-items-md-center flex-column flex-md-row pt-2 pb-4"
     >

@@ -6,11 +6,11 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Getter
 @Setter
@@ -19,7 +19,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "khach_hang")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-public class KhachHang {
+public class KhachHang implements UserDetails {
     @Id
     @GeneratedValue
     @Column(name = "id")
@@ -70,6 +70,14 @@ public class KhachHang {
     @Column(name = "trang_thai")
     private Byte trangThai;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "id_chuc_vu")
+    private ChucVu chucVu;
+
+    @OneToMany(mappedBy = "khachHang", fetch = FetchType.LAZY,
+            cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    private List<DiaChi> danhSachDiaChi = new ArrayList<>();
+
     @PrePersist
     protected void onCreate() {
         // Chỉ set ngày tạo nếu chưa có
@@ -86,11 +94,50 @@ public class KhachHang {
         }
     }
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_chuc_vu")
-    private ChucVu chucVu;
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        if (this.chucVu == null) {
+            return List.of();
+        }
+        // Giả sử ChucVu có getTen()
+        return List.of(new SimpleGrantedAuthority("ROLE_" + this.chucVu.getTen().toUpperCase()));
+    }@Override
+    public String getPassword() {
+        // Trả về trường mật khẩu
+        return this.matKhau;
+    }
 
-    @OneToMany(mappedBy = "khachHang", fetch = FetchType.LAZY,
-            cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    private List<DiaChi> danhSachDiaChi = new ArrayList<>();
+    @Override
+    public String getUsername() {
+        // Trả về trường tên đăng nhập
+        return this.taiKhoan;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        // true = tài khoản không hết hạn
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        // true = tài khoản không bị khóa
+        // Bạn có thể dùng trường trangThai ở đây
+        // Ví dụ: return this.trangThai == 1;
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        // true = mật khẩu không hết hạn
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        // true = tài khoản được kích hoạt
+        // Đây là nơi tốt nhất để dùng trangThai
+        return this.trangThai != null && this.trangThai == 1;
+    }
+
 }

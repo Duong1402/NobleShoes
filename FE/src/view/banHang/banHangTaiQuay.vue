@@ -1,5 +1,5 @@
 <template>
-  <div class="container-fluid mt-4 px-1">
+  <div class="container-fluid mt-4">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
         <div
@@ -60,8 +60,8 @@
                     <span
                       class="badge text-uppercase"
                       :class="{
-                        'bg-success': hd.trangThai === 5,
-                        'bg-danger': hd.trangThai === 0,
+                        'bg-warning': hd.trangThai === 0,
+                        'bg-danger': hd.trangThai === 5,
                         'bg-secondary':
                           hd.trangThai !== 0 && hd.trangThai !== 5,
                       }"
@@ -210,7 +210,13 @@
                             font-size: 0.9rem;
                             height: 28px;
                           "
-                          @change="handleCapNhatSoLuong(sp.id, $event.target.value, $event.target)"
+                          @change="
+                            handleCapNhatSoLuong(
+                              sp.id,
+                              $event.target.value,
+                              $event.target
+                            )
+                          "
                         />
 
                         <button
@@ -781,12 +787,7 @@
                       <div class="text-end">
                         <span class="fw-bold text-danger fs-6">
                           -
-                          {{
-                            formatCurrency(
-                              tongTienHang -
-                                (hoaDon.tongTienSauGiam || tongTienHang)
-                            )
-                          }}
+          {{ formatCurrency(hoaDon.phieuGiamGia.giaTriGiam) }}
                         </span>
                         <br />
                         <small
@@ -863,18 +864,14 @@
               </div>
 
               <div
-                v-if="
-                  hoaDon &&
-                  hoaDon.phieuGiamGia &&
-                  tongTienHang - hoaDon.tongTienSauGiam > 0
-                "
-                class="d-flex justify-content-between mb-1 text-success"
-              >
-                <span> <i class="fa-solid fa-gift me-1"></i> Khuyến mãi: </span>
-                <span class="fw-bold">
-                  - {{ formatCurrency(tongTienHang - hoaDon.tongTienSauGiam) }}
-                </span>
-              </div>
+  v-if="hoaDon && hoaDon.phieuGiamGia"
+  class="d-flex justify-content-between mb-1 text-success"
+>
+  <span> <i class="fa-solid fa-gift me-1"></i> Khuyến mãi: </span>
+  <span class="fw-bold">
+   - {{ formatCurrency(hoaDon.phieuGiamGia.giaTriGiam) }}
+  </span>
+</div>
 
               <div
                 v-if="isBanGiaoHang"
@@ -891,14 +888,7 @@
               >
                 <span class="fw-bold h6 mb-0">KHÁCH CẦN TRẢ:</span>
                 <span class="fw-bolder fs-4 text-danger">
-                  {{
-                    formatCurrency(
-                      (hoaDon?.tongTienSauGiam !== null &&
-                      hoaDon?.tongTienSauGiam !== undefined
-                        ? hoaDon.tongTienSauGiam
-                        : tongTienHang) + (isBanGiaoHang ? phiShip : 0)
-                    )
-                  }}
+                  {{ formatCurrency(hoaDon.tongTienSauGiam) }}
                 </span>
               </div>
             </div>
@@ -1056,12 +1046,12 @@ const formatCurrency = (amount) => {
 // Hàm hiển thị trạng thái (Nguyên nhân gây lỗi của bạn)
 const trangThaiText = (value) => {
   const map = {
-    0: "Đã hủy",
+    0: "Chờ thanh toán",
     1: "Chờ xác nhận",
     2: "Đã xác nhận",
-    3: "Chờ thanh toán",
-    4: "Đang giao",
-    5: "Hoàn thành",
+    3: "Đang giao",
+    4: "Hoàn thành",
+    5: "Đã hủy",
   };
   return map[value] || "Không xác định";
 };
@@ -1122,7 +1112,7 @@ const {
   searchResults,
   isGuestEditable,
   showAddGuestButton,
-  khachLeMacDinh,
+  khachLeInfo,
   assignKhachHang,
   handleTimKhachHang,
   handleThemNhanhKhachHang,
@@ -1193,7 +1183,7 @@ onMounted(async () => {
     await nextTick();
 
     if (hoaDon.value && hoaDon.value.khachHang) {
-      const isKhachLe = hoaDon.value.khachHang.id === khachLeMacDinh.id;
+      const isKhachLe = hoaDon.value.khachHang.id === khachLeInfo.id;
 
       await assignKhachHang(hoaDon.value.khachHang, isKhachLe);
     }
@@ -1214,13 +1204,10 @@ onMounted(async () => {
 .empty-icon {
   width: 60px;
   height: 60px;
-  background-color: #ffc107; /* màu xanh dịu */
+  background-color: #ffc107;
 }
-/* Card to (cao bằng 2 card nhỏ bên trái) */
 .big-card {
-  height: calc(
-    (100% - 1rem) * 2 / 3
-  ); /* Tự động tính cao bằng 2/3 của cột trái */
+  height: calc((100% - 1rem) * 2 / 3);
 }
 
 .card:hover {
@@ -1229,15 +1216,14 @@ onMounted(async () => {
   transition: all 0.2s ease;
 }
 
-/* Nếu muốn cố định chiều cao cho các card nhỏ để dễ nhìn */
 .col-md-6 .card {
   height: auto;
 }
 .qr-btn {
-  height: 100%; /* Cùng chiều cao với ô input */
-  white-space: nowrap; /* Không xuống dòng */
-  font-size: 0.9rem; /* Nhỏ hơn một chút cho gọn */
-  padding: 0 10px; /* Giảm padding ngang */
+  height: 100%;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  padding: 0 10px;
 }
 .nav-tabs .nav-link.active {
   background-color: #ffc107;
@@ -1264,7 +1250,7 @@ onMounted(async () => {
 }
 
 .hoa-don-card {
-  flex: 0 0 180px; /* cố định kích thước mỗi card */
+  flex: 0 0 180px;
   min-height: 90px;
   background: #fff;
   border: 1px solid #ddd;
@@ -1283,13 +1269,12 @@ onMounted(async () => {
   letter-spacing: 0.3px;
 }
 .product-thumb {
-  width: 60px; /* Chiều rộng cố định */
-  height: 60px; /* Chiều cao cố định */
-  object-fit: cover; /* Đảm bảo ảnh không bị méo */
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
   border-radius: 4px;
   border: 1px solid #ddd;
 }
-/* CSS cho hình ảnh sản phẩm trong Giỏ hàng (Card 2) */
 .cart-thumb {
   width: 150px;
   height: 150px;

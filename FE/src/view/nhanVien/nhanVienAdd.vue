@@ -1,5 +1,5 @@
 <template>
-  <div class="container-fluid mt-4 px-1">
+  <div class="container-fluid mt-4">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
         <div
@@ -210,21 +210,6 @@
             </div>
           </div>
 
-          <!-- Tài khoản -->
-          <!-- <div class="col-md-6">
-            <label class="form-label">Tài khoản</label>
-            <input
-              v-model="form.taiKhoan"
-              type="text"
-              class="form-control"
-              :class="{ 'is-invalid': v$.taiKhoan.$error }"
-              placeholder="Nhập tài khoản nhân viên"
-            />
-            <small v-if="v$.taiKhoan.$error" class="text-danger">
-              Vui lòng nhập tài khoản
-            </small>
-          </div> -->
-
           <!-- Giới tính -->
           <div class="col-md-6">
             <label class="form-label d-block">Giới tính</label>
@@ -374,17 +359,20 @@ import { required, email, helpers } from "@vuelidate/validators";
 import { getProvinces, getDistricts, getWards } from "vietnam-provinces";
 import axios from "axios";
 import { BrowserMultiFormatReader } from "@zxing/browser";
-import { error } from "jquery";
+import {
+  createNhanVien,
+  checkEmail,
+  getAllChucVu,
+  uploadImage,
+} from "@/service/NhanVienService";
 
 const router = useRouter();
 const chucVuList = ref([]);
 const notify = useNotify();
 const uploading = ref(false);
 const previewUrl = ref("");
-const errorEmail = ref("");
 const isCheckingEmail = ref(false);
 
-// Form thêm nhân viên
 const form = reactive({
   hoTen: "",
   sdt: "",
@@ -397,32 +385,23 @@ const form = reactive({
   chiTiet: "",
   cccd: "",
   chucVu: { id: "" },
-  // taiKhoan: "",
   urlAnh: "",
 });
 
-// check trùng email
 const checkDuplicateEmail = async (value) => {
-  if (!value) return true; // bỏ qua nếu chưa nhập
+  if (!value) return true;
   isCheckingEmail.value = true;
   try {
-    const res = await fetch(
-      `http://localhost:8080/admin/nhan-vien/check-email?email=${encodeURIComponent(
-        value
-      )}`
-    );
-    const data = await res.json();
-    // BE trả về { exists: true/false }
-    return !data.exists;
+    const res = await checkEmail(value);
+    return !res.data.exists;
   } catch (e) {
     console.error("Lỗi kiểm tra email:", e);
-    return true; // tránh chặn khi có lỗi mạng
+    return true;
   } finally {
     isCheckingEmail.value = false;
   }
 };
 
-// Validate
 const rules = {
   hoTen: { required },
   sdt: {
@@ -440,24 +419,21 @@ const rules = {
     required,
     cccd: helpers.regex(/^\d{12}$/),
   },
-  // taiKhoan: { required },
   ngaySinh: { required },
   chucVu: { id: { required } },
 };
 const v$ = useVuelidate(rules, form);
 
-// Quét CCCD
 const scanning = ref(false);
 const decodeError = ref(null);
-const decoded = ref(false); // 🧩 cờ chống lặp
+const decoded = ref(false);
 let codeReader = null;
 let videoElem = null;
 
-// Mở camera để quét
 const openScanner = async () => {
   scanning.value = true;
   decodeError.value = null;
-  decoded.value = false; // reset trạng thái
+  decoded.value = false;
   await nextTick();
 
   try {
@@ -469,7 +445,6 @@ const openScanner = async () => {
       return;
     }
 
-    // Ưu tiên camera sau nếu có
     const selectedDeviceId =
       devices.find((d) => d.label.toLowerCase().includes("back"))?.deviceId ||
       devices[0].deviceId;
@@ -497,7 +472,6 @@ const openScanner = async () => {
   }
 };
 
-// Dừng quét
 const stopScan = () => {
   scanning.value = false;
   decodeError.value = null;
@@ -516,17 +490,13 @@ const stopScan = () => {
   }
 };
 
-// Xử lý dữ liệu CCCD sau khi quét
 const handleDecodedCCCD = async (text) => {
   try {
-    // Ví dụ mã QR CCCD: "001203047337|Nguyen Van A|15081999|Nam|Thôn X, Xã Y, Huyện Z, Hà Nội"
     const parts = text.split("|").filter((x) => x.trim() !== "");
 
-    // Gán dữ liệu cơ bản
     form.cccd = parts[0]?.trim() || "";
     form.hoTen = parts[1]?.trim() || "";
 
-    // Xử lý ngày sinh
     const ngaySinhRaw = parts[2]?.trim() || "";
     if (/^\d{8}$/.test(ngaySinhRaw)) {
       const d = ngaySinhRaw.substring(0, 2);
@@ -536,44 +506,34 @@ const handleDecodedCCCD = async (text) => {
     } else {
       form.ngaySinh = "";
     }
-
-    // Giới tính (radio Nam/Nữ)
     const gioiTinhRaw = (parts[3] || "").trim().toLowerCase();
     form.gioiTinh = gioiTinhRaw === "nam" || gioiTinhRaw === "male";
 
-    // 📍 Địa chỉ tổng (phần còn lại sau | thứ 4)
     const fullAddress = parts.slice(4).join(", ").trim();
     form.diaChi = fullAddress;
 
-    // Tách địa chỉ nếu có định dạng "Thôn..., Xã..., Huyện..., Tỉnh..."
-    // (Tùy từng mã CCCD QR mà có hoặc không)
     const addrParts = fullAddress.split(",").map((a) => a.trim());
     form.chiTiet = addrParts[0] || "";
 
-    // Cố gắng tìm và tự chọn tỉnh / huyện / xã dựa theo danh sách bạn đã load
     if (addrParts.length >= 4) {
       const xaName = addrParts[1];
       const huyenName = addrParts[2];
       const tinhName = addrParts[3];
 
-      // Tự động chọn Tỉnh nếu trùng tên
       const province = provinces.value.find(
         (p) => tinhName && p.name.toLowerCase().includes(tinhName.toLowerCase())
       );
       if (province) {
         selectedProvince.value = province.code;
-        await onProvinceChange(); // load danh sách quận/huyện
+        await onProvinceChange();
 
-        // Tự động chọn Huyện
         const district = districts.value.find(
           (d) =>
             huyenName && d.name.toLowerCase().includes(huyenName.toLowerCase())
         );
         if (district) {
           selectedDistrict.value = district.code;
-          await onDistrictChange(); // load danh sách xã/phường
-
-          // Tự động chọn Xã
+          await onDistrictChange();
           const ward = wards.value.find(
             (w) => xaName && w.name.toLowerCase().includes(xaName.toLowerCase())
           );
@@ -583,7 +543,7 @@ const handleDecodedCCCD = async (text) => {
     }
 
     notify.success("Quét QR thành công");
-    scanning.value = false; // Đóng modal sau khi quét
+    scanning.value = false;
   } catch (e) {
     console.error("❌ Lỗi phân tích CCCD:", e);
     decodeError.value = "Không thể đọc được dữ liệu CCCD!";
@@ -591,10 +551,8 @@ const handleDecodedCCCD = async (text) => {
   }
 };
 
-// Khi rời trang
 onBeforeUnmount(stopScan);
 
-// Upload ảnh
 const handleFileUpload = async (event) => {
   const file = event.target.files[0];
   if (!file) return;
@@ -605,9 +563,7 @@ const handleFileUpload = async (event) => {
   uploading.value = true;
 
   try {
-    const res = await axios.post("http://localhost:8080/admin/upload", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const res = await uploadImage(formData);
     form.urlAnh = res.data;
     console.log("Ảnh đã upload:", form.urlAnh);
   } catch (err) {
@@ -618,7 +574,6 @@ const handleFileUpload = async (event) => {
   }
 };
 
-// Load địa chỉ hành chính
 const provinces = ref([]);
 const districts = ref([]);
 const wards = ref([]);
@@ -637,18 +592,15 @@ const onDistrictChange = () => {
   selectedWard.value = "";
 };
 
-// 📚 Load chức vụ
 const loadChucVu = async () => {
   try {
-    const res = await fetch("http://localhost:8080/admin/chuc-vu");
-    const data = await res.json();
-    chucVuList.value = data;
+    const res = await getAllChucVu();
+    chucVuList.value = res.data;
   } catch (err) {
     console.error("Lỗi khi tải chức vụ:", err);
   }
 };
 
-// Lưu nhân viên
 const addNhanVien = async () => {
   try {
     form.tinh =
@@ -664,13 +616,8 @@ const addNhanVien = async () => {
       form.huyen || ""
     }, ${form.tinh || ""}`.replace(/(^[,\s]+)|([,\s]+$)/g, "");
 
-    const res = await fetch("http://localhost:8080/admin/nhan-vien", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
+    await createNhanVien(form);
 
-    if (!res.ok) throw new Error("Lỗi khi thêm nhân viên");
     notify.success("Thêm nhân viên thành công!");
     router.push({ name: "nhanVien" });
   } catch (err) {
@@ -679,7 +626,6 @@ const addNhanVien = async () => {
   }
 };
 
-// Xác nhận lưu
 const confirmSave = async () => {
   v$.value.$touch();
   if (v$.value.$invalid) {
@@ -704,7 +650,6 @@ const confirmSave = async () => {
   }
 };
 
-// Khi trang load
 onMounted(() => {
   provinces.value = getProvinces();
   loadChucVu();
@@ -724,12 +669,11 @@ onMounted(() => {
 .text-danger {
   font-size: 0.875rem;
 }
-/* Khi focus vào input, select, textarea — đổi viền sang màu vàng */
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: #ffc107 !important; /* Màu warning của Bootstrap */
-  box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25); /* Hiệu ứng sáng nhẹ */
+  border-color: #ffc107 !important;
+  box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
   outline: none !important;
 }
 </style>

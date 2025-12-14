@@ -1,5 +1,7 @@
 package com.example.datn.config;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.UnsupportedEncodingException;
@@ -53,9 +55,7 @@ public class VnpayHashUtils {
 
             // Chỉ hash các tham số VNPay, bỏ qua tham số SecureHash
             if (fieldValue != null && fieldValue.length() > 0 && !fieldName.equals("vnp_SecureHash")) {
-                hashData.append(fieldName);
-                hashData.append("=");
-                hashData.append(fieldValue);
+                hashData.append(fieldName).append("=").append(fieldValue);
 
                 if (i < fieldNames.size() - 1) {
                     hashData.append("&");
@@ -65,13 +65,16 @@ public class VnpayHashUtils {
         return hashData.toString();
     }
 
-    public static Map<String, String> getVNPayFields(javax.servlet.http.HttpServletRequest request) {
+    // ✅ đổi javax -> jakarta
+    public static Map<String, String> getVNPayFields(HttpServletRequest request) {
         Map<String, String> fields = new HashMap<>();
         Enumeration<String> paramNames = request.getParameterNames();
+
         while (paramNames.hasMoreElements()) {
             String paramName = paramNames.nextElement();
             String paramValue = request.getParameter(paramName);
-            if ((paramValue != null) && (paramValue.length() > 0)) {
+
+            if (paramValue != null && !paramValue.isEmpty()) {
                 fields.put(paramName, paramValue);
             }
         }

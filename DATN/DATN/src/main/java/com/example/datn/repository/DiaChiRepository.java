@@ -29,6 +29,8 @@ public interface DiaChiRepository extends JpaRepository<DiaChi, UUID> {
     void updateAllDefaultsToFalse(@Param("khachHangId") UUID khachHangId, @Param("diaChiId") UUID diaChiId);
 
 
-    // Tùy chọn: Tìm địa chỉ mặc định
+    // Tìm địa chỉ mặc định
     Optional<DiaChi> findByKhachHangIdAndMacDinhTrue(UUID khachHangId);
+
+    List<DiaChi> findByKhachHangId(UUID idKhachHang);
 }

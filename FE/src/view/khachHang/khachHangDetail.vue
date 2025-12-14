@@ -513,7 +513,7 @@ import Breadcrumb from "@/components/common/Breadcrumb.vue";
 import { useNotify } from "@/composables/useNotify";
 import Swal from "sweetalert2";
 import axios from "axios";
-import { getKhachHangById, updateKhachHang } from "@/service/KhachHangService";
+import { getKhachHangById, updateKhachHang, uploadImage } from "@/service/KhachHangService";
 
 import {
   getDiaChiByKhachHangId,
@@ -583,13 +583,7 @@ const handleFileUpload = async (event) => {
   uploading.value = true;
   try {
     // Endpoint upload giống form thêm của bạn
-    const res = await axios.post(
-      "http://localhost:8080/admin/upload",
-      formData,
-      {
-        headers: { "Content-Type": "multipart/form-data" },
-      }
-    );
+    const res = await uploadImage(formData);
 
     form.urlAnh = res?.data?.url ?? res?.data?.secure_url ?? res?.data ?? "";
     if (form.urlAnh) previewUrl.value = form.urlAnh;

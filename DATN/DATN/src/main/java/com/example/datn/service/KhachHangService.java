@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -22,8 +23,19 @@ public class KhachHangService {
         this.diaChiService = diaChiService;
     }
 
+    // ==========================
+    // 📌 FIND ALL + PAGINATION
+    // ==========================
     public Page<KhachHang> findAllPage(int page, int size, String sortBy) {
-        Pageable pageable = (Pageable) PageRequest.of(page, size, Sort.by(sortBy).ascending());
+        int p = Math.max(page, 0);
+        int s = Math.max(size, 1);
+
+        String field = (sortBy == null || sortBy.trim().isEmpty()) ? "ma" : sortBy.trim();
+
+        Set<String> allowedSortFields = Set.of("ma", "hoTen", "sdt", "email", "id");
+        if (!allowedSortFields.contains(field)) field = "ma";
+
+        Pageable pageable = PageRequest.of(p, s, Sort.by(Sort.Direction.DESC, field));
         return repo.findAll(pageable);
     }
 
@@ -35,38 +47,54 @@ public class KhachHangService {
         return repo.findById(id);
     }
 
+    // ==========================
+    // 📌 SAVE + AUTO GENERATE MA
+    // ==========================
     public KhachHang save(KhachHang obj) {
-        boolean isNew = obj.getId() == null;
+        boolean isNew = (obj.getId() == null);
 
         if (isNew && (obj.getMa() == null || obj.getMa().trim().isEmpty())) {
             obj.setMa(generateNewMa());
         }
 
-        KhachHang savedKhachHang = repo.save(obj);
-        return savedKhachHang;
+        return repo.save(obj);
     }
 
     public void deleteById(UUID id) {
         repo.deleteById(id);
     }
 
+    // ==========================
+    // 📌 TẠO MÃ KH TỰ ĐỘNG
+    // ==========================
     public String generateNewMa() {
         String maxMa = repo.findMaxMaKhachHang();
         int nextNumber = 1;
 
         if (maxMa != null && maxMa.startsWith("KH")) {
             try {
-                // Lấy phần số sau "KH"
                 String numberPart = maxMa.substring(2);
-                // Chuyển thành số và tăng lên 1
                 nextNumber = Integer.parseInt(numberPart) + 1;
             } catch (NumberFormatException e) {
-                // Xử lý nếu mã không đúng định dạng (ví dụ: KHabc)
-                System.err.println("Lỗi parse mã Khách Hàng: " + maxMa);
-                nextNumber = 1; // Khởi tạo lại từ KH01 nếu lỗi
+                System.err.println("Lỗi parse mã KH: " + maxMa);
+                nextNumber = 1;
             }
         }
-        // Format lại thành chuỗi có 2 chữ số (KH01, KH02, KH10, KH100)
+
         return String.format("KH%02d", nextNumber);
+    }
+
+    // ==========================
+    // 📌 TÌM THEO TÀI KHOẢN
+    // ==========================
+    public Optional<KhachHang> findByTaiKhoan(String tk) {
+        return repo.findByTaiKhoan(tk);
+    }
+
+    // ==========================
+    // 📌 CHECK EMAIL
+    // ==========================
+    public Boolean existsByEmail(String email) {
+        return repo.existsByEmail(email);
     }
 }

@@ -8,8 +8,8 @@ import {
   getAllNhanVien,
   updateNhanVien,
   createNhanVien,
+  getAllChucVu,
 } from "@/service/NhanVienService";
-import { getAllChucVu } from "@/service/ChucVuService";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { useNotify } from "@/composables/useNotify";
 import * as XLSX from "xlsx";
@@ -37,9 +37,7 @@ watch([searchTerm, filterStatus], () => {
 
 // Phân trang
 const currentPage = ref(1);
-const itemsPerPage = ref(5); // mặc định hiển thị 10 dòng
-
-// ========================== 🟩 XUẤT DANH SÁCH NHÂN VIÊN 🟩 ==========================
+const itemsPerPage = ref(5); 
 const exportToExcel = () => {
   if (!filteredNhanVien.value.length) {
     notify.warning("Không có dữ liệu để xuất!");
@@ -71,7 +69,6 @@ const exportToExcel = () => {
   notify.success("Xuất file Excel thành công!");
 };
 
-// ========================== 🟨 NHẬP DỮ LIỆU TỪ EXCEL 🟨 ==========================
 const importing = ref(false);
 const importFromExcel = async (e) => {
   const file = e.target.files[0];
@@ -91,14 +88,11 @@ const importFromExcel = async (e) => {
       return;
     }
 
-    // Map dữ liệu sang đúng format backend cần
     const mappedData = importedData.map((item) => {
       // Chuyển giới tính
       const gioiTinh = String(item["Giới tính"]).toLowerCase().includes("nam")
         ? true
         : false;
-
-      // Map chức vụ từ tên sang ID
       const chucVuObj = chucVuList.value.find(
         (cv) =>
           cv.ten.toLowerCase().trim() ===
@@ -123,8 +117,6 @@ const importFromExcel = async (e) => {
           : 1,
       };
     });
-
-    // Kiểm tra những dòng thiếu chức vụ
     const invalidChucVu = mappedData.filter((x) => !x.chucVu);
     if (invalidChucVu.length > 0) {
       Swal.fire({
@@ -147,7 +139,6 @@ const importFromExcel = async (e) => {
         importing.value = true;
         notify.info("Đang nhập dữ liệu, vui lòng chờ...");
         try {
-          // Gọi API thêm nhân viên hàng loạt
           for (const nv of mappedData) {
             await createNhanVien(nv);
           }
@@ -167,7 +158,6 @@ const importFromExcel = async (e) => {
   reader.readAsArrayBuffer(file);
 };
 
-// ========================== 🟦 TẢI FILE MẪU EXCEL 🟦 ==========================
 const downloadTemplateExcel = () => {
   const templateData = [
     {
@@ -191,13 +181,11 @@ const downloadTemplateExcel = () => {
   notify.success("Tải file mẫu Excel thành công!");
 };
 
-// Khi component mount, load danh sách nhân viên
 onMounted(async () => {
   await loadNhanVien();
   await loadChucVu();
 });
 
-// Hàm load danh sách nhân viên
 const loadNhanVien = async () => {
   try {
     const res = await getAllNhanVien();
@@ -207,7 +195,6 @@ const loadNhanVien = async () => {
   }
 };
 
-// Hàm load danh sách chức vụ
 const loadChucVu = async () => {
   try {
     const res = await getAllChucVu();
@@ -219,12 +206,10 @@ const loadChucVu = async () => {
   }
 };
 
-// Danh sách nhân viên sau khi lọc theo keyword + trạng thái
 const filteredNhanVien = computed(() => {
   const keyword = searchTerm.value.toLowerCase().trim();
 
   return nhanVien.value.filter((nv) => {
-    // 1️⃣ Lọc theo từ khóa
     const matchKeyword =
       !keyword ||
       nv.ma?.toLowerCase().includes(keyword) ||
@@ -236,7 +221,6 @@ const filteredNhanVien = computed(() => {
       nv.taiKhoan?.toLowerCase().includes(keyword) ||
       nv.chucVu?.ten?.toLowerCase().includes(keyword);
 
-    // 2️⃣ Lọc theo trạng thái
     const matchStatus =
       filterStatus.value === "all"
         ? true
@@ -248,25 +232,21 @@ const filteredNhanVien = computed(() => {
   });
 });
 
-// Danh sách sau khi lọc, cắt theo trang
 const paginatedNhanVien = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage.value;
   const end = start + itemsPerPage.value;
   return filteredNhanVien.value.slice(start, end);
 });
 
-// Tổng số trang
 const totalPages = computed(() => {
   return Math.ceil(filteredNhanVien.value.length / itemsPerPage.value) || 1;
 });
 
-// Chuyển trang
 const changePage = (page) => {
   if (page < 1 || page > totalPages.value) return;
   currentPage.value = page;
 };
 
-// Tạo hàm confirm
 const confirmSave = async () => {
   const result = await Swal.fire({
     title: "Xác nhận lưu thay đổi?",
@@ -276,21 +256,20 @@ const confirmSave = async () => {
     confirmButtonText: "Có, lưu lại",
     cancelButtonText: "Hủy",
     reverseButtons: true,
-    confirmButtonColor: "#ffc107", // màu vàng giống btn
+    confirmButtonColor: "#ffc107",
     cancelButtonColor: "#6c757d",
   });
 
   if (result.isConfirmed) {
-    saveNhanVien(); // gọi hàm lưu
+    saveNhanVien(); 
   }
 };
 
 const toggleTrangThai = async (nv) => {
   const oldValue = nv.trangThai;
-  nv.trangThai = nv.trangThai === 1 ? 0 : 1; // Đổi 1↔0 thay vì true/false
+  nv.trangThai = nv.trangThai === 1 ? 0 : 1;
 
   try {
-    // Tạo payload đầy đủ, tránh làm mất các field khác
     const payload = {
       id: nv.id,
       ma: nv.ma,
@@ -320,14 +299,14 @@ const toggleTrangThai = async (nv) => {
       }`
     );
   } catch (err) {
-    nv.trangThai = oldValue; // revert lại nếu lỗi
+    nv.trangThai = oldValue; 
     console.error("❌ Lỗi khi cập nhật trạng thái:", err);
     notify.error("Cập nhật trạng thái thất bại!");
   }
 };
 </script>
 <template>
-  <div class="container-fluid mt-4 px-1">
+  <div class="container-fluid mt-4">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
         <div

@@ -28,4 +28,6 @@ public interface BanHangTaiQuayServiceImpl {
     void xoaSanPhamKhoiHoaDon(UUID idHoaDon, UUID idChiTietSanPham);
 
     List<KhachHang> timKhachHangByHotenOrSdt(String keyword);
+
+    HoaDon capNhatThongTinHoaDon(UUID idHoaDon, ThanhToanRequest request);
 }

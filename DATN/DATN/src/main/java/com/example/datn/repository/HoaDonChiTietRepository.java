@@ -33,7 +33,7 @@ public interface HoaDonChiTietRepository extends JpaRepository<HoaDonChiTiet, UU
             "JOIN hdct.chiTietSanPham ctsp " +
             "JOIN ctsp.sanPham sp " +
             "JOIN hdct.hoaDon hd " +
-            "WHERE hd.ngayTao BETWEEN :start AND :end AND hd.trangThai = 5 " + // Chỉ tính đơn HOÀN THÀNH
+            "WHERE hd.ngayTao BETWEEN :start AND :end AND hd.trangThai = 4 " + // Chỉ tính đơn HOÀN THÀNH
             "GROUP BY sp.hinhAnh.urlAnh1, sp.ten, hdct.donGia " +
             "ORDER BY SUM(hdct.soLuong) DESC")
     Page<SanPhamBanChayDto> findBestSellingProducts(
@@ -41,10 +41,6 @@ public interface HoaDonChiTietRepository extends JpaRepository<HoaDonChiTiet, UU
             @Param("end") LocalDate end,
             Pageable pageable
     );
-
-    List<HoaDonChiTiet> findByHoaDonId(UUID idHoaDon);
-
-    void deleteByHoaDonIdAndChiTietSanPhamId(UUID idHoaDon, UUID idChiTietSanPham);
 
     @Query("SELECT COALESCE(SUM(hdct.thanhTien), 0) FROM HoaDonChiTiet hdct " +
             "WHERE hdct.hoaDon.id = :idHoaDon AND hdct.trangThai <> 0")
@@ -61,5 +57,11 @@ public interface HoaDonChiTietRepository extends JpaRepository<HoaDonChiTiet, UU
 
     // 2. Tìm danh sách các sản phẩm cùng ID (để check xem có giá cũ không)
     List<HoaDonChiTiet> findByHoaDonIdAndChiTietSanPhamId(UUID idHoaDon, UUID idChiTietSanPham);
+
+    List<HoaDonChiTiet> findByHoaDonId(UUID idHoaDon);
+
+    List<HoaDonChiTiet> findAllByHoaDon_Id(UUID hoaDonId);
+
+    void deleteByHoaDonIdAndChiTietSanPhamId(UUID idHoaDon, UUID idChiTietSanPham);
 
 }

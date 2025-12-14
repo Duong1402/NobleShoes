@@ -281,7 +281,6 @@ export function useDiaChiKhachHang(provincesData) {
   };
 
   return {
-    // state
     newAddresses,
     currentAddressIndex,
     isAddingNewAddress,
@@ -292,14 +291,12 @@ export function useDiaChiKhachHang(provincesData) {
     loadDiaChiForKhachHang,
     getDisplayAddress,
 
-    // computed
     currentProvince,
     currentDistrict,
     currentWard,
     districts,
     wards,
 
-    // actions
     openAddressForm,
     closeAddressForm,
     saveAddressToDraft,
@@ -308,7 +305,6 @@ export function useDiaChiKhachHang(provincesData) {
     nextAddress,
     prevAddress,
 
-    // internal utils (nếu muốn dùng bên ngoài)
     resetAddressForm,
     syncAddressToForm,
   };

@@ -1,18 +1,23 @@
-// src/service/KhachHangService.js
-import axios from "axios";
+import instance from "./axios";
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/admin",
-  withCredentials: false,
-});
+const API_BASE_URL = "/admin/khach-hang";
 
-const RESOURCE = "/khach-hang";
+export const getAllKhachHang = (params) =>
+  instance.get(API_BASE_URL, { params });
+export const getKhachHangById = (id) => instance.get(`${API_BASE_URL}/${id}`);
+export const createKhachHang = (data) => instance.post(API_BASE_URL, data);
+export const updateKhachHang = (id, data) =>
+  instance.put(`${API_BASE_URL}/${id}`, data);
+export const deleteKhachHang = (id) => instance.delete(`${API_BASE_URL}/${id}`);
 
-export const getAllKhachHang = (params) => api.get(RESOURCE, { params });
-export const getKhachHangById = (id) => api.get(`${RESOURCE}/${id}`);
-export const createKhachHang = (data) => api.post(RESOURCE, data);
-export const updateKhachHang = (id, data) => api.put(`${RESOURCE}/${id}`, data);
-export const deleteKhachHang = (id) => api.delete(`${RESOURCE}/${id}`);
+export const uploadImage = (formData) =>
+  instance.post("/admin/upload", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+export const sendChatMessage = (data) => instance.post(API_CHAT_URL, data);
 
 export default {
   getAllKhachHang,
@@ -20,4 +25,6 @@ export default {
   createKhachHang,
   updateKhachHang,
   deleteKhachHang,
+  uploadImage,
+  sendChatMessage
 };

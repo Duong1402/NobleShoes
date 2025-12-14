@@ -1,10 +1,16 @@
 package com.example.datn.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDate;
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -15,7 +21,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-public class NhanVien {
+public class NhanVien implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -70,7 +76,7 @@ public class NhanVien {
     @Column(name = "trang_thai")
     private Byte trangThai = 1;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_chuc_vu")
     private ChucVu chucVu;
 
@@ -83,5 +89,54 @@ public class NhanVien {
     @PreUpdate
     protected void onUpdate() {
         this.ngaySua = LocalDate.now();
+    }
+
+    @Override
+    @JsonIgnore
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        if (this.chucVu == null || this.chucVu.getTen() == null) {
+            return List.of(); // Không có quyền
+        }
+        String roleName = this.chucVu.getTen().toUpperCase();
+
+        if (!roleName.startsWith("ROLE_")) {
+            roleName = "ROLE_" + roleName;
+        }
+
+        return List.of(new SimpleGrantedAuthority(roleName));
+    }
+
+    @Override
+    public String getPassword() {
+        // Trả về trường mật khẩu
+        return this.matKhau;
+    }
+
+    @Override
+    public String getUsername() {
+        // Trả về trường tên đăng nhập
+        return this.taiKhoan;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true; // Tài khoản không bao giờ hết hạn
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true; // Tài khoản không bao giờ bị khóa
+        // Hoặc bạn có thể dùng: return this.trangThai != null && this.trangThai == 1;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true; // Mật khẩu không bao giờ hết hạn
+    }
+
+    @Override
+    public boolean isEnabled() {
+        // Tài khoản có được kích hoạt hay không
+        return this.trangThai != null && this.trangThai == 1;
     }
 }

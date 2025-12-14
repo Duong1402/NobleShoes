@@ -40,7 +40,7 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
 
 
     @Query("SELECT COUNT(ct) FROM ChiTietSanPham ct WHERE ct.sanPham.id = :sanPhamId")
-    int countBySanPhamId(UUID sanPhamId);
+    int countBySanPhamId(@Param("sanPhamId") UUID sanPhamId);
 
     @Query(value = "SELECT TOP 1 ma FROM chi_tiet_san_pham WHERE ma LIKE 'CTSP%' ORDER BY CAST(SUBSTRING(ma, 5, 10) AS int) DESC", nativeQuery = true)
     String findMaxMaCTSP();

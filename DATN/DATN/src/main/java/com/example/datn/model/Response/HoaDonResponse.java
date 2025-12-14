@@ -8,6 +8,8 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -15,103 +17,114 @@ import java.util.stream.Collectors;
 @Getter
 @Setter
 public class HoaDonResponse {
+
     private UUID id;
     private String ma;
+    private String loaiHoaDon;   // Online / Tại quầy / ...
+    private String tenSanPham;   // mô tả ngắn “Giày X x2,...” (nếu có)
     private String tenKhachHang;
+    private String emailKhachHang;
     private String sdt;
     private String tenNhanVien;
-    private LocalDate ngayTao;
-    private BigDecimal tongTien;
-    private String loaiHoaDon;
-    private Integer trangThai;
     private String diaChiGiaoHang;
-
+    private BigDecimal phiVanChuyen;
+    private BigDecimal tongTien;
+    private BigDecimal tongTienSauGiam;
+    private Integer trangThai;
+    private LocalDate ngayTao;
+    private String ghiChu;
     private List<LichSuHoaDon> lichSuHoaDon;
 
     public HoaDonResponse(HoaDon hd) {
+        if (hd == null) return;
+
         this.id = hd.getId();
         this.ma = hd.getMa();
+        this.tenSanPham = hd.getTenSanPham();
 
-        if (hd.getTenKhachHang() != null && !hd.getTenKhachHang().isEmpty()) {
-            this.tenKhachHang = hd.getTenKhachHang();
-        } else if (hd.getKhachHang() != null) {
+        // ===== KHÁCH HÀNG =====
+        String tenHD = hd.getTenKhachHang();
+        if (tenHD != null && !tenHD.trim().isEmpty()) {
+            this.tenKhachHang = tenHD;
+        } else if (hd.getKhachHang() != null && hd.getKhachHang().getHoTen() != null) {
             this.tenKhachHang = hd.getKhachHang().getHoTen();
         } else {
             this.tenKhachHang = "Khách lẻ";
         }
 
-        this.sdt = hd.getSdt();
-        this.tenNhanVien = (hd.getNhanVien() != null) ? hd.getNhanVien().getMa() : "N/A";
-        this.ngayTao = hd.getNgayTao();
+        this.emailKhachHang = hd.getEmailKhachHang();
+        if (hd.getSdt() != null && !hd.getSdt().trim().isEmpty()) {
+            this.sdt = hd.getSdt();
+        } else if (hd.getKhachHang() != null) {
+            this.sdt = hd.getKhachHang().getSdt();
+        } else {
+            this.sdt = null; // Hoặc "" tùy bạn
+        }
+
+        // ===== NHÂN VIÊN =====
+        if (hd.getNhanVien() != null) {
+            this.tenNhanVien = hd.getNhanVien().getHoTen();
+        } else {
+            this.tenNhanVien = "Chờ xử lý";
+        }
+
+        // ===== TÀI CHÍNH =====
+        this.phiVanChuyen = hd.getPhiVanChuyen();
         this.tongTien = hd.getTongTien();
+        this.tongTienSauGiam = hd.getTongTienSauGiam();
         this.trangThai = hd.getTrangThai();
+        this.ngayTao = hd.getNgayTao();
+        this.ghiChu = hd.getGhiChu();
 
-        String diaChiHienTai = hd.getDiaChiGiaoHang();
-
-        if (diaChiHienTai != null && !diaChiHienTai.trim().isEmpty()) {
-            // CASE 1: Đã có địa chỉ trong hóa đơn -> Dùng luôn
-            this.diaChiGiaoHang = diaChiHienTai;
-            this.loaiHoaDon = "Online";
-        }
-        else {
-            // CASE 2: Hóa đơn chưa có địa chỉ -> Thử tìm trong sổ địa chỉ Khách Hàng
-            // Phải check kỹ hd.getKhachHang() để tránh lỗi NullPointer
-            if (hd.getKhachHang() != null) {
-
-                // ⚠️ Lưu ý: Kiểm tra tên hàm getDanhSachDiaChi() hay getListDiaChi() bên Entity nhé
-                List<DiaChi> listDC = hd.getKhachHang().getDanhSachDiaChi();
-
-                if (listDC == null) {
-                    System.out.println("DEBUG LIST ĐỊA CHỈ: NULL");
-                } else {
-                    System.out.println("DEBUG LIST ĐỊA CHỈ SIZE: " + listDC.size());
-                }
-
-                if (listDC != null && !listDC.isEmpty()) {
-                    // Lấy cái đầu tiên
-                    DiaChi dc = listDC.get(0);
-
-                    System.out.println("--- CHI TIẾT ĐỊA CHỈ ĐẦU TIÊN ---");
-                    System.out.println("ID: " + dc.getId());
-                    System.out.println("Cụ thể: " + dc.getDiaChiCuThe());
-                    System.out.println("Xã: " + dc.getXa());
-                    System.out.println("Huyện: " + dc.getHuyen());
-                    System.out.println("TP: " + dc.getThanhPho());
-
-                    // Ghép chuỗi
-                    String diaChiGhep = "";
-                    if (dc.getDiaChiCuThe() != null) diaChiGhep += dc.getDiaChiCuThe();
-                    if (dc.getXa() != null) diaChiGhep += ", " + dc.getXa();
-                    if (dc.getHuyen() != null) diaChiGhep += ", " + dc.getHuyen();
-                    if (dc.getThanhPho() != null) diaChiGhep += ", " + dc.getThanhPho();
-
-                    // Xử lý dấu phẩy thừa
-                    if (diaChiGhep.startsWith(", ")) diaChiGhep = diaChiGhep.substring(2);
-
-                    this.diaChiGiaoHang = diaChiGhep;
-                    this.loaiHoaDon = "Online"; // Có địa chỉ gợi ý -> Hiện form
-                } else {
-                    // Khách hàng có tài khoản nhưng chưa lưu địa chỉ nào
-                    this.diaChiGiaoHang = "";
-                    this.loaiHoaDon = (hd.getLoaiHoaDon() != null) ? hd.getLoaiHoaDon() : "Tại quầy";
-                }
-            } else {
-                // CASE 3: Khách lẻ (null) -> Không có địa chỉ
-                this.diaChiGiaoHang = "";
-                this.loaiHoaDon = (hd.getLoaiHoaDon() != null) ? hd.getLoaiHoaDon() : "Tại quầy";
-            }
+        // ===== ĐỊA CHỈ + LOẠI HÓA ĐƠN =====
+        String diaChiHD = hd.getDiaChiGiaoHang();
+        if (diaChiHD != null && !diaChiHD.trim().isEmpty()) {
+            // đã có địa chỉ trong hóa đơn
+            this.diaChiGiaoHang = diaChiHD;
+        } else {
+            // fallback: lấy từ sổ địa chỉ khách hàng (nếu có)
+            this.diaChiGiaoHang = buildDiaChiFromKhachHang(hd);
         }
 
-        // Lịch sử
+        // loaiHoaDon: ưu tiên giá trị thực trong DB, nếu null thì suy ra
+        if (hd.getLoaiHoaDon() != null && !hd.getLoaiHoaDon().trim().isEmpty()) {
+            this.loaiHoaDon = hd.getLoaiHoaDon();
+        } else {
+            // có địa chỉ => Online, không có => Tại quầy
+            this.loaiHoaDon = (this.diaChiGiaoHang != null && !this.diaChiGiaoHang.trim().isEmpty())
+                    ? "Online"
+                    : "Tại quầy";
+        }
+
+        // ===== LỊCH SỬ =====
         if (hd.getLichSuHoaDons() != null) {
-            this.lichSuHoaDon = hd.getLichSuHoaDons()
-                    .stream()
-                    .sorted((a, b) -> {
-                        if (a.getThoiGian() == null) return -1;
-                        if (b.getThoiGian() == null) return 1;
-                        return a.getThoiGian().compareTo(b.getThoiGian());
-                    })
+            this.lichSuHoaDon = hd.getLichSuHoaDons().stream()
+                    .sorted(Comparator.comparing(LichSuHoaDon::getThoiGian).reversed()) // .reversed() để mới nhất lên đầu
                     .collect(Collectors.toList());
+        } else {
+            this.lichSuHoaDon = Collections.emptyList();
         }
     }
+
+    private String buildDiaChiFromKhachHang(HoaDon hd) {
+        if (hd.getKhachHang() == null) return "";
+        List<DiaChi> list = hd.getKhachHang().getDanhSachDiaChi();
+        if (list == null || list.isEmpty()) return "";
+
+        DiaChi dc = list.get(0);
+
+        StringBuilder sb = new StringBuilder();
+        if (dc.getDiaChiCuThe() != null && !dc.getDiaChiCuThe().isBlank()) sb.append(dc.getDiaChiCuThe());
+        if (dc.getXa() != null && !dc.getXa().isBlank()) appendComma(sb).append(dc.getXa());
+        if (dc.getHuyen() != null && !dc.getHuyen().isBlank()) appendComma(sb).append(dc.getHuyen());
+        if (dc.getThanhPho() != null && !dc.getThanhPho().isBlank()) appendComma(sb).append(dc.getThanhPho());
+
+        return sb.toString();
+    }
+
+    private StringBuilder appendComma(StringBuilder sb) {
+        if (sb.length() > 0) sb.append(", ");
+        return sb;
+    }
+
 }

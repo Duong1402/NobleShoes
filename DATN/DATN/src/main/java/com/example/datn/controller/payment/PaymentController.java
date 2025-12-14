@@ -3,11 +3,11 @@ package com.example.datn.controller.payment;
 import com.example.datn.config.VnpayHashUtils;
 import com.example.datn.dto.PaymentRequest;
 import com.example.datn.service.payment.PaymentService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
 import java.io.UnsupportedEncodingException;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -21,8 +21,8 @@ public class PaymentController {
     private PaymentService paymentService;
 
     @PostMapping("/create-payment")
-    public ResponseEntity<?> createPayment(
-            @RequestBody PaymentRequest paymentRequest) throws UnsupportedEncodingException {
+    public ResponseEntity<?> createPayment(@RequestBody PaymentRequest paymentRequest)
+            throws UnsupportedEncodingException {
 
         String paymentUrl = paymentService.createPaymentUrl(paymentRequest);
 
@@ -48,7 +48,6 @@ public class PaymentController {
             }
         } else {
             String txnRef = fields.getOrDefault("vnp_TxnRef", "unknown");
-
             return "redirect:http://localhost:5173/order/status?vnp_TxnRef=" + txnRef + "&status=invalid_signature";
         }
     }

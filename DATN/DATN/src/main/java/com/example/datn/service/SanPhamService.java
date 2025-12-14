@@ -107,15 +107,6 @@ public class SanPhamService {
         return saved;
     }
 
-//    public List<SanPham> getAll() {
-//        return sanPhamRepository.findAll();
-//    }
-
-//    public SanPham update(UUID id, SanPham sp) {
-//        sp.setId(id);
-//        return sanPhamRepository.save(sp);
-//    }
-
     public SanPham createSanPham(SanPham sp) {
         if (sp.getHinhAnh() == null) {
             HinhAnh hinhAnh = new HinhAnh();
@@ -156,6 +147,4 @@ public class SanPhamService {
         sp.setTrangThai(newValue);
         sanPhamRepository.save(sp);
     }
-
-
 }

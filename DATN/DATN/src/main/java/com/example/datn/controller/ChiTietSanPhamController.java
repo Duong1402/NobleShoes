@@ -15,36 +15,36 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/admin/chi-tiet-san-pham")
 @RequiredArgsConstructor
+@CrossOrigin(originPatterns = "http://localhost:*")
+@RequestMapping
 public class ChiTietSanPhamController {
 
     private final ChiTietSanPhamService chiTietSanPhamService;
 
-    // 1️⃣ Lấy tất cả chi tiết sản phẩm
-    @GetMapping
+    @GetMapping("/api/public/chi-tiet-san-pham/san-pham/{sanPhamId}")
+    public ResponseEntity<List<ChiTietSanPhamDTO>> getChiTietSanPhamBySanPhamIdPublic(
+            @PathVariable UUID sanPhamId
+    ) {
+        List<ChiTietSanPhamDTO> list = chiTietSanPhamService.getChiTietSanPhamBySanPhamId(sanPhamId);
+        return ResponseEntity.ok(list);
+    }
+
+    @GetMapping("/admin/chi-tiet-san-pham")
     public ResponseEntity<List<ChiTietSanPhamResponse>> getAllChiTietSanPham() {
         List<ChiTietSanPhamResponse> list = chiTietSanPhamService.getAll();
         return ResponseEntity.ok(list);
     }
 
-
-    // 2️⃣ Lấy chi tiết sản phẩm theo ID chi tiết
-//    @GetMapping("/{id}")
-//    public ResponseEntity<ChiTietSanPham> getChiTietSanPhamById(@PathVariable UUID id) {
-//        ChiTietSanPham ct = chiTietSanPhamService.getChiTietSanPhamById(id);
-//        return ResponseEntity.ok(ct);
-//    }
-
-    // 3️⃣ Lấy chi tiết sản phẩm theo ID sản phẩm
-    @GetMapping("/san-pham/{sanPhamId}")
-    public ResponseEntity<List<ChiTietSanPhamDTO>> getChiTietSanPhamBySanPhamId(@PathVariable UUID sanPhamId) {
+    @GetMapping("/admin/chi-tiet-san-pham/san-pham/{sanPhamId}")
+    public ResponseEntity<List<ChiTietSanPhamDTO>> getChiTietSanPhamBySanPhamIdAdmin(
+            @PathVariable UUID sanPhamId
+    ) {
         List<ChiTietSanPhamDTO> list = chiTietSanPhamService.getChiTietSanPhamBySanPhamId(sanPhamId);
         return ResponseEntity.ok(list);
     }
 
-
-    @PutMapping("/{id}")
+    @PutMapping("/admin/chi-tiet-san-pham/{id}")
     public ResponseEntity<?> updateChiTietSanPham(
             @PathVariable UUID id,
             @RequestBody ChiTietSanPhamUpdateDTO dto
@@ -53,13 +53,12 @@ public class ChiTietSanPhamController {
             ChiTietSanPham updated = chiTietSanPhamService.updateChiTietSanPham(id, dto);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
-            e.printStackTrace(); // log chi tiết lỗi ra console
+            e.printStackTrace();
             return ResponseEntity.status(500).body(e.getMessage());
         }
     }
 
-    // ✅ Inline update endpoint
-    @PutMapping("/inline/{ctspId}")
+    @PutMapping("/admin/chi-tiet-san-pham/inline/{ctspId}")
     public ResponseEntity<?> updateInline(
             @PathVariable UUID ctspId,
             @RequestBody Map<String, Object> payload
@@ -68,6 +67,7 @@ public class ChiTietSanPhamController {
             BigDecimal giaBan = payload.get("giaBan") != null
                     ? new BigDecimal(payload.get("giaBan").toString())
                     : null;
+
             Integer soLuongTon = payload.get("soLuongTon") != null
                     ? Integer.parseInt(payload.get("soLuongTon").toString())
                     : null;

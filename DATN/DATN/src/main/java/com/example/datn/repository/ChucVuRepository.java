@@ -12,4 +12,6 @@ public interface ChucVuRepository extends JpaRepository<ChucVu, UUID> {
     boolean existsByMa(String ma);
 
     Optional<ChucVu> findTopByOrderByMaDesc();
+
+    Optional<ChucVu> findByMa(String customer);
 }

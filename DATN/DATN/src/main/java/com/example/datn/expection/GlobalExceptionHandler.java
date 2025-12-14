@@ -25,7 +25,7 @@ public class GlobalExceptionHandler {
         response.put("code", "VALIDATION_ERROR");
         response.put("errors", errors);
 
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
     // Bắt lỗi do bạn tự throw new ApiException
@@ -36,22 +36,37 @@ public class GlobalExceptionHandler {
         response.put("code", ex.getCode());
         response.put("message", ex.getMessage());
 
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        return ResponseEntity.status(ex.getStatus()).body(response);
     }
 
     // Bắt tất cả lỗi còn lại
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleAll(Exception ex) {
+        ex.printStackTrace();
+
         Map<String, Object> response = new HashMap<>();
         response.put("status", "FAILED");
         response.put("code", "INTERNAL_ERROR");
         response.put("message", ex.getMessage());
 
-        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
+
+        // ✅ Java 15 compatible: KHÔNG dùng "instanceof ApiException api"
+        if (ex instanceof ApiException) {
+            ApiException api = (ApiException) ex;
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "FAILED");
+            response.put("code", api.getCode());
+            response.put("message", api.getMessage());
+
+            return ResponseEntity.status(api.getStatus()).body(response);
+        }
+
         Map<String, Object> error = new HashMap<>();
         error.put("timestamp", LocalDateTime.now());
         error.put("status", HttpStatus.BAD_REQUEST.value());

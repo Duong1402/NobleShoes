@@ -18,22 +18,17 @@ public class CustomUserDetailService {
     private KhachHangRepository khachHangRepository;
 
     public UserDetails loadUserByTaiKhoan(String taiKhoan, String matKhau) throws UsernameNotFoundException{
-        NhanVien nv = nhanVienRepository.findNhanVienByTaiKhoanAndMatKhau(taiKhoan, matKhau).orElse(null);
-        if (nv!= null){
-            return User.withUsername(nv.getTaiKhoan())
-                    .password(nv.getMatKhau())
-                    .roles("EMPLOYER")
-                    .build();
+
+        NhanVien nv = nhanVienRepository.findByTaiKhoan(taiKhoan).orElse(null);
+        if (nv != null) {
+            return nv;
         }
 
-        KhachHang kh = khachHangRepository.findByTaiKhoanAndMatKhau(taiKhoan, matKhau).orElse(null);
-        if (kh != null){
-            return User.withUsername(nv.getTaiKhoan())
-                    .password(nv.getMatKhau())
-                    .roles("GUEST")
-                    .build();
-        }
-        throw new UsernameNotFoundException("Không tìm thấy tài khoản");
+
+        KhachHang kh = khachHangRepository.findByTaiKhoan(taiKhoan)
+                .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy tài khoản: " + taiKhoan));
+
+        return kh;
     }
 
 }

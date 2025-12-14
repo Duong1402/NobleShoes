@@ -14,7 +14,7 @@ import {
   getAllMucDichSuDung,
   getAllMauSac,
   getAllKichThuoc,
-  getAllChatLieu
+  getAllChatLieu,
 } from "@/service/ComboBoxService";
 import { uploadImageToCloudinary } from "@/service/UploadService";
 import QRCode from "qrcode";
@@ -51,7 +51,9 @@ const resetFilters = () => {
 // Phân trang
 const currentPage = ref(1);
 const pageSize = ref(10);
-const totalPages = computed(() => Math.ceil(filteredChiTietSP.value.length / pageSize.value));
+const totalPages = computed(() =>
+  Math.ceil(filteredChiTietSP.value.length / pageSize.value)
+);
 const goToPage = (page) => {
   if (totalPages.value === 0) currentPage.value = 1;
   else if (page < 1) currentPage.value = 1;
@@ -74,17 +76,21 @@ const previewImage = ref(null);
 
 // Filtered & paged
 const filteredChiTietSP = computed(() =>
-  chiTietSP.value.filter(ct => {
+  chiTietSP.value.filter((ct) => {
     const matchKeyword =
       !filterKeyword.value ||
       ct.tenSP.toLowerCase().includes(filterKeyword.value.toLowerCase()) ||
       ct.maSP.toLowerCase().includes(filterKeyword.value.toLowerCase());
-    const matchDanhMuc = !filterDanhMuc.value || ct.danhMucId === filterDanhMuc.value;
-    const matchThuongHieu = !filterThuongHieu.value || ct.thuongHieuId === filterThuongHieu.value;
-    const matchChatLieu = !filterChatLieu.value || ct.chatLieuId === filterChatLieu.value;
+    const matchDanhMuc =
+      !filterDanhMuc.value || ct.danhMucId === filterDanhMuc.value;
+    const matchThuongHieu =
+      !filterThuongHieu.value || ct.thuongHieuId === filterThuongHieu.value;
+    const matchChatLieu =
+      !filterChatLieu.value || ct.chatLieuId === filterChatLieu.value;
     const matchMau = !filterMau.value || ct.mauSacId === filterMau.value;
     const matchSize = !filterSize.value || ct.kichThuocId === filterSize.value;
-    const matchMucDich = !filterMucDich.value || ct.mucDichSuDungId === filterMucDich.value;
+    const matchMucDich =
+      !filterMucDich.value || ct.mucDichSuDungId === filterMucDich.value;
     const matchTrangThai =
       !filterTrangThai.value || ct.trangThai === filterTrangThai.value;
     const matchGia =
@@ -111,7 +117,9 @@ const pagedChiTietSP = computed(() => {
 });
 
 // Watch filters để reset trang
-watch([filterMau, filterSize], () => { currentPage.value = 1; });
+watch([filterMau, filterSize], () => {
+  currentPage.value = 1;
+});
 
 // Load combo box
 const loadComboBox = async () => {
@@ -134,16 +142,24 @@ const loadChiTietSP = async () => {
   try {
     const res = await getChiTietSanPhamBySanPhamId(sanPhamId);
     const data = Array.isArray(res) ? res : res.data || [];
-    chiTietSP.value = data.map(ct => ({
+    chiTietSP.value = data.map((ct) => ({
       ...ct,
       soLuongTon: ct.soLuongTon || 0,
-      danhMucId: danhMucList.value.find(d => d.ten === ct.tenDanhMuc)?.id || null,
-      thuongHieuId: thuongHieuList.value.find(t => t.ten === ct.tenThuongHieu)?.id || null,
-      xuatXuId: xuatXuList.value.find(x => x.ten === ct.tenXuatXu)?.id || null,
-      mucDichSuDungId: mucDichSuDungList.value.find(m => m.ten === ct.mucDichSuDung)?.id || null,
-      mauSacId: mauSacList.value.find(m => m.ten === ct.mauSac)?.id || null,
-      kichThuocId: kichThuocList.value.find(k => k.ten === ct.kichThuoc)?.id || null,
-      chatLieuId: chatLieuList.value.find(c => c.ten === ct.chatLieu)?.id || null
+      danhMucId:
+        danhMucList.value.find((d) => d.ten === ct.tenDanhMuc)?.id || null,
+      thuongHieuId:
+        thuongHieuList.value.find((t) => t.ten === ct.tenThuongHieu)?.id ||
+        null,
+      xuatXuId:
+        xuatXuList.value.find((x) => x.ten === ct.tenXuatXu)?.id || null,
+      mucDichSuDungId:
+        mucDichSuDungList.value.find((m) => m.ten === ct.mucDichSuDung)?.id ||
+        null,
+      mauSacId: mauSacList.value.find((m) => m.ten === ct.mauSac)?.id || null,
+      kichThuocId:
+        kichThuocList.value.find((k) => k.ten === ct.kichThuoc)?.id || null,
+      chatLieuId:
+        chatLieuList.value.find((c) => c.ten === ct.chatLieu)?.id || null,
     }));
   } catch (err) {
     console.error(err);
@@ -190,11 +206,14 @@ const saveInline = async () => {
     kichThuocId: editingCTSP.value.kichThuocId,
     chatLieuId: editingCTSP.value.chatLieuId,
     hinhAnhUrl: editingCTSP.value.hinhAnhUrl || null,
-    soLuongTon: editingCTSP.value.soLuongTon
+    soLuongTon: editingCTSP.value.soLuongTon,
   };
 
   try {
-    await axios.put(`/admin/chi-tiet-san-pham/${editingCTSP.value.id}`, payload);
+    await axios.put(
+      `/admin/chi-tiet-san-pham/${editingCTSP.value.id}`,
+      payload
+    );
     notify.success("Cập nhật thành công!");
     editingCTSP.value = null;
     await loadChiTietSP();
@@ -231,7 +250,9 @@ onMounted(async () => {
   <div class="container-fluid mt-4 px-1">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
-        <div class="page-header d-flex align-items-center justify-content-between">
+        <div
+          class="page-header d-flex align-items-center justify-content-between"
+        >
           <div>
             <h3 class="fw-bold text-warning mb-1">Quản lý chi tiết sản phẩm</h3>
             <Breadcrumb class="mt-2 mb-0" />
@@ -245,57 +266,114 @@ onMounted(async () => {
       <div class="card-body">
         <div class="row g-2 align-items-end">
           <div class="col-md-3">
-            <label class="form-label text-muted small mb-1">Mã hoặc tên sản phẩm</label>
-            <input v-model="filterKeyword" type="text" class="form-control" placeholder="Nhập mã hoặc tên sản phẩm..." />
+            <label class="form-label text-muted small mb-1"
+              >Mã hoặc tên sản phẩm</label
+            >
+            <input
+              v-model="filterKeyword"
+              type="text"
+              class="form-control"
+              placeholder="Nhập mã hoặc tên sản phẩm..."
+            />
           </div>
           <div class="col-md-2">
             <label class="form-label text-muted small mb-1">Danh mục</label>
             <select class="form-select" v-model="filterDanhMuc">
               <option value="">Tất cả</option>
-              <option v-for="item in danhMucList" :key="item.id" :value="item.id">{{ item.ten }}</option>
+              <option
+                v-for="item in danhMucList"
+                :key="item.id"
+                :value="item.id"
+              >
+                {{ item.ten }}
+              </option>
             </select>
           </div>
           <div class="col-md-2">
             <label class="form-label text-muted small mb-1">Thương hiệu</label>
             <select class="form-select" v-model="filterThuongHieu">
               <option value="">Tất cả</option>
-              <option v-for="item in thuongHieuList" :key="item.id" :value="item.id">{{ item.ten }}</option>
+              <option
+                v-for="item in thuongHieuList"
+                :key="item.id"
+                :value="item.id"
+              >
+                {{ item.ten }}
+              </option>
             </select>
           </div>
           <div class="col-md-2">
             <label class="form-label text-muted small mb-1">Màu sắc</label>
             <select class="form-select" v-model="filterMau">
               <option value="">Tất cả</option>
-              <option v-for="item in mauSacList" :key="item.id" :value="item.id">{{ item.ten }}</option>
+              <option
+                v-for="item in mauSacList"
+                :key="item.id"
+                :value="item.id"
+              >
+                {{ item.ten }}
+              </option>
             </select>
           </div>
           <div class="col-md-2">
             <label class="form-label text-muted small mb-1">Chất liệu</label>
             <select class="form-select" v-model="filterChatLieu">
               <option value="">Tất cả</option>
-              <option v-for="item in chatLieuList" :key="item.id" :value="item.id">{{ item.ten }}</option>
+              <option
+                v-for="item in chatLieuList"
+                :key="item.id"
+                :value="item.id"
+              >
+                {{ item.ten }}
+              </option>
             </select>
           </div>
           <div class="col-md-2">
             <label class="form-label text-muted small mb-1">Kích cỡ</label>
             <select class="form-select" v-model="filterSize">
               <option value="">Tất cả</option>
-              <option v-for="item in kichThuocList" :key="item.id" :value="item.id">{{ item.ten }}</option>
+              <option
+                v-for="item in kichThuocList"
+                :key="item.id"
+                :value="item.id"
+              >
+                {{ item.ten }}
+              </option>
             </select>
           </div>
           <div class="col-md-2">
-            <label class="form-label text-muted small mb-1">Mục đích sử dụng</label>
+            <label class="form-label text-muted small mb-1"
+              >Mục đích sử dụng</label
+            >
             <select class="form-select" v-model="filterMucDich">
               <option value="">Tất cả</option>
-              <option v-for="item in mucDichSuDungList" :key="item.id" :value="item.id">{{ item.ten }}</option>
+              <option
+                v-for="item in mucDichSuDungList"
+                :key="item.id"
+                :value="item.id"
+              >
+                {{ item.ten }}
+              </option>
             </select>
           </div>
           <div class="col-md-3">
-            <label class="form-label text-muted small mb-1">Khoảng giá (VND)</label>
+            <label class="form-label text-muted small mb-1"
+              >Khoảng giá (VND)</label
+            >
             <div class="d-flex align-items-center gap-2">
-              <input type="number" v-model.number="filterMinPrice" class="form-control" placeholder="Từ" />
+              <input
+                type="number"
+                v-model.number="filterMinPrice"
+                class="form-control"
+                placeholder="Từ"
+              />
               <span>-</span>
-              <input type="number" v-model.number="filterMaxPrice" class="form-control" placeholder="Đến" />
+              <input
+                type="number"
+                v-model.number="filterMaxPrice"
+                class="form-control"
+                placeholder="Đến"
+              />
             </div>
           </div>
           <div class="col-md-2">
@@ -303,116 +381,165 @@ onMounted(async () => {
               <i class="fa fa-undo me-1"></i>Đặt lại
             </button>
           </div>
+          <div class="col-md-2">
+            <router-link to="/admin/san-pham" class="btn btn-secondary w-100">
+              <i class="fa fa-arrow-left me-1"></i>Quay lại
+            </router-link>
+          </div>
         </div>
       </div>
     </div>
 
-<!-- Inline edit form -->
-<div v-if="editingCTSP" class="card mb-3 shadow-sm border-0 p-3">
-  <h5 class="text-warning">Chỉnh sửa sản phẩm: {{ editingCTSP.tenSP }}</h5>
-  <div class="row g-3">
-    <div class="col-md-2 text-center">
-      <img
-        :src="previewImage || editingCTSP.hinhAnhUrl || 'https://via.placeholder.com/150'"
-        class="img-fluid rounded mb-2"
-        style="max-height: 150px; object-fit: cover; border: 1px solid #ddd;"
-      />
-      <label for="image-upload-inline" class="btn btn-sm btn-outline-secondary w-100 mb-2">
-        Chọn tệp
-      </label>
-      <input
-        type="file"
-        id="image-upload-inline"
-        @change="onImageChangeInline"
-        class="d-none"
-      />
-      <small class="text-muted d-block overflow-hidden text-truncate">
-        {{ previewImage ? 'Đã chọn tệp' : 'Không có tệp nào được chọn' }}
-      </small>
-    </div>
+    <!-- Inline edit form -->
+    <div v-if="editingCTSP" class="card mb-3 shadow-sm border-0 p-3">
+      <h5 class="text-warning">Chỉnh sửa sản phẩm: {{ editingCTSP.tenSP }}</h5>
+      <div class="row g-3">
+        <div class="col-md-2 text-center">
+          <img
+            :src="
+              previewImage ||
+              editingCTSP.hinhAnhUrl ||
+              'https://via.placeholder.com/150'
+            "
+            class="img-fluid rounded mb-2"
+            style="max-height: 150px; object-fit: cover; border: 1px solid #ddd"
+          />
+          <label
+            for="image-upload-inline"
+            class="btn btn-sm btn-outline-secondary w-100 mb-2"
+          >
+            Chọn tệp
+          </label>
+          <input
+            type="file"
+            id="image-upload-inline"
+            @change="onImageChangeInline"
+            class="d-none"
+          />
+          <small class="text-muted d-block overflow-hidden text-truncate">
+            {{ previewImage ? "Đã chọn tệp" : "Không có tệp nào được chọn" }}
+          </small>
+        </div>
 
-    <div class="col-md-10">
-      <div class="row g-2">
-        <div class="col-md-3">
-          <label class="form-label">Tên SP</label>
-          <input class="form-control" v-model="editingCTSP.tenSP" />
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Danh mục</label>
-          <select class="form-select" v-model="editingCTSP.danhMucId">
-            <option v-for="item in danhMucList" :key="item.id" :value="item.id">
-              {{ item.ten }}
-            </option>
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Thương hiệu</label>
-          <select class="form-select" v-model="editingCTSP.thuongHieuId">
-            <option v-for="item in thuongHieuList" :key="item.id" :value="item.id">
-              {{ item.ten }}
-            </option>
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Xuất xứ</label>
-          <select class="form-select" v-model="editingCTSP.xuatXuId">
-            <option v-for="item in xuatXuList" :key="item.id" :value="item.id">
-              {{ item.ten }}
-            </option>
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Mục đích</label>
-          <select class="form-select" v-model="editingCTSP.mucDichSuDungId">
-            <option v-for="item in mucDichSuDungList" :key="item.id" :value="item.id">
-              {{ item.ten }}
-            </option>
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Số lượng tồn</label>
-          <input type="number" class="form-control" v-model="editingCTSP.soLuongTon" />
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Giá bán</label>
-          <input type="number" class="form-control" v-model="editingCTSP.giaBan" />
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Màu sắc</label>
-          <select class="form-select" v-model="editingCTSP.mauSacId">
-            <option v-for="item in mauSacList" :key="item.id" :value="item.id">
-              {{ item.ten }}
-            </option>
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Kích thước</label>
-          <select class="form-select" v-model="editingCTSP.kichThuocId">
-            <option v-for="item in kichThuocList" :key="item.id" :value="item.id">
-              {{ item.ten }}
-            </option>
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Chất liệu</label>
-          <select class="form-select" v-model="editingCTSP.chatLieuId">
-            <option v-for="item in chatLieuList" :key="item.id" :value="item.id">
-              {{ item.ten }}
-            </option>
-          </select>
+        <div class="col-md-10">
+          <div class="row g-2">
+            <div class="col-md-3">
+              <label class="form-label">Tên SP</label>
+              <input class="form-control" v-model="editingCTSP.tenSP" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Danh mục</label>
+              <select class="form-select" v-model="editingCTSP.danhMucId">
+                <option
+                  v-for="item in danhMucList"
+                  :key="item.id"
+                  :value="item.id"
+                >
+                  {{ item.ten }}
+                </option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Thương hiệu</label>
+              <select class="form-select" v-model="editingCTSP.thuongHieuId">
+                <option
+                  v-for="item in thuongHieuList"
+                  :key="item.id"
+                  :value="item.id"
+                >
+                  {{ item.ten }}
+                </option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Xuất xứ</label>
+              <select class="form-select" v-model="editingCTSP.xuatXuId">
+                <option
+                  v-for="item in xuatXuList"
+                  :key="item.id"
+                  :value="item.id"
+                >
+                  {{ item.ten }}
+                </option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Mục đích</label>
+              <select class="form-select" v-model="editingCTSP.mucDichSuDungId">
+                <option
+                  v-for="item in mucDichSuDungList"
+                  :key="item.id"
+                  :value="item.id"
+                >
+                  {{ item.ten }}
+                </option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Số lượng tồn</label>
+              <input
+                type="number"
+                class="form-control"
+                v-model="editingCTSP.soLuongTon"
+              />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Giá bán</label>
+              <input
+                type="number"
+                class="form-control"
+                v-model="editingCTSP.giaBan"
+              />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Màu sắc</label>
+              <select class="form-select" v-model="editingCTSP.mauSacId">
+                <option
+                  v-for="item in mauSacList"
+                  :key="item.id"
+                  :value="item.id"
+                >
+                  {{ item.ten }}
+                </option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Kích thước</label>
+              <select class="form-select" v-model="editingCTSP.kichThuocId">
+                <option
+                  v-for="item in kichThuocList"
+                  :key="item.id"
+                  :value="item.id"
+                >
+                  {{ item.ten }}
+                </option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Chất liệu</label>
+              <select class="form-select" v-model="editingCTSP.chatLieuId">
+                <option
+                  v-for="item in chatLieuList"
+                  :key="item.id"
+                  :value="item.id"
+                >
+                  {{ item.ten }}
+                </option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
+
+      <div class="mt-3">
+        <button class="btn btn-success me-2" @click="saveInline">Lưu</button>
+        <button class="btn btn-secondary me-2" @click="editingCTSP = null">
+          Hủy
+        </button>
+        <button class="btn btn-primary" @click="downloadQR">Tải QR</button>
+      </div>
     </div>
-  </div>
 
-  <div class="mt-3">
-    <button class="btn btn-success me-2" @click="saveInline">Lưu</button>
-    <button class="btn btn-secondary me-2" @click="editingCTSP = null">Hủy</button>
-    <button class="btn btn-primary" @click="downloadQR">Tải QR</button>
-  </div>
-</div>
-
-    
     <!-- Table -->
     <div class="card">
       <div class="card-body table-responsive">
@@ -438,20 +565,39 @@ onMounted(async () => {
             <tr v-for="(ct, index) in pagedChiTietSP" :key="ct.id">
               <td>{{ (currentPage - 1) * pageSize + index + 1 }}</td>
               <td class="text-center">
-                <img :src="ct.hinhAnhUrl || 'https://via.placeholder.com/40'" alt="img" style="width:40px;height:40px;object-fit:cover;" />
+                <img
+                  :src="ct.hinhAnhUrl || 'https://via.placeholder.com/40'"
+                  alt="img"
+                  style="width: 40px; height: 40px; object-fit: cover"
+                />
               </td>
               <td>{{ ct.tenSP }}</td>
-              <td>{{ danhMucList.find(d => d.id === ct.danhMucId)?.ten }}</td>
-              <td>{{ thuongHieuList.find(t => t.id === ct.thuongHieuId)?.ten }}</td>
-              <td>{{ xuatXuList.find(x => x.id === ct.xuatXuId)?.ten }}</td>
-              <td>{{ mucDichSuDungList.find(m => m.id === ct.mucDichSuDungId)?.ten }}</td>
+              <td>{{ danhMucList.find((d) => d.id === ct.danhMucId)?.ten }}</td>
+              <td>
+                {{ thuongHieuList.find((t) => t.id === ct.thuongHieuId)?.ten }}
+              </td>
+              <td>{{ xuatXuList.find((x) => x.id === ct.xuatXuId)?.ten }}</td>
+              <td>
+                {{
+                  mucDichSuDungList.find((m) => m.id === ct.mucDichSuDungId)
+                    ?.ten
+                }}
+              </td>
               <td>{{ ct.soLuongTon }}</td>
               <td>{{ ct.giaBan }}</td>
-              <td>{{ mauSacList.find(m => m.id === ct.mauSacId)?.ten }}</td>
-              <td>{{ kichThuocList.find(k => k.id === ct.kichThuocId)?.ten }}</td>
-              <td>{{ chatLieuList.find(c => c.id === ct.chatLieuId)?.ten }}</td>
+              <td>{{ mauSacList.find((m) => m.id === ct.mauSacId)?.ten }}</td>
+              <td>
+                {{ kichThuocList.find((k) => k.id === ct.kichThuocId)?.ten }}
+              </td>
+              <td>
+                {{ chatLieuList.find((c) => c.id === ct.chatLieuId)?.ten }}
+              </td>
               <td class="text-center">
-                <button class="btn btn-link text-info btn-lg p-0" @click="startEditing(ct)" title="Sửa chi tiết">
+                <button
+                  class="btn btn-link text-info btn-lg p-0"
+                  @click="startEditing(ct)"
+                  title="Sửa chi tiết"
+                >
                   <i class="fa fa-edit"></i>
                 </button>
               </td>
@@ -465,13 +611,33 @@ onMounted(async () => {
         <nav v-if="totalPages > 1" aria-label="Page navigation">
           <ul class="pagination justify-content-end mt-3">
             <li class="page-item" :class="{ disabled: currentPage === 1 }">
-              <a class="page-link" href="#" @click.prevent="goToPage(currentPage - 1)">Trước</a>
+              <a
+                class="page-link"
+                href="#"
+                @click.prevent="goToPage(currentPage - 1)"
+                >Trước</a
+              >
             </li>
-            <li class="page-item" v-for="page in totalPages" :key="page" :class="{ active: currentPage === page }">
-              <a class="page-link" href="#" @click.prevent="goToPage(page)">{{ page }}</a>
+            <li
+              class="page-item"
+              v-for="page in totalPages"
+              :key="page"
+              :class="{ active: currentPage === page }"
+            >
+              <a class="page-link" href="#" @click.prevent="goToPage(page)">{{
+                page
+              }}</a>
             </li>
-            <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-              <a class="page-link" href="#" @click.prevent="goToPage(currentPage + 1)">Sau</a>
+            <li
+              class="page-item"
+              :class="{ disabled: currentPage === totalPages }"
+            >
+              <a
+                class="page-link"
+                href="#"
+                @click.prevent="goToPage(currentPage + 1)"
+                >Sau</a
+              >
             </li>
           </ul>
         </nav>

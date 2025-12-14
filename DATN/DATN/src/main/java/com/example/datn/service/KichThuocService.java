@@ -23,17 +23,15 @@ public class KichThuocService {
         return repo.findById(id).orElse(null);
     }
 
-    public KichThuoc create(KichThuoc kichThuoc) {
-        // ⚠️ Kiểm tra và sinh mã nếu nó đang là null (tức là request thêm mới từ FE)
-        if (kichThuoc.getMa() == null || kichThuoc.getMa().trim().isEmpty()) {
-            // Ví dụ logic tự sinh mã: KT + 6 ký tự ngẫu nhiên từ UUID
-            String newMa = "KT" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
-            kichThuoc.setMa(newMa);
+    public KichThuoc create(KichThuoc kt) {
+        if (kt.getMa() == null || kt.getMa().trim().isEmpty()) {
+            String newMa = "KT" + UUID.randomUUID().toString()
+                    .replace("-", "")
+                    .substring(0, 6)
+                    .toUpperCase();
+            kt.setMa(newMa);
         }
-
-        // Đảm bảo các validation khác vẫn được xử lý (nếu cần)
-
-        return repo.save(kichThuoc);
+        return repo.save(kt);
     }
 
     public KichThuoc update(UUID id, KichThuoc kt) {

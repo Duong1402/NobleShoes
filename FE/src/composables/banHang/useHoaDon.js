@@ -2,19 +2,16 @@ import { ref, watch } from "vue";
 import {
   taoHoaDon,
   huyHoaDon as apiHuyHoaDon,
-  apDungKhuyenMaiTuDong, // Đảm bảo đã import API này
+  apDungKhuyenMaiTuDong,
 } from "@/service/BanHangService";
 import Swal from "sweetalert2";
+import { khachLeInfo } from "./useKhachHang";
 
 export function useHoaDon(notify, idNhanVien, resetGiaoHangCallback) {
   const hoaDonChoList = ref([]);
   const selectedHoaDonId = ref(null);
   const hoaDon = ref(null);
 
-  // ID Khách lẻ mặc định (Constant)
-  const KHACH_LE_ID = "0F773ECB-16F4-4DE2-96F1-115BECAE963E";
-
-  // 1. Load danh sách hóa đơn chờ từ LocalStorage
   const savedListJson = localStorage.getItem("hoaDonChoList");
   if (savedListJson) {
     try {
@@ -25,11 +22,9 @@ export function useHoaDon(notify, idNhanVien, resetGiaoHangCallback) {
     }
   }
 
-  // 2. Load ID đang chọn từ LocalStorage
   const savedIdStr = localStorage.getItem("selectedHoaDonId");
   const savedSelectedId = ref(savedIdStr || null);
 
-  // --- HÀM CHỌN HÓA ĐƠN ---
   const selectHoaDon = (id) => {
     const found = hoaDonChoList.value.find((h) => h.id === id);
     if (found) {
@@ -42,8 +37,6 @@ export function useHoaDon(notify, idNhanVien, resetGiaoHangCallback) {
       localStorage.removeItem("selectedHoaDonId");
     }
   };
-
-  // --- HÀM TẠO HÓA ĐƠN MỚI ---
   const handleTaoHoaDon = async () => {
     if (hoaDonChoList.value.length >= 5) {
       Swal.fire("Giới hạn 5 hóa đơn chờ!", "", "warning");
@@ -51,16 +44,12 @@ export function useHoaDon(notify, idNhanVien, resetGiaoHangCallback) {
     }
 
     try {
-      const res = await taoHoaDon(idNhanVien);
+      const res = await taoHoaDon();
       const newHoaDon = {
         ...res.data,
         tongSoLuong: 0,
         sanPhamList: [],
-        khachHang: {
-          id: KHACH_LE_ID,
-          hoTen: "Khách lẻ",
-          sdt: "0000000000",
-        },
+        khachHang: res.data.khachHang || khachLeInfo.value,
       };
 
       hoaDonChoList.value.push(newHoaDon);
@@ -75,7 +64,6 @@ export function useHoaDon(notify, idNhanVien, resetGiaoHangCallback) {
     }
   };
 
-  // --- HÀM HỦY HÓA ĐƠN ---
   const handleHuyHoaDon = async (id) => {
     const confirm = await Swal.fire({
       title: "Hủy hóa đơn này?",
@@ -104,72 +92,71 @@ export function useHoaDon(notify, idNhanVien, resetGiaoHangCallback) {
     }
   };
 
-  // --- HÀM ÁP DỤNG KHUYẾN MÃI (ĐÃ SỬA) ---
-  const handleApDungKhuyenMai = async () => {
+const handleApDungKhuyenMai = async () => {
     if (!selectedHoaDonId.value) {
       return notify.warning("Chưa chọn hóa đơn!");
     }
 
-    // Kiểm tra khách lẻ
-    if (!hoaDon.value?.khachHang || hoaDon.value.khachHang.id === KHACH_LE_ID) {
+    const currentKhachHangId = hoaDon.value?.khachHang?.id;
+    if (khachLeInfo.value.id && currentKhachHangId === khachLeInfo.value.id) {
       return notify.warning(
         "Vui lòng chọn khách hàng thành viên để dùng mã giảm giá!"
       );
     }
+    
+    const khachHangSafe = { ...hoaDon.value.khachHang };
 
     try {
       const maPhieuCu = hoaDon.value.phieuGiamGia?.ma;
-
-      // Gọi API
       const res = await apDungKhuyenMaiTuDong(selectedHoaDonId.value);
 
       console.log("🔥 API Trả về:", res.data);
-      console.log("🔥 Có phiếu giảm giá không?", res.data?.phieuGiamGia);
 
-      // Xử lý kết quả trả về
-      // TH1: Backend trả về String (Ví dụ: "Không có mã phù hợp")
       if (typeof res.data === "object" && res.data.id) {
-        const updatedHoaDon = res.data;
-
-        // A. Cập nhật vào view chi tiết (Giữ lại list SP để không mất hiển thị ảnh/tên)
+        const updatedHoaDon = res.data; 
         hoaDon.value = {
-          ...hoaDon.value, // Giữ data cũ
-          ...updatedHoaDon, // Đè data mới (tongTien, tongTienSauGiam, phieuGiamGia)
-          sanPhamList: hoaDon.value.sanPhamList,
-          phieuGiamGia: updatedHoaDon.phieuGiamGia
+          ...hoaDon.value,   
+          ...updatedHoaDon,  
+          
+          khachHang: (updatedHoaDon.khachHang && updatedHoaDon.khachHang.id) 
+                     ? updatedHoaDon.khachHang 
+                     : khachHangSafe,
+                     
+          sanPhamList: hoaDon.value.sanPhamList, 
         };
 
-        // B. Cập nhật vào danh sách chờ (Sidebar)
         const index = hoaDonChoList.value.findIndex(
           (h) => h.id === updatedHoaDon.id
         );
+        
         if (index !== -1) {
+          const itemCu = hoaDonChoList.value[index];
+
           hoaDonChoList.value[index] = {
-            ...hoaDonChoList.value[index],
-            ...updatedHoaDon,
-            sanPhamList: hoaDonChoList.value[index].sanPhamList,
+            ...itemCu, 
+            tongTien: updatedHoaDon.tongTien,        
+            tongTienSauGiam: updatedHoaDon.tongTienSauGiam,
+            soTienGiamGia: updatedHoaDon.soTienGiamGia,
+            phiVanChuyen: updatedHoaDon.phiVanChuyen,
+            phieuGiamGia: updatedHoaDon.phieuGiamGia,
+
+            khachHang: updatedHoaDon.khachHang || itemCu.khachHang,
+            sanPhamList: itemCu.sanPhamList,
           };
         }
 
-        // C. 🔥 LOGIC THÔNG BÁO THÔNG MINH 🔥
         const pggMoi = updatedHoaDon.phieuGiamGia;
-
         if (pggMoi) {
-          // Nếu có phiếu mới
           if (pggMoi.ma !== maPhieuCu) {
-            // TH: Tìm được mã mới tốt hơn (hoặc trước đó chưa có mã)
             notify.success(`Đã áp dụng mã ưu đãi: ${pggMoi.ten}`);
           } else {
-            // TH: Mã cũ vẫn đang là mã tốt nhất
             notify.info(`Mã hiện tại (${pggMoi.ten}) đang là tốt nhất!`);
           }
         } else {
-          // TH: Backend trả về hóa đơn nhưng không có phiếu (đã gỡ phiếu do không đủ điều kiện)
           notify.warning("Hiện không có mã giảm giá nào phù hợp.");
         }
-      }
-      // Trường hợp 2: Backend trả về String (ít gặp nhưng cứ giữ để safe)
-      else if (typeof res.data === "string") {
+        
+      } else if (typeof res.data === "string") {
         notify.info(res.data);
       }
     } catch (err) {
@@ -182,7 +169,6 @@ export function useHoaDon(notify, idNhanVien, resetGiaoHangCallback) {
     }
   };
 
-  // --- WATCHERS ---
   watch(
     hoaDonChoList,
     (val) => {

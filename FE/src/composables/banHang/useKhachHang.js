@@ -1,10 +1,16 @@
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import {
   timKhachHangDaDangKy,
   capNhatKhachHang,
   themKhachHangMoi,
 } from "@/service/BanHangService";
 import Swal from "sweetalert2";
+
+export const khachLeInfo = ref({
+  id: null,
+  hoTen: "Khách lẻ",
+  sdt: "0000000000",
+});
 
 export function useKhachHang(
   notify,
@@ -21,93 +27,127 @@ export function useKhachHang(
   const isGuestEditable = ref(false);
   const showAddGuestButton = ref(false);
 
-  // ID Khách lẻ mặc định (Thay bằng ID thật trong DB của bạn)
-  const KHACH_LE_ID = "0F773ECB-16F4-4DE2-96F1-115BECAE963E";
-  const khachLeMacDinh = {
-    id: KHACH_LE_ID,
-    hoTen: "Khách lẻ",
-    sdt: "0000000000",
+  const initKhachLe = async () => {
+    if (khachLeInfo.value.id) {
+      return;
+    }
+
+    try {
+      const sdtMacDinh = "0000000000";
+      const res = await timKhachHangDaDangKy(sdtMacDinh);
+
+      if (res.data && res.data.length > 0) {
+        khachLeInfo.value = res.data[0];
+        console.log("✅ Đã tìm thấy Khách lẻ ID:", khachLeInfo.value.id);
+      } else {
+        console.log("⚠️ Không tìm thấy Khách lẻ -> Đang tạo mới...");
+        const newRes = await themKhachHangMoi({
+          hoTen: "Khách lẻ",
+          sdt: sdtMacDinh,
+        });
+        khachLeInfo.value = newRes.data;
+        console.log("✅ Đã tạo mới Khách lẻ ID:", khachLeInfo.value.id);
+      }
+    } catch (err) {
+      console.error("Lỗi khởi tạo khách lẻ:", err);
+    }
   };
 
-  // 1. Hàm gán khách hàng (Core logic)
-  const assignKhachHang = async (khachHang, keepInputEmpty = false) => {
+  onMounted(() => {
+    initKhachLe();
+  });
+
+const assignKhachHang = async (khachHang, keepInputEmpty = false) => {
     try {
-      console.log("Chọn khách hàng:", khachHang);
-
-      // Gọi API cập nhật khách cho hóa đơn
-      await capNhatKhachHang(hoaDon.value.id, khachHang.id);
-
-      // Cập nhật UI
-      hoaDon.value.khachHang = khachHang;
-      isGuestEditable.value = false;
-      searchResults.value = [];
-
-      // A. Xử lý ô Input tìm kiếm (Giữ rỗng hoặc điền tên)
-      if (keepInputEmpty) {
-        searchKeyword.value = "";
-      } else {
-        searchKeyword.value = khachHang.hoTen;
+      if (
+        (!khachLeInfo.value || !khachLeInfo.value.id) &&
+        khachHang === "KHACH_LE"
+      ) {
+        await initKhachLe();
+        if (!khachLeInfo.value) return notify.error("Lỗi dữ liệu khách lẻ");
+        khachHang = khachLeInfo.value;
       }
 
-      // B. Xử lý Form Giao Hàng
+      console.log("Chọn khách hàng:", khachHang);
+      const selectedId = khachHang.id; 
+    
+      hoaDon.value.khachHang = khachHang; 
+      
+      isGuestEditable.value = true; 
+      
+      searchResults.value = []; 
+      
+      searchKeyword.value = khachHang.hoTen; 
+      const res = await capNhatKhachHang(hoaDon.value.id, selectedId);
+      if (res.data) {
+        const dataMoi = res.data;
 
-      // --- TRƯỜNG HỢP 1: LÀ KHÁCH LẺ (GUEST) ---
-      if (khachHang.id === KHACH_LE_ID) {
-        // FIX: Thay vì gọi resetFormGiaoHang() (làm tắt switch giao hàng),
-        // ta chỉ xóa dữ liệu trong các ô input thôi.
+        hoaDon.value.tongTien = dataMoi.tongTien;
+        hoaDon.value.tongTienSauGiam = dataMoi.tongTienSauGiam;
+        hoaDon.value.soTienGiamGia = dataMoi.soTienGiamGia;
+        hoaDon.value.phieuGiamGia = dataMoi.phieuGiamGia;
+        if (dataMoi.phiVanChuyen !== undefined && dataMoi.phiVanChuyen !== null) {
+          hoaDon.value.phiVanChuyen = dataMoi.phiVanChuyen;
+        }
 
-        // 1. Reset thông tin cá nhân để nhập mới
-        thongTinNguoiNhan.value.hoTen = "";
-        thongTinNguoiNhan.value.sdt = "";
+        if (dataMoi.khachHang && dataMoi.khachHang.id) {
+          hoaDon.value.khachHang = dataMoi.khachHang;
+        } else {
+          hoaDon.value.khachHang = {
+            ...khachHang,
+            id: selectedId, 
+            hoTen: dataMoi.tenKhachHang || khachHang.hoTen, 
+            sdt: dataMoi.sdt || khachHang.sdt,
+            diaChi: dataMoi.diaChiGiaoHang || khachHang.diaChi,
+          };
+          
+          console.log("Fix Khách hàng sau API:", hoaDon.value.khachHang);
+        }
+      }
 
-        // 2. Reset địa chỉ về rỗng (nếu muốn khách lẻ tự nhập lại từ đầu)
-        thongTinNguoiNhan.value.tinhThanh = "";
-        thongTinNguoiNhan.value.quanHuyen = "";
-        thongTinNguoiNhan.value.phuongXa = "";
-        thongTinNguoiNhan.value.diaChiCuThe = "";
+      const isKhachLe = khachLeInfo.value && selectedId === khachLeInfo.value.id;
 
+      if (keepInputEmpty || isKhachLe) {
+        searchKeyword.value = "";
+      } else {
+        searchKeyword.value = hoaDon.value.khachHang.hoTen; 
+      }
+
+      if (isKhachLe) {
+        if (resetFormGiaoHang) resetFormGiaoHang(false);
         if (phiShip) phiShip.value = 0;
-
         notify.info("Đã chuyển về Khách lẻ.");
         return;
       }
 
-      // TRƯỜNG HỢP 2: LÀ KHÁCH QUEN (Member)
-      // B1. Luôn điền Tên và SĐT của khách vào form trước
-      thongTinNguoiNhan.value.hoTen = khachHang.hoTen || "";
-      thongTinNguoiNhan.value.sdt = khachHang.sdt || "";
+      thongTinNguoiNhan.value.hoTen = hoaDon.value.khachHang.hoTen || "";
+      thongTinNguoiNhan.value.sdt = hoaDon.value.khachHang.sdt || "";
 
-      // B2. Xử lý Địa chỉ
       const listDiaChi = khachHang.danhSachDiaChi || khachHang.listDiaChi || [];
-
       if (listDiaChi.length > 0) {
-        // --- Có địa chỉ lưu sẵn ---
-        const dc = listDiaChi.find((d) => d.macDinh) || listDiaChi[0];
+         const dc = listDiaChi.find((d) => d.macDinh) || listDiaChi[0];
+         const dbTinh = dc.thanhPho || dc.tinhThanh || "";
+         const dbHuyen = dc.huyen || dc.quanHuyen || "";
+         const dbXa = dc.xa || dc.phuongXa || "";
+         const dbCuThe = dc.diaChiCuThe || "";
 
-        const dbTinh = dc.thanhPho || dc.tinhThanh || "";
-        const dbHuyen = dc.huyen || dc.quanHuyen || "";
-        const dbXa = dc.xa || dc.phuongXa || "";
-        const dbCuThe = dc.diaChiCuThe || "";
+         thongTinNguoiNhan.value.tinhThanh = dbTinh;
+         thongTinNguoiNhan.value.quanHuyen = dbHuyen;
+         thongTinNguoiNhan.value.phuongXa = dbXa;
+         thongTinNguoiNhan.value.diaChiCuThe = dbCuThe;
 
-        thongTinNguoiNhan.value.tinhThanh = dbTinh;
-        thongTinNguoiNhan.value.quanHuyen = dbHuyen;
-        thongTinNguoiNhan.value.phuongXa = dbXa;
-        thongTinNguoiNhan.value.diaChiCuThe = dbCuThe;
-
-        // Gọi hàm tự động chọn Dropdown GHN
-        if (autoFillAddressFromNames) {
-          await autoFillAddressFromNames(dbTinh, dbHuyen, dbXa);
-          if (isBanGiaoHang && isBanGiaoHang.value === true) {
-            if (calculateShippingFee) await calculateShippingFee();
-          }
-        }
+         if (autoFillAddressFromNames) {
+           await autoFillAddressFromNames(dbTinh, dbHuyen, dbXa);
+           if (isBanGiaoHang && isBanGiaoHang.value === true) {
+             if (calculateShippingFee) await calculateShippingFee();
+           }
+         }
       } else {
-        thongTinNguoiNhan.value.tinhThanh = "";
-        thongTinNguoiNhan.value.quanHuyen = "";
-        thongTinNguoiNhan.value.phuongXa = "";
-        thongTinNguoiNhan.value.diaChiCuThe = "";
-
-        if (phiShip) phiShip.value = 0;
+         thongTinNguoiNhan.value.tinhThanh = "";
+         thongTinNguoiNhan.value.quanHuyen = "";
+         thongTinNguoiNhan.value.phuongXa = "";
+         thongTinNguoiNhan.value.diaChiCuThe = "";
+         if (phiShip) phiShip.value = 0;
       }
 
       notify.success("Đã cập nhật khách hàng!");
@@ -117,31 +157,28 @@ export function useKhachHang(
     }
   };
 
-  // 2. Hàm tìm kiếm (Gắn vào @input)
   const handleTimKhachHang = async () => {
     const keyword = searchKeyword.value ? searchKeyword.value.trim() : "";
 
-    // Trường hợp 1: Người dùng xóa trắng ô input
     if (!keyword) {
-      // Nếu khách hiện tại KHÔNG PHẢI là Khách lẻ -> Reset về Khách lẻ
-      if (hoaDon.value?.khachHang?.id !== KHACH_LE_ID) {
-        // Truyền true để giữ ô input rỗng, không điền chữ "Khách lẻ" vào
-        await assignKhachHang(khachLeMacDinh, true);
+      if (
+        khachLeInfo.value &&
+        hoaDon.value?.khachHang?.id !== khachLeInfo.value.id
+      ) {
+        await assignKhachHang(khachLeInfo.value, true);
         notify.info("Đã chuyển về Khách lẻ.");
       }
 
       searchResults.value = [];
       showAddGuestButton.value = false;
-      return; // Dừng lại, không gọi API
+      return;
     }
 
-    // Trường hợp 2: Từ khóa quá ngắn
     if (keyword.length < 2) {
       searchResults.value = [];
       return;
     }
 
-    // Trường hợp 3: Gọi API tìm kiếm
     try {
       const res = await timKhachHangDaDangKy(keyword);
       if (res.data && res.data.length > 0) {
@@ -156,12 +193,10 @@ export function useKhachHang(
     }
   };
 
-  // 3. Hàm chọn từ danh sách gợi ý
   const handleSelectKhachHang = (khachHang) => {
+    searchResults.value = [];
     assignKhachHang(khachHang);
   };
-
-  // 4. Hàm thêm nhanh khách hàng (Swal)
   const handleThemNhanhKhachHang = async () => {
     await Swal.fire({
       title: `<span style="font-weight: bold; font-size: 1.3rem;">Thêm khách hàng mới</span>`,
@@ -210,7 +245,7 @@ export function useKhachHang(
         try {
           const res = await themKhachHangMoi({ hoTen, sdt });
           const newKH = res.data;
-          await assignKhachHang(newKH); // Tự động chọn sau khi thêm
+          await assignKhachHang(newKH);
           notify.success("Thêm khách hàng thành công!");
           return true;
         } catch (error) {
@@ -228,8 +263,8 @@ export function useKhachHang(
   };
 
   const resetKhachHangState = () => {
-      searchKeyword.value = "";
-      searchResults.value = []; 
+    searchKeyword.value = "";
+    searchResults.value = [];
   };
 
   return {
@@ -237,7 +272,7 @@ export function useKhachHang(
     searchResults,
     isGuestEditable,
     showAddGuestButton,
-    khachLeMacDinh,
+    khachLeInfo,
     assignKhachHang,
     handleTimKhachHang,
     handleSelectKhachHang,

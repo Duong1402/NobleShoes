@@ -103,12 +103,12 @@ const pieChartOptions = ref({
 });
 
 const TRANG_THAI_MAP = {
-  0: { label: "Đã hủy", color: "#dc3545" },
-  1: { label: "Chờ xác nhận", color: "#fd7e14" },
-  2: { label: "Đã xác nhận", color: "#ffc107" },
-  3: { label: "Chờ thanh toán", color: "#adb5bd" },
-  4: { label: "Đang giao", color: "#0dcaf0" },
-  5: { label: "Hoàn thành", color: "#198754" },
+  0: { label: "Chờ thanh toán", color: "#ffc107" },
+  1: { label: "Chờ xác nhận", color: "#6c757d" },
+  2: { label: "Đã xác nhận", color: "#0dcaf0" },
+  3: { label: "Đang giao", color: "#0d6efd" },
+  4: { label: "Hoàn thành", color: "#198754" },
+  5: { label: "Đã hủy", color: "#dc3545" },
 };
 
 const pieChartLegend = computed(() => {
@@ -402,7 +402,7 @@ const growthChartOptions = {
 </script>
 
 <template>
-  <div class="container-fluid mt-4 px-4">
+  <div class="container-fluid mt-4">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-3 px-4">
         <div

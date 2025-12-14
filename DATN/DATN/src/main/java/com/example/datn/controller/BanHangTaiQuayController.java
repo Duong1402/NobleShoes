@@ -39,8 +39,8 @@ public class BanHangTaiQuayController {
     }
 
     // 1. Tạo hóa đơn chờ
-    @PostMapping("/tao-hoa-don/{idNhanVien}")
-    public ResponseEntity<HoaDon> taoHoaDon(@PathVariable UUID idNhanVien) {
+    @PostMapping("/tao-hoa-don")
+    public ResponseEntity<HoaDon> taoHoaDon(@RequestParam(name = "idNhanVien", required = false) UUID idNhanVien) {
         HoaDon hoaDon = banHangTaiQuayService.taoHoaDonCho(idNhanVien);
         return ResponseEntity.status(HttpStatus.CREATED).body(hoaDon);
     }
@@ -60,7 +60,6 @@ public class BanHangTaiQuayController {
             @RequestParam int soLuong) {
         ThemSanPhamResponse response = banHangTaiQuayService.themSanPhamVaoHoaDon(idHoaDon, idChiTietSanPham, soLuong);
 
-        // Trả về DTO cho Frontend
         return ResponseEntity.ok(response);
     }
 
@@ -69,10 +68,8 @@ public class BanHangTaiQuayController {
     public ResponseEntity<HoaDon> xoaSanPhamKhoiHoaDon(
             @PathVariable UUID idHoaDon,
             @PathVariable UUID idChiTietSanPham) {
-        // Service xóa SP và tự động tính tiền
         banHangTaiQuayService.xoaSanPhamKhoiHoaDon(idHoaDon, idChiTietSanPham);
 
-        // Lấy hóa đơn mới nhất
         HoaDon hd = hoaDonRepository.findById(idHoaDon).orElseThrow();
         return ResponseEntity.ok(hd);
     }
@@ -117,7 +114,6 @@ public class BanHangTaiQuayController {
             @RequestBody ThanhToanRequest request
     ) {
         try {
-            // Gọi Service
             HoaDon hoaDonDaThanhToan = banHangTaiQuayService.thanhToan(
                     idHoaDon,
                     request
@@ -125,14 +121,9 @@ public class BanHangTaiQuayController {
             return ResponseEntity.ok(hoaDonDaThanhToan);
 
         } catch (LoiPhieuGiamGiaException e) {
-            // 🔥 BẮT LỖI RIÊNG CHO PHIẾU GIẢM GIÁ
-            // Lỗi này do ta chủ động ném ra sau khi đã gỡ phiếu và tính lại tiền.
-            // Trả về 400 để Frontend bắt được và reload lại giao diện.
             return ResponseEntity.badRequest().body(e.getMessage());
 
         } catch (Exception e) {
-            // Bắt các lỗi không mong muốn khác (Lỗi hệ thống, null pointer...)
-            e.printStackTrace(); // In lỗi ra console server để dễ debug
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
@@ -146,7 +137,6 @@ public class BanHangTaiQuayController {
 
     @PostMapping("/ap-dung-khuyen-mai-tu-dong/{idHoaDon}")
     public ResponseEntity<?> autoApplyBestCoupon(@PathVariable UUID idHoaDon) {
-        // 1. Lấy hóa đơn
         HoaDon hd = hoaDonRepository.findById(idHoaDon)
                 .orElseThrow(() -> new RuntimeException("Hóa đơn không tồn tại"));
 
@@ -154,75 +144,40 @@ public class BanHangTaiQuayController {
             return ResponseEntity.badRequest().body("Vui lòng chọn khách hàng trước.");
         }
 
-        // 🔥 BƯỚC 1 (QUAN TRỌNG NHẤT): TÍNH LẠI TỔNG TIỀN TỪ CHI TIẾT SẢN PHẨM
-        // Lý do: DB có thể đang lưu tong_tien = 0 nếu chưa update kịp
-        BigDecimal tongTienHang = BigDecimal.ZERO;
-
-        // Cách 1: Nếu Entity HoaDon đã map List<HoaDonChiTiet>
-        if (hd.getHoaDonChiTiets() != null) {
-            for (HoaDonChiTiet ct : hd.getHoaDonChiTiets()) {
-                if (ct.getThanhTien() != null) {
-                    tongTienHang = tongTienHang.add(ct.getThanhTien());
-                }
-            }
-        }
-
-        // Cập nhật lại tổng tiền chuẩn vào hóa đơn
-        hd.setTongTien(tongTienHang);
-
-        // 🔥 BƯỚC 2: TÌM PHIẾU GIẢM GIÁ TỐT NHẤT
         PhieuGiamGia bestCoupon = banHangTaiQuayService.timPhieuGiamGiaTotNhat(idHoaDon, hd.getKhachHang().getId());
 
         if (bestCoupon != null) {
             hd.setPhieuGiamGia(bestCoupon);
-
-            BigDecimal soTienGiam = BigDecimal.ZERO;
-
-            // Logic tính toán: TRUE = %, FALSE = Tiền mặt (Khớp với ảnh DB của bạn)
-            if (Boolean.TRUE.equals(bestCoupon.getHinhThucGiamGia())) {
-                // --- TRƯỜNG HỢP GIẢM THEO % ---
-                BigDecimal phanTram = bestCoupon.getGiaTriGiam(); // Ví dụ: 10
-
-                // Công thức: Tổng * % / 100
-                soTienGiam = tongTienHang.multiply(phanTram)
-                        .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
-
-                // Check giảm tối đa
-                if (bestCoupon.getGiaTriGiamToiDa() != null
-                        && soTienGiam.compareTo(bestCoupon.getGiaTriGiamToiDa()) > 0) {
-                    soTienGiam = bestCoupon.getGiaTriGiamToiDa();
-                }
-            } else {
-                // --- TRƯỜNG HỢP GIẢM TIỀN MẶT ---
-                soTienGiam = bestCoupon.getGiaTriGiam(); // Ví dụ: 20000
-            }
-
-            // Chặn giảm âm tiền (Không được giảm quá tổng tiền hàng)
-            if (soTienGiam.compareTo(tongTienHang) > 0) {
-                soTienGiam = tongTienHang;
-            }
-
-            // Cập nhật tổng tiền sau giảm
-            BigDecimal tienSauGiam = tongTienHang.subtract(soTienGiam);
-            hd.setTongTienSauGiam(tienSauGiam);
-
-            // Lưu vào DB
-            hoaDonRepository.save(hd);
-
-            System.out.println("✅ Đã áp mã: " + bestCoupon.getTen() + " | Tổng: " + tongTienHang + " | Giảm: " + soTienGiam);
-
-            // Trả về Object để FE hiển thị
-            return ResponseEntity.ok(hd);
+            System.out.println("✅ Tìm thấy mã tốt nhất: " + bestCoupon.getTen());
         } else {
-            // Không tìm thấy mã -> Reset về giá gốc
             hd.setPhieuGiamGia(null);
-            hd.setTongTienSauGiam(tongTienHang); // Trả về bằng tổng tiền hàng
-            hoaDonRepository.save(hd);
+            System.out.println("⚠️ Không tìm thấy mã phù hợp -> Xóa mã cũ.");
+        }
 
-            System.out.println("⚠️ Không có mã phù hợp. Reset về: " + tongTienHang);
+        hoaDonRepository.save(hd);
 
-            // Vẫn trả về OK kèm Object hóa đơn để FE cập nhật lại giá gốc
+        banHangTaiQuayService.capNhatLaiTongTienVaKhuyenMai(hd);
+
+        return ResponseEntity.ok(hd);
+    }
+
+    @PutMapping("/hoa-don/{idHoaDon}")
+    public ResponseEntity<?> capNhatThongTinHoaDon(
+            @PathVariable UUID idHoaDon,
+            @RequestBody ThanhToanRequest request) {
+
+        System.out.println("========================================");
+        System.out.println("LOG CONTROLLER - ID: " + idHoaDon);
+        System.out.println("1. Request Ship (Raw): " + request.getPhiVanChuyen());
+        System.out.println("2. Request Tổng Tiền (Raw): " + request.getTongTienSauGiam());
+        System.out.println("3. Request Địa chỉ: " + request.getDiaChiGiaoHang());
+        System.out.println("========================================");
+
+        try {
+            HoaDon hd = banHangTaiQuayService.capNhatThongTinHoaDon(idHoaDon, request);
             return ResponseEntity.ok(hd);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
