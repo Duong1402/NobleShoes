@@ -2,6 +2,8 @@
 import { RouterLink, RouterView } from "vue-router";
 import FooterLayout from "./footerLayout.vue";
 import Sidebar from "./sidebar.vue";
+import ChatWidget from "@/components/ChatWidget.vue";
+
 </script>
 <template>
   <div class="wrapper">
@@ -235,7 +237,7 @@ import Sidebar from "./sidebar.vue";
                   </div>
                   <span class="profile-username">
                     <span class="op-7">Hi,</span>
-                    <span class="fw-bold">Hizrian</span>
+                    <span class="fw-bold">Thedd</span>
                   </span>
                 </a>
                 <ul class="dropdown-menu dropdown-user animated fadeIn">
@@ -270,13 +272,13 @@ import Sidebar from "./sidebar.vue";
         </nav>
         <!-- End Navbar -->
       </div>
-
       <div class="container-fluid py-3 mt-5">
         <RouterView></RouterView>
       </div>
-
       <FooterLayout></FooterLayout>
     </div>
+<ChatWidget />
+
   </div>
 </template>
 <style></style>

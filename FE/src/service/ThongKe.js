@@ -1,6 +1,6 @@
 import api from "./axios.js"; 
 
-const API_URL = "/api/thong-ke";
+const API_URL = "/admin/thong-ke";
 
 export const getOverviewData = (params) => {
     return api.get(`${API_URL}/overview`, { params });

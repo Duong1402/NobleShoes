@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -18,31 +19,32 @@ public class ChatLieuController {
         this.service = service;
     }
 
-    // ✅ Lấy tất cả
+    // Lấy tất cả chất liệu
     @GetMapping
     public List<ChatLieu> getAll() {
         return service.getAll();
     }
 
-    // ✅ Lấy theo ID
+    // Lấy theo ID (UUID)
     @GetMapping("/{id}")
-    public ChatLieu getById(@PathVariable UUID id) {
+    public Optional<ChatLieu> getById(@PathVariable UUID id) {
         return service.getById(id);
     }
 
-    // ✅ Thêm mới (có validate)
+    // ✅ Thêm mới chất liệu - BỎ @Valid
+    // Logic sinh mã sẽ xử lý trong service.create(cl)
     @PostMapping
-    public ChatLieu create(@Valid @RequestBody ChatLieu cl) {
+    public ChatLieu create(@RequestBody ChatLieu cl) {
         return service.create(cl);
     }
 
-    // ✅ Cập nhật (có validate)
+    // Cập nhật chất liệu - GIỮ @Valid để kiểm tra 'ten'
     @PutMapping("/{id}")
     public ChatLieu update(@PathVariable UUID id, @Valid @RequestBody ChatLieu cl) {
         return service.update(id, cl);
     }
 
-    // ✅ Xóa
+    // Xóa chất liệu
     @DeleteMapping("/{id}")
     public void delete(@PathVariable UUID id) {
         service.delete(id);

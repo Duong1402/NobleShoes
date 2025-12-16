@@ -11,7 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/thong-ke")
+@RequestMapping("/admin/thong-ke")
 @CrossOrigin(origins = "http://localhost:5173")
 @RequiredArgsConstructor
 public class ThongKeController {

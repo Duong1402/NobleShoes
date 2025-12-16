@@ -91,22 +91,34 @@ const editItem = (item) => {
   if (!modalInstance) modalInstance = new Modal(modalEl);
   modalInstance.show();
 };
-
-// Validate
+//validate
 const validateForm = () => {
-  // 💡 CHỈNH SỬA: BỎ validation cho Mã khi Thêm mới, chỉ kiểm tra Tên.
-  // Nếu là Cập nhật, mã vẫn được hiển thị (readonly) nhưng không cần kiểm tra.
-  
-  if (!selectedDayGiay.value.ten?.trim()) {
+  const ten = selectedDayGiay.value.ten?.trim(); // ⚠️ phải khai báo ten
+
+  if (!ten) {
     notify.warning("Vui lòng nhập tên dây giày!");
     return false;
   }
-  if (selectedDayGiay.value.ten.length < 3) {
+
+  if (ten.length < 3) {
     notify.warning("Tên dây giày phải có ít nhất 3 ký tự!");
     return false;
   }
-  return true;
+
+  // ✅ Check trùng
+  const duplicate = dayGiay.value.some(
+    (d) => d.ten.trim().toLowerCase() === ten.toLowerCase() &&
+           d.id !== selectedDayGiay.value.id // tránh trùng chính bản thân khi sửa
+  );
+
+  if (duplicate) {
+    notify.warning("Tên dây giày đã tồn tại, vui lòng chọn tên khác!");
+    return false;
+  }
+
+  return true; // mọi thứ hợp lệ
 };
+
 
 // Lưu thêm/sửa
 const saveItem = async () => {
@@ -180,7 +192,7 @@ const goToPage = (page) => {
 </script>
 
 <template>
-  <div class="container-fluid mt-4 px-5">
+  <div class="container-fluid mt-4">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
         <div class="page-header d-flex align-items-center justify-content-between">

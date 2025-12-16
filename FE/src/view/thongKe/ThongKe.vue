@@ -103,12 +103,12 @@ const pieChartOptions = ref({
 });
 
 const TRANG_THAI_MAP = {
-  0: { label: "Đã hủy", color: "#dc3545" },
+  5: { label: "Đã hủy", color: "#dc3545" },
   1: { label: "Chờ xác nhận", color: "#fd7e14" },
   2: { label: "Đã xác nhận", color: "#ffc107" },
-  3: { label: "Chờ thanh toán", color: "#adb5bd" },
-  4: { label: "Đang giao", color: "#0dcaf0" },
-  5: { label: "Hoàn thành", color: "#198754" },
+  0: { label: "Chờ thanh toán", color: "#adb5bd" },
+  3: { label: "Đang giao", color: "#0dcaf0" },
+  4: { label: "Hoàn thành", color: "#198754" },
 };
 
 const pieChartLegend = computed(() => {
@@ -290,12 +290,14 @@ const handleExportThongKeExcel = async () => {
        1) Sheet: SẢN PHẨM BÁN CHẠY
        ================================ */
 
-    const bestHeader = ["Tên sản phẩm", "Số lượng bán", "Giá tiền"];
+    const bestHeader = ["Mã sản phẩm", "Tên sản phẩm", "Màu sắc", "Kích thước", "Số lượng bán"];
 
     const bestRows = bestSellingProducts.value.map((p) => [
+      p.maSanPham,
       p.tenSanPham,
+      p.mauSac,
+      p.kichThuoc,
       p.soLuongBan,
-      formatCurrency(p.giaTien),
     ]);
 
     const wsBest = XLSX.utils.aoa_to_sheet([bestHeader, ...bestRows]);
@@ -305,12 +307,14 @@ const handleExportThongKeExcel = async () => {
        2) Sheet: SẢN PHẨM SẮP HẾT HÀNG
        ====================================== */
 
-    const lowHeader = ["Tên sản phẩm", "Số lượng tồn", "Giá bán"];
+    const lowHeader = ["Mã sản phẩm", "Tên sản phẩm", "Màu sắc", "Kích thước", "Số lượng bán"];
 
     const lowRows = lowStockProducts.value.map((p) => [
+      p.maSanPham,
       p.tenSanPham,
-      p.soLuongTon,
-      formatCurrency(p.giaBan),
+      p.mauSac,
+      p.kichThuoc,
+      p.soLuongBan,
     ]);
 
     const wsLow = XLSX.utils.aoa_to_sheet([lowHeader, ...lowRows]);
@@ -369,36 +373,87 @@ const growthChartData = computed(() => {
       labels: ["Không có dữ liệu"],
       datasets: [
         {
-          label: "Tăng trưởng",
+          label: "Tăng trưởng (%)",
           data: [0],
-          backgroundColor: "#f39c12",
-          borderColor: "#f39c12",
-        },
-      ],
+          borderColor: "#6c757d", // màu xám cho trường hợp không có dữ liệu
+          borderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          fill: {
+            target: 'origin',
+            above: 'rgba(108,117,125,0.15)', // xám nhạt
+            below: 'rgba(108,117,125,0.15)'
+          },
+          tension: 0.4
+        }
+      ]
     };
   }
 
   return {
-    labels: growthStats.value.map((s) => s.label),
+    labels: growthStats.value.map(s => s.label),
     datasets: [
       {
         label: "Tăng trưởng (%)",
-        data: growthStats.value.map((s) => s.percentage),
-        borderColor: "#0dcaf0",
-        backgroundColor: "rgba(13, 202, 240, 0.3)",
-        fill: true,
-        tension: 0.3,
-      },
-    ],
+        data: growthStats.value.map(s => s.percentage),
+        borderColor: "#6c757d", // màu mặc định
+        borderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        segment: {
+          borderColor: ctx => {
+            const prev = ctx.p0.parsed.y;
+            const curr = ctx.p1.parsed.y;
+            return curr >= prev ? "#22c55e" : "#ef4444"; // xanh lá hoặc đỏ
+          }
+        },
+        fill: {
+          target: 'origin',
+          above: 'rgba(34,197,94,0.15)', // xanh mờ
+          below: 'rgba(239,68,68,0.15)'   // đỏ mờ
+        },
+        tension: 0.4
+      }
+    ]
   };
 });
+
+
 const growthChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   scales: {
-    y: { beginAtZero: true },
+    y: {
+      beginAtZero: true,
+      ticks: {
+        callback: value => value + '%' // hiển thị % trên trục Y
+      }
+    },
+    x: {
+      ticks: {
+        maxRotation: 45,
+        minRotation: 30,
+        autoSkip: true
+      }
+    }
   },
+  plugins: {
+    tooltip: {
+      callbacks: {
+        title: context => context[0].label,
+        label: context => `Tăng trưởng: ${context.parsed.y}%`
+      }
+    },
+    legend: {
+      display: false
+    }
+  },
+  interaction: {
+    mode: 'nearest',
+    intersect: false
+  }
 };
+
 </script>
 
 <template>
@@ -728,9 +783,11 @@ const growthChartOptions = {
                 <thead>
                   <tr style="background-color: #f39c12; color: white">
                     <th class="text-center" style="width: 80px">Ảnh</th>
+                    <th>Mã</th>
                     <th>Tên sản phẩm</th>
+                    <th class="text-center">Màu</th>
+                    <th class="text-center">Size</th>
                     <th class="text-center">Số lượng</th>
-                    <th class="text-end">Giá tiền</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -765,10 +822,12 @@ const growthChartOptions = {
                         "
                       />
                     </td>
+                    <td>{{ product.maSanPham }}</td>
                     <td>{{ product.tenSanPham }}</td>
-                    <td class="text-center">{{ product.soLuongBan }}</td>
-                    <td class="text-end fw-bold">
-                      {{ formatCurrency(product.giaTien) }}
+                    <td class="text-center">{{ product.mauSac }}</td>
+                    <td class="text-center">{{ product.kichThuoc }}</td>
+                    <td class="text-center fw-bold text-danger">
+                      {{ product.soLuongBan }}
                     </td>
                   </tr>
                 </tbody>
@@ -857,9 +916,11 @@ const growthChartOptions = {
                 <thead>
                   <tr style="background-color: #f39c12; color: white">
                     <th class="text-center" style="width: 80px">Ảnh</th>
+                    <th>Mã</th>
                     <th>Tên sản phẩm</th>
+                    <th class="text-center">Màu</th>
+                    <th class="text-center">Size</th>
                     <th class="text-center">Số lượng</th>
-                    <th class="text-end">Giá tiền</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -893,12 +954,12 @@ const growthChartOptions = {
                         "
                       />
                     </td>
+                    <td>{{ product.maSanPham }}</td>
                     <td>{{ product.tenSanPham }}</td>
+                    <td class="text-center">{{ product.mauSac }}</td>
+                    <td class="text-center">{{ product.kichThuoc }}</td>
                     <td class="text-center fw-bold text-danger">
                       {{ product.soLuongTon }}
-                    </td>
-                    <td class="text-end fw-bold">
-                      {{ formatCurrency(product.giaBan) }}
                     </td>
                   </tr>
                 </tbody>

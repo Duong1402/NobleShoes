@@ -5,7 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -13,7 +12,9 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class SanPhamBanChayDto {
     private String hinhAnh;
+    private String maSanPham;
     private String tenSanPham;
+    private String mauSac;
+    private String kichThuoc;
     private long soLuongBan;
-    private BigDecimal giaTien;
 }

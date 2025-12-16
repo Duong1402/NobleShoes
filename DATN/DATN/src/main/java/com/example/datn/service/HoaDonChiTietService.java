@@ -12,10 +12,23 @@ import java.util.UUID;
 public class HoaDonChiTietService {
     private final HoaDonChiTietRepository repo;
 
-    public HoaDonChiTietService(HoaDonChiTietRepository repo) { this.repo = repo; }
+    public HoaDonChiTietService(HoaDonChiTietRepository repo) {
+        this.repo = repo;
+    }
 
-    public List<HoaDonChiTiet> findAll() { return repo.findAll(); }
-    public Optional<HoaDonChiTiet> findById(UUID id) { return repo.findById(id); }
-    public HoaDonChiTiet save(HoaDonChiTiet obj) { return repo.save(obj); }
-    public void deleteById(UUID id) { repo.deleteById(id); }
+    public List<HoaDonChiTiet> findAll() {
+        return repo.findAll();
+    }
+
+    public Optional<HoaDonChiTiet> findById(UUID id) {
+        return repo.findById(id);
+    }
+
+    public HoaDonChiTiet save(HoaDonChiTiet obj) {
+        return repo.save(obj);
+    }
+
+    public void deleteById(UUID id) {
+        repo.deleteById(id);
+    }
 }

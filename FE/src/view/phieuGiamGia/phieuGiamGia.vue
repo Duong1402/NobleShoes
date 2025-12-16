@@ -20,8 +20,7 @@ import { all } from "axios";
 
 const phieuGiamGia = ref([]);
 const notify = useNotify();
-const selectedphieuGiamGia = ref({
-});
+const selectedphieuGiamGia = ref({});
 const errors = reactive({});
 const totalPages = ref(0);
 const page = ref(0);
@@ -63,10 +62,12 @@ onMounted(async () => {
 });
 
 // Hàm load danh sách phiếu giảm giá
+const allPhieuGiamGia = ref([]);
 const loadphieuGiamGia = async () => {
   try {
     const res = await getAllPhieuGiamGia(page.value, size.value);
     phieuGiamGia.value = res.content;
+    allPhieuGiamGia.value = res.content;
     totalPages.value = res.totalPages;
   } catch (err) {
     console.error("Lỗi khi tải danh sách phiếu giảm giá:", err);
@@ -102,7 +103,7 @@ const editphieuGiamGia = (p) => {
 
   // ✅ Deep copy tránh làm thay đổi list chính
   selectedphieuGiamGia.value = JSON.parse(JSON.stringify(normalized));
-console.log(selectedphieuGiamGia.value);
+  console.log(selectedphieuGiamGia.value);
   // ✅ Mở modal sửa
   window.history.pushState({}, "", `?id=${p.id}`);
   const modalEl = document.getElementById("detailModal");
@@ -139,7 +140,6 @@ const savephieuGiamGia = async () => {
     notify.error("Có lỗi khi cập nhật!");
   }
 };
-
 
 // Tạo hàm confirm
 const confirmSave = async () => {
@@ -184,8 +184,7 @@ const toggleTrangThai = async (p) => {
 };
 
 const filterPhieuGiamGia = computed(() => {
-  // Hàm lọc phiếu giảm giá (chưa triển khai)
-  return phieuGiamGia.value.filter((p) => {
+  return allPhieuGiamGia.value.filter((p) => {
     const matchesStatus =
       filterTrangThai.value === "all" ||
       (filterTrangThai.value === "active" && p.trangThai) ||
@@ -215,15 +214,17 @@ watch(
   }
 );
 
-const resetFilters = () => {
+const resetFilters = async () => {
   filterTrangThai.value = "all";
   searchQuery.value = "";
   filterNgayBatDau.value = "";
   filterNgayKetThuc.value = "";
+  page.value = 0;
+  await loadphieuGiamGia(); 
 };
 </script>
 <template>
-  <div class="container-fluid mt-4 px-5">
+  <div class="container-fluid mt-4">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
         <div
@@ -582,7 +583,7 @@ const resetFilters = () => {
                         class="form-control"
                         v-model="selectedphieuGiamGia.giaTriGiamToiThieu"
                       />
-                      <div class="invalid-feedback">                      </div>
+                      <div class="invalid-feedback"></div>
                     </div>
 
                     <div class="col-md-6">

@@ -24,6 +24,13 @@ public class KichThuocService {
     }
 
     public KichThuoc create(KichThuoc kt) {
+        if (kt.getMa() == null || kt.getMa().trim().isEmpty()) {
+            String newMa = "KT" + UUID.randomUUID().toString()
+                    .replace("-", "")
+                    .substring(0, 6)
+                    .toUpperCase();
+            kt.setMa(newMa);
+        }
         return repo.save(kt);
     }
 

@@ -132,23 +132,26 @@ const confirmSave = async () => {
 //Toggle trạng thái
 const toggleTrangThai = async (p) => {
   const oldValue = p.trangThai;
-  p.trangThai = !p.trangThai; // Đổi 1↔0 thay vì true/false
+
+  const newValue = p.trangThai ? 0 : 1;
+
+  p.trangThai = newValue;
 
   try {
-    // Tạo payload đầy đủ, tránh làm mất các field khác
     const payload = {
       ...p,
+      trangThai: newValue,
     };
 
     await updateDotGiamGia(p.id, payload);
 
     notify.success(
       `Đã chuyển sang trạng thái: ${
-        p.trangThai ? "Còn hoạt động" : "Ngừng hoạt động"
+        newValue === 1 ? "Còn hoạt động" : "Ngừng hoạt động"
       }`
     );
   } catch (err) {
-    p.trangThai = oldValue; // revert lại nếu lỗi
+    p.trangThai = oldValue;
     console.error("❌ Lỗi khi cập nhật trạng thái:", err);
     notify.error("Cập nhật trạng thái thất bại!");
   }
@@ -164,7 +167,7 @@ const formatCurrency = (value) => {
 </script>
 
 <template>
-  <div class="container-fluid mt-4 px-5">
+  <div class="container-fluid mt-4">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
         <div
@@ -290,11 +293,15 @@ const formatCurrency = (value) => {
                       <span
                         class="badge rounded-pill fs-6 px-3 status-badge"
                         :class="{
-                          'text-white bg-warning': p.trangThai,
-                          'text-white bg-danger': !p.trangThai,
+                          'text-white bg-success': p.trangThai === 1,
+                          'text-white bg-danger': p.trangThai === 0,
                         }"
                       >
-                        {{ p.trangThai ? "Còn hoạt động" : "Ngừng hoạt động" }}
+                        {{
+                          p.trangThai === 1
+                            ? "Còn hoạt động"
+                            : "Ngừng hoạt động"
+                        }}
                       </span>
                     </td>
                     <td class="text-center align-middle">
@@ -308,7 +315,7 @@ const formatCurrency = (value) => {
                             type="checkbox"
                             role="switch"
                             :id="'switch-' + p.id"
-                            :checked="p.trangThai === true"
+                            :checked="p.trangThai === 1"
                             @change="toggleTrangThai(p)"
                             style="
                               cursor: pointer;

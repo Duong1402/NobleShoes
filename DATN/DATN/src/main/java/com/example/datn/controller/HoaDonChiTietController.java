@@ -9,7 +9,7 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/hoa-don-chi-tiet")
+@RequestMapping("/admin/hoa-don-chi-tiet")
 public class HoaDonChiTietController {
     private final HoaDonChiTietService service;
     public HoaDonChiTietController(HoaDonChiTietService service) { this.service = service; }

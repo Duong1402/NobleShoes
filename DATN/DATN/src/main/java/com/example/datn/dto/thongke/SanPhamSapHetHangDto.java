@@ -13,7 +13,9 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class SanPhamSapHetHangDto {
     private String hinhAnh;
+    private String maSanPham;
     private String tenSanPham;
+    private String mauSac;
+    private String kichThuoc;
     private int soLuongTon;
-    private BigDecimal giaBan;
 }

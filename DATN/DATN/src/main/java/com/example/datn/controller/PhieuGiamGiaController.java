@@ -34,7 +34,7 @@ public class PhieuGiamGiaController {
     }
 
     @PutMapping("/{id}")
-    public PhieuGiamGia update(@PathVariable UUID id,@Valid @RequestBody PhieuGiamGia obj) {
+    public PhieuGiamGia update(@PathVariable UUID id, @Valid @RequestBody PhieuGiamGia obj) {
         obj.setId(id);
         return service.save(obj);
     }

@@ -33,6 +33,11 @@ public class SanPhamService {
 
     @Transactional
     public SanPham saveSanPham(SanPhamRequest req) {
+        //Kiểm tra Trùng lặp Tên sản phẩm
+        if (sanPhamRepository.existsByTen(req.getTen())) {
+            // Ném lỗi Nghiệp vụ
+            throw new RuntimeException("Lỗi: Tên sản phẩm đã tồn tại!");
+        }
 
         // 1. Lưu Hình ảnh cho sản phẩm (lấy từ biến thể đầu tiên nếu có)
         HinhAnh hinhAnh = new HinhAnh();
@@ -67,8 +72,27 @@ public class SanPhamService {
 
         // 3. Lưu chi tiết sản phẩm (biến thể) - KHÔNG gán HinhAnh
         List<ChiTietSanPham> chiTietList = new ArrayList<>();
+
+        int currentMaxNumber = 0;
+        String maxMa = chiTietSanPhamRepository.findMaxMaCTSP();
+        if (maxMa != null && maxMa.startsWith("CTSP")) {
+            try {
+                currentMaxNumber = Integer.parseInt(maxMa.substring(4));
+            } catch (NumberFormatException e) {
+                currentMaxNumber = 0;
+            }
+        }
+
         for (ChiTietSanPhamRequest ctReq : req.getChiTietSanPham()) {
+
+            currentMaxNumber++;
+
             ChiTietSanPham ct = new ChiTietSanPham();
+
+            String formattedNumber = String.format("%02d", currentMaxNumber);
+            String maCTSP = "CTSP" + formattedNumber;
+            ct.setMa(maCTSP);
+
             ct.setSanPham(saved);
             ct.setGiaBan(ctReq.getGiaBan());
             ct.setSoLuongTon(ctReq.getSoLuongTon());
@@ -83,15 +107,6 @@ public class SanPhamService {
         return saved;
     }
 
-//    public List<SanPham> getAll() {
-//        return sanPhamRepository.findAll();
-//    }
-
-//    public SanPham update(UUID id, SanPham sp) {
-//        sp.setId(id);
-//        return sanPhamRepository.save(sp);
-//    }
-
     public SanPham createSanPham(SanPham sp) {
         if (sp.getHinhAnh() == null) {
             HinhAnh hinhAnh = new HinhAnh();
@@ -100,9 +115,11 @@ public class SanPhamService {
         }
         return sanPhamRepository.save(sp); // cascade sẽ lưu cả HinhAnh
     }
+
     public List<Map<String, Object>> getAll() {
         return sanPhamRepository.getDanhSachSanPhamVaChiTiet();
     }
+
     @Transactional
     public void updateSanPham(UUID id, SanPhamRequest req) {
         SanPham sp = sanPhamRepository.findById(id)
@@ -123,14 +140,11 @@ public class SanPhamService {
 
         sanPhamRepository.save(sp);
     }
+
     public void updateTrangThai(UUID id, boolean newValue) {
         SanPham sp = sanPhamRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm!"));
         sp.setTrangThai(newValue);
         sanPhamRepository.save(sp);
     }
-
-
-
-
 }

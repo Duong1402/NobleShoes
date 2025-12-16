@@ -26,15 +26,31 @@
             </router-link>
           </li>
 
-          <!-- Tiêu đề nhóm -->
-          <li class="nav-section">
-            <span class="sidebar-mini-icon">
-              <i class="fa fa-ellipsis-h"></i>
-            </span>
-            <h4 class="text-section">Components</h4>
+          <!-- Thống kê -->
+          <li class="nav-item" :class="{ active: activeRoute === 'ThongKe' }">
+            <router-link
+              :to="{ name: 'ThongKe' }"
+              class="nav-link link-with-icon"
+            >
+              <div class="icon-title">
+                <i class="fa-solid fa-chart-line"></i>
+                <p class="mb-0">Thống kê</p>
+              </div>
+            </router-link>
           </li>
 
           <!-- Mẫu menu có submenu -->
+          <li class="nav-item" :class="{ active: activeRoute === 'BanHang' }">
+            <router-link
+              :to="{ name: 'BanHang' }"
+              class="nav-link link-with-icon"
+            >
+              <div class="icon-title">
+                <i class="fas fa-shopping-cart"></i>
+                <p class="mb-0">Bán hàng</p>
+              </div>
+            </router-link>
+          </li>
           <li
             v-for="item in menus"
             :key="item.key"
@@ -83,18 +99,7 @@
             </transition>
           </li>
 
-          <!-- Quản lý nhân viên -->
-          <!-- <li class="nav-item" :class="{ active: activeRoute === 'nhanVien' }">
-            <router-link
-              :to="{ name: 'nhanVien' }"
-              class="nav-link link-with-icon"
-            >
-              <div class="icon-title">
-                <i class="fas fa-user-alt"></i>
-                <p class="mb-0">Quản lý nhân viên</p>
-              </div>
-            </router-link>
-          </li> -->
+          
         </ul>
       </div>
     </div>
@@ -125,24 +130,18 @@ watch(
 
 const menus = [
   {
-    key: "banHang",
-    title: "Bán hàng",
-    icon: "fas fa-shopping-cart",
-    routeName: "banHang",
-    children: [{ text: "Đơn hàng" }, { text: "Khách hàng" }],
-  },
-  {
     key: "hoaDon",
     title: "Quản lý hóa đơn",
     icon: "fas fa-file",
     routeName: "HoaDon",
-    children: [{ text: "Hóa Đơn",route: "HoaDon" }],
+    children: [{ text: "Hóa Đơn", route: "HoaDon" }],
   },
+
   {
     key: "giamGia",
     title: "Quản lý giảm giá",
     icon: "fas fa-tag",
-    routeName: "giamGia",
+    routeName: "PhieuGiamGia",
     children: [
       { text: "Phiếu giảm giá", route: "PhieuGiamGia" },
       { text: "Đợt giảm giá", route: "DotGiamGia" },
@@ -161,23 +160,18 @@ const menus = [
       { text: "Đế giày", route: "DeGiay" },
       { text: "Thương hiệu", route: "ThuongHieu" },
       { text: "Xuất xứ", route: "XuatXu" },
+      { text: "Chất liệu", route: "ChatLieu" },
     ],
   },
   {
     key: "taiKhoan",
     title: "Tài khoản",
     icon: "fa-solid fa-users",
-    routeName: "taiKhoan",
+    routeName: "nhanVien",
     children: [
-      { text: "Nhân viên",  route: "nhanVien"}, 
-      { text: "Khách hàng" , route: "khachHang"}],
-  },
-  {
-    key: "thongKe",
-    title: "Thống Kê",
-    icon: "fas fa-file",
-    routeName: "ThongKe",
-    children: [{ text: "Thống kê",route: "ThongKe" }],
+      { text: "Nhân viên", route: "nhanVien" },
+      { text: "Khách hàng", route: "khachHang" },
+    ],
   },
 ];
 </script>

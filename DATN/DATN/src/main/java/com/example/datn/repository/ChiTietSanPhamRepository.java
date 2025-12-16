@@ -21,7 +21,8 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
             "d.ten, t.ten, x.ten, dg.ten, dy.ten, md.ten, " +
             "ct.giaBan, ct.moTa, " +
             "m.ten, k.ten, cl.ten, " +
-            "h.urlAnh1, h.urlAnh2, h.urlAnh3) " +
+            "h.urlAnh1, h.urlAnh2, h.urlAnh3, " +
+            "ct.soLuongTon) " +   // ✅ thêm soLuongTon vào constructor
             "FROM ChiTietSanPham ct " +
             "JOIN ct.sanPham sp " +
             "LEFT JOIN sp.danhMuc d " +
@@ -37,13 +38,20 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
             "WHERE sp.id = :sanPhamId")
     List<ChiTietSanPhamDTO> findChiTietSanPhamDTOBySanPhamId(@Param("sanPhamId") UUID sanPhamId);
 
-    @Query("SELECT COUNT(ct) FROM ChiTietSanPham ct WHERE ct.sanPham.id = :sanPhamId")
-    int countBySanPhamId(UUID sanPhamId);
 
-    @Query("SELECT new com.example.datn.dto.thongke.SanPhamSapHetHangDto(" +
-            "COALESCE(sp.hinhAnh.urlAnh1, ''), sp.ten, ctsp.soLuongTon, ctsp.giaBan) " +
-            "FROM ChiTietSanPham ctsp JOIN ctsp.sanPham sp " +
-            "WHERE ctsp.soLuongTon < 10 " +
-            "ORDER BY ctsp.soLuongTon ASC")
+    @Query("SELECT COUNT(ct) FROM ChiTietSanPham ct WHERE ct.sanPham.id = :sanPhamId")
+    int countBySanPhamId(@Param("sanPhamId") UUID sanPhamId);
+
+    @Query(value = "SELECT TOP 1 ma FROM chi_tiet_san_pham WHERE ma LIKE 'CTSP%' ORDER BY CAST(SUBSTRING(ma, 5, 10) AS int) DESC", nativeQuery = true)
+    String findMaxMaCTSP();
+
+    @Query("SELECT new com.example.datn.dto.thongke.SanPhamSapHetHangDto(\n" +
+            "    COALESCE(sp.hinhAnh.urlAnh1, ''), sp.ma, sp.ten,\n" +
+            "    ctsp.mauSac.ten, ctsp.kichThuoc.ten, ctsp.soLuongTon)\n" +
+            "FROM ChiTietSanPham ctsp\n" +
+            "JOIN ctsp.sanPham sp\n" +
+            "WHERE ctsp.soLuongTon < 10\n" +
+            "ORDER BY ctsp.soLuongTon ASC\n")
     Page<SanPhamSapHetHangDto> findSanPhamSapHetHang(Pageable pageable);
+
 }

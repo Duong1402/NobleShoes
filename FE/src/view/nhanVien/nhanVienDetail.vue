@@ -1,5 +1,5 @@
 <template>
-  <div class="container-fluid mt-4 px-5">
+  <div class="container-fluid mt-4">
     <!-- Header -->
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
@@ -258,35 +258,6 @@
               </option>
             </select>
           </div>
-
-          <!-- Trạng thái -->
-          <!-- <div class="col-md-6">
-            <label class="form-label d-block">Trạng thái</label>
-            <div class="form-check form-check-inline">
-              <input
-                class="form-check-input"
-                type="radio"
-                id="trangThaiHoatDong"
-                :value="1"
-                v-model="nhanVien.trangThai"
-              />
-              <label class="form-check-label" for="trangThaiHoatDong">
-                Còn hoạt động
-              </label>
-            </div>
-            <div class="form-check form-check-inline">
-              <input
-                class="form-check-input"
-                type="radio"
-                id="trangThaiNgung"
-                :value="0"
-                v-model="nhanVien.trangThai"
-              />
-              <label class="form-check-label" for="trangThaiNgung">
-                Ngừng hoạt động
-              </label>
-            </div>
-          </div> -->
         </div>
 
         <!-- Loading -->
@@ -315,7 +286,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from "vue";
-import axios from "axios";
+import axios from "axios"; 
 import Breadcrumb from "@/components/common/Breadcrumb.vue";
 import Swal from "sweetalert2";
 import { useNotify } from "@/composables/useNotify";
@@ -324,19 +295,22 @@ import useVuelidate from "@vuelidate/core";
 import { required, email, helpers } from "@vuelidate/validators";
 import router from "@/router";
 
+import {
+  getNhanVienById,
+  updateNhanVien as updateNhanVienApi,
+  getAllChucVu,
+} from "@/service/NhanVienService";
+
 const hover = ref(false);
 const props = defineProps(["id"]);
 const notify = useNotify();
 const nhanVien = reactive({});
 const chucVuList = ref([]);
 
-// Upload & preview
 const previewUrl = ref(null);
 const selectedFile = ref(null);
 const uploading = ref(false);
-const oldImageUrl = ref(null); // lưu lại ảnh cũ trước khi thay
 
-// Địa chỉ
 const provinces = ref([]);
 const districts = ref([]);
 const wards = ref([]);
@@ -351,16 +325,14 @@ onMounted(async () => {
   await loadNhanVien();
 });
 
-// load dữ liệu
 async function loadNhanVien() {
   try {
-    const res = await axios.get(
-      `http://localhost:8080/admin/nhan-vien/${props.id}`
-    );
+    const res = await getNhanVienById(props.id);
     const data = res.data || {};
+
     if (!data.chucVu) data.chucVu = { id: "", ten: "" };
     Object.assign(nhanVien, data);
-    oldImageUrl.value = data.urlAnh || null;
+
     parseDiaChi(data.diaChi);
   } catch (err) {
     console.error("❌ Lỗi load nhân viên:", err);
@@ -371,26 +343,18 @@ async function loadNhanVien() {
 // Validate
 const rules = {
   hoTen: { required },
-  sdt: {
-    required,
-    phone: helpers.regex(/^0\d{9}$/),
-  },
+  sdt: { required, phone: helpers.regex(/^0\d{9}$/) },
   email: { required, email },
-  cccd: {
-    required,
-    cccd: helpers.regex(/^\d{12}$/),
-  },
+  cccd: { required, cccd: helpers.regex(/^\d{12}$/) },
   ngaySinh: { required },
-  chucVu: {
-    id: { required },
-  },
+  chucVu: { id: { required } },
 };
 
 const v$ = useVuelidate(rules, nhanVien);
 
 async function loadChucVu() {
   try {
-    const res = await axios.get(`http://localhost:8080/admin/chuc-vu`);
+    const res = await getAllChucVu();
     chucVuList.value = res.data;
   } catch (err) {
     console.error("❌ Lỗi load chức vụ:", err);
@@ -399,7 +363,6 @@ async function loadChucVu() {
 
 // cập nhật nhân viên
 async function updateNhanVien() {
-  // Kiểm tra form hợp lệ trước
   v$.value.$touch();
   if (v$.value.$invalid) {
     notify.error("Vui lòng nhập đầy đủ và đúng thông tin nhân viên!");
@@ -408,42 +371,32 @@ async function updateNhanVien() {
 
   try {
     uploading.value = true;
+    let newImageUrl = nhanVien.urlAnh;
 
-    let newImageUrl = nhanVien.urlAnh; // giữ nguyên nếu không chọn ảnh mới
-
-    // Nếu có chọn ảnh mới => upload lên Cloudinary
     if (selectedFile.value) {
-      // Nếu có ảnh cũ => xóa trước khi upload ảnh mới
-      if (oldImageUrl.value) {
-        await deleteOldImage(oldImageUrl.value);
-      }
-
+      
       const formData = new FormData();
       formData.append("file", selectedFile.value);
       formData.append("upload_preset", "nobleshoes_preset");
 
-      const uploadRes = await axios.post(
+      const res = await fetch(
         "https://api.cloudinary.com/v1_1/dppzg4tin/image/upload",
-        formData
+        {
+          method: "POST",
+          body: formData,
+        }
       );
 
-      if (uploadRes.data.secure_url) {
-        newImageUrl = uploadRes.data.secure_url;
-      } else {
-        throw new Error("Không nhận được URL ảnh từ Cloud!");
-      }
+      if (!res.ok) throw new Error("Lỗi khi upload ảnh lên Cloudinary");
+
+      const data = await res.json();
+      newImageUrl = data.secure_url;
     }
 
-    // Lấy địa chỉ hành chính
-    const provinceObj = provinces.value.find(
-      (p) => p.code === selectedProvince.value
-    );
-    const districtObj = districts.value.find(
-      (d) => d.code === selectedDistrict.value
-    );
+    const provinceObj = provinces.value.find((p) => p.code === selectedProvince.value);
+    const districtObj = districts.value.find((d) => d.code === selectedDistrict.value);
     const wardObj = wards.value.find((w) => w.code === selectedWard.value);
 
-    // Ghép địa chỉ
     const diaChiParts = [
       chiTiet.value,
       wardObj?.name,
@@ -455,17 +408,15 @@ async function updateNhanVien() {
       ...nhanVien,
       urlAnh: newImageUrl,
       diaChi: diaChiParts.join(", "),
+      chucVu: { id: nhanVien.chucVu.id } 
     };
 
-    await axios.put(
-      `http://localhost:8080/admin/nhan-vien/${props.id}`,
-      updatedNhanVien
-    );
+    await updateNhanVienApi(props.id, updatedNhanVien);
 
     notify.success("Cập nhật nhân viên thành công!");
-    oldImageUrl.value = newImageUrl; // cập nhật lại ảnh hiện tại
-    selectedFile.value = null; // reset file sau khi upload
+    selectedFile.value = null; 
     router.push({ name: "nhanVien" });
+    
   } catch (err) {
     console.error("❌ Lỗi cập nhật nhân viên:", err);
     notify.error("Cập nhật thất bại, vui lòng thử lại.");
@@ -474,23 +425,6 @@ async function updateNhanVien() {
   }
 }
 
-// xóa ảnh cũ trên cloud
-async function deleteOldImage(imageUrl) {
-  try {
-    const publicIdMatch = imageUrl.match(/\/upload\/(?:v\d+\/)?([^/.]+)/);
-    if (!publicIdMatch) return;
-
-    const publicId = publicIdMatch[1];
-    await axios.delete("http://localhost:8080/api/upload/delete", {
-      params: { publicId },
-    });
-    console.log(`🗑️ Ảnh cũ đã được xóa: ${publicId}`);
-  } catch (err) {
-    console.warn("⚠️ Không thể xóa ảnh cũ:", err.message);
-  }
-}
-
-// confirm
 async function confirmUpdate() {
   const result = await Swal.fire({
     title: "Xác nhận cập nhật nhân viên?",
@@ -509,59 +443,37 @@ async function confirmUpdate() {
   }
 }
 
-// địa chỉ
 function parseDiaChi(fullAddress) {
   if (!fullAddress) return;
   const normalize = (str) =>
-    str
-      ? str
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .toLowerCase()
-          .trim()
-      : "";
+    str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : "";
 
-  const parts = fullAddress
-    .split(",")
-    .map((p) => p.trim())
-    .reverse();
+  const parts = fullAddress.split(",").map((p) => p.trim()).reverse();
   const tinhName = parts[0] || "";
   const huyenName = parts[1] || "";
   const xaName = parts[2] || "";
 
-  const province =
-    provinces.value.find(
-      (p) =>
-        normalize(tinhName).includes(normalize(p.name)) ||
-        normalize(p.name).includes(normalize(tinhName)) ||
-        normalize(fullAddress).includes(normalize(p.name))
-    ) || null;
+  const province = provinces.value.find(
+    (p) => normalize(tinhName).includes(normalize(p.name)) || normalize(p.name).includes(normalize(tinhName))
+  ) || null;
 
   if (province) {
     selectedProvince.value = province.code;
     districts.value = getDistricts(province.code);
   }
 
-  const district =
-    districts.value.find(
-      (d) =>
-        normalize(huyenName).includes(normalize(d.name)) ||
-        normalize(d.name).includes(normalize(huyenName)) ||
-        normalize(fullAddress).includes(normalize(d.name))
-    ) || null;
+  const district = districts.value.find(
+    (d) => normalize(huyenName).includes(normalize(d.name)) || normalize(d.name).includes(normalize(huyenName))
+  ) || null;
 
   if (district) {
     selectedDistrict.value = district.code;
     wards.value = getWards(district.code);
   }
 
-  const ward =
-    wards.value.find(
-      (w) =>
-        normalize(xaName).includes(normalize(w.name)) ||
-        normalize(w.name).includes(normalize(xaName)) ||
-        normalize(fullAddress).includes(normalize(w.name))
-    ) || null;
+  const ward = wards.value.find(
+    (w) => normalize(xaName).includes(normalize(w.name)) || normalize(w.name).includes(normalize(xaName))
+  ) || null;
 
   if (ward) {
     selectedWard.value = ward.code;
@@ -583,7 +495,6 @@ function onDistrictChange() {
   selectedWard.value = "";
 }
 
-// ảnh preview
 function handleImageChange(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -591,13 +502,13 @@ function handleImageChange(e) {
   previewUrl.value = URL.createObjectURL(file);
 }
 </script>
+
 <style scoped>
-/* Khi focus vào input, select, textarea — đổi viền sang màu vàng */
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: #ffc107 !important; /* Màu warning của Bootstrap */
-  box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25); /* Hiệu ứng sáng nhẹ */
+  border-color: #ffc107 !important; 
+  box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25); 
   outline: none !important;
 }
 </style>
