@@ -29,9 +29,11 @@ const TRANG_THAI_HOA_DON = {
   0: { text: "Chờ thanh toán", class: "bg-warning text-dark" },
   1: { text: "Chờ xác nhận", class: "bg-secondary" },
   2: { text: "Đã xác nhận", class: "bg-info" },
-  3: { text: "Đang giao", class: "bg-primary" },
-  4: { text: "Hoàn thành", class: "bg-success" },
-  5: { text: "Đã hủy", class: "bg-danger" },
+  3: { text: "Đang chuẩn bị", class: "bg-purple" },
+  4: { text: "Đang giao", class: "bg-primary" },
+  5: { text: "Giao hàng thất bại", class: "bg-danger" },
+  6: { text: "Hoàn thành", class: "bg-success" },
+  7: { text: "Đã hủy", class: "bg-dark" },
 };
 
 const tabs = ref([
@@ -39,9 +41,11 @@ const tabs = ref([
   { label: "Chờ thanh toán", value: 0 },
   { label: "Chờ xác nhận", value: 1 },
   { label: "Đã xác nhận", value: 2 },
-  { label: "Đang giao", value: 3 },
-  { label: "Hoàn thành", value: 4 },
-  { label: "Đã hủy", value: 5 },
+  { label: "Đang chuẩn bị", value: 3 },
+  { label: "Đang giao", value: 4 },
+  { label: "Giao hàng thất bại", value: 5 },
+  { label: "Hoàn thành", value: 6 },
+  { label: "Đã hủy", value: 7 },
 ]);
 
 const activeTab = ref("");
@@ -75,7 +79,7 @@ onMounted(() => {
 
 const loadHoaDon = async (page = 0) => {
   try {
-    const params = { page, size: pagination.value.size };
+    const params = { page, size: Number(itemsPerPage.value) };
     if (filter.ma) params.ma = filter.ma.trim();
     if (filter.sdt) params.sdt = filter.sdt.trim();
     if (filter.tenKhachOrNhanVien)
@@ -139,8 +143,9 @@ const handleReset = () => {
 };
 
 const handlePageChange = (newPage) => {
-  if (newPage >= 0 && newPage < pagination.value.totalPages)
-    loadHoaDon(newPage);
+  if (newPage < 0 || newPage >= pagination.value.totalPages) return;
+
+  loadHoaDon(newPage);
 };
 
 const handleExportExcel = () => {
@@ -174,8 +179,7 @@ const handleExportExcel = () => {
 
 const itemsPerPage = ref(10);
 
-watch(itemsPerPage, (newSize) => {
-  pagination.value.size = Number(newSize);
+watch(itemsPerPage, () => {
   pagination.value.page = 0;
   loadHoaDon(0);
 });
@@ -246,13 +250,13 @@ watch(itemsPerPage, (newSize) => {
             </p>
 
             <div class="d-flex align-items-center gap-2">
-              <button
+              <!-- <button
                 type="button"
                 class="btn btn-success"
                 @click="handleScanQRCode"
               >
                 <i class="fa fa-qrcode me-1"></i> Quét Mã
-              </button>
+              </button> -->
               <button
                 type="button"
                 class="btn btn-primary"
@@ -642,5 +646,9 @@ watch(itemsPerPage, (newSize) => {
 .badge[data-status="Đã Hủy"],
 .badge.da-huy {
   background-color: #dc3545 !important;
+}
+.bg-purple {
+  background-color: #6f42c1 !important;
+  color: #fff !important;
 }
 </style>

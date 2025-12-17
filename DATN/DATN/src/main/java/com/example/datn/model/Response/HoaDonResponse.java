@@ -65,7 +65,7 @@ public class HoaDonResponse {
         if (hd.getNhanVien() != null) {
             this.tenNhanVien = hd.getNhanVien().getHoTen();
         } else {
-            this.tenNhanVien = "Chờ xử lý";
+            this.tenNhanVien = "Quản lý";
         }
 
         // ===== TÀI CHÍNH =====

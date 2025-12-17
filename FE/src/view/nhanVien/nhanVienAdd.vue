@@ -64,14 +64,32 @@
           <!-- Họ tên -->
           <div class="col-md-6">
             <label class="form-label">Họ tên</label>
-            <input
-              v-model="form.hoTen"
-              type="text"
-              class="form-control"
-              :class="{ 'is-invalid': v$.hoTen.$error }"
-              placeholder="Nhập họ tên nhân viên"
-            />
-            <small v-if="v$.hoTen.$error" class="text-danger">
+
+            <div class="input-group">
+              <input
+                v-model="form.hoTen"
+                type="text"
+                class="form-control"
+                :class="{ 'is-invalid': v$.hoTen.$error }"
+                placeholder="Nhập họ tên nhân viên"
+                @blur="v$.hoTen.$touch()"
+              />
+
+              <!-- Nút quét CCCD -->
+              <button
+                type="button"
+                class="btn btn-outline-warning"
+                @click="openScanner"
+                title="Quét CCCD"
+              >
+                <i class="fa-solid fa-id-card"></i>
+              </button>
+            </div>
+
+            <small
+              v-if="v$.hoTen.$dirty && v$.hoTen.$invalid"
+              class="text-danger"
+            >
               Vui lòng nhập họ tên
             </small>
           </div>
@@ -133,7 +151,7 @@
           </div>
 
           <!-- CCCD (chỉ phần input + nút vẫn giữ) -->
-          <div class="col-md-6">
+          <!-- <div class="col-md-6">
             <label class="form-label">CCCD</label>
             <div class="input-group">
               <input
@@ -144,7 +162,7 @@
                 placeholder="Nhập CCCD nhân viên"
                 @blur="v$.cccd.$touch()"
               />
-              <!-- Bấm sẽ mở modal và bắt đầu scan -->
+
               <button
                 type="button"
                 class="btn btn-outline-warning"
@@ -155,7 +173,6 @@
               </button>
             </div>
 
-            <!-- Thông báo lỗi -->
             <small
               v-if="v$.cccd.$dirty && v$.cccd.required.$invalid"
               class="text-danger"
@@ -168,47 +185,7 @@
             >
               CCCD phải có 12 số
             </small>
-
-            <!-- Modal quét CCCD đơn giản -->
-            <div
-              v-if="scanning"
-              class="modal fade show"
-              style="display: block; background: rgba(0, 0, 0, 0.6)"
-            >
-              <div
-                class="modal-dialog modal-dialog-centered"
-                style="max-width: 420px"
-              >
-                <div class="modal-content border-0">
-                  <div class="modal-header bg-dark text-white py-2">
-                    <h6 class="mb-0">
-                      <i class="fa-solid fa-id-card me-2 text-warning"></i>Quét
-                      CCCD
-                    </h6>
-                    <button
-                      type="button"
-                      class="btn-close btn-close-white"
-                      @click="stopScan"
-                    ></button>
-                  </div>
-                  <div class="modal-body text-center p-0">
-                    <video
-                      id="video"
-                      autoplay
-                      muted
-                      playsinline
-                      style="width: 100%; height: 320px; background: #000"
-                    ></video>
-                  </div>
-                  <div class="modal-footer py-2 justify-content-end">
-                    <button class="btn btn-warning btn-sm" @click="stopScan">
-                      Đóng
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          </div> -->
 
           <!-- Giới tính -->
           <div class="col-md-6">
@@ -344,6 +321,41 @@
           </button>
         </div>
       </form>
+    </div>
+    <!-- Modal quét CCCD đơn giản -->
+    <div
+      v-if="scanning"
+      class="modal fade show"
+      style="display: block; background: rgba(0, 0, 0, 0.6)"
+    >
+      <div class="modal-dialog modal-dialog-centered" style="max-width: 420px">
+        <div class="modal-content border-0">
+          <div class="modal-header bg-dark text-white py-2">
+            <h6 class="mb-0">
+              <i class="fa-solid fa-id-card me-2 text-warning"></i>Quét CCCD
+            </h6>
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              @click="stopScan"
+            ></button>
+          </div>
+          <div class="modal-body text-center p-0">
+            <video
+              id="video"
+              autoplay
+              muted
+              playsinline
+              style="width: 100%; height: 320px; background: #000"
+            ></video>
+          </div>
+          <div class="modal-footer py-2 justify-content-end">
+            <button class="btn btn-warning btn-sm" @click="stopScan">
+              Đóng
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>

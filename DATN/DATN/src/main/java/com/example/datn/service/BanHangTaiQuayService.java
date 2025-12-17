@@ -1,7 +1,9 @@
 package com.example.datn.service;
 
+import com.example.datn.dto.VoucherInfo;
 import com.example.datn.entity.*;
 import com.example.datn.expection.LoiPhieuGiamGiaException;
+import com.example.datn.model.Response.HoaDonVoucherCheckResponse;
 import com.example.datn.model.Response.ThemSanPhamResponse;
 import com.example.datn.model.request.ThanhToanRequest;
 import com.example.datn.repository.*;
@@ -44,9 +46,11 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
         CHO_THANH_TOAN(0),
         CHO_XAC_NHAN(1),
         DA_XAC_NHAN(2),
-        DANG_GIAO(3),
-        HOAN_THANH(4),
-        DA_HUY(5);
+        DANG_CHUAN_BI(3),
+        DANG_GIAO(4),
+        GIAO_HANG_THAT_BAI(5),
+        HOAN_THANH(6),
+        DA_HUY(7);
 
         private final int value;
 
@@ -167,11 +171,14 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
                     .findByHoaDonIdAndChiTietSanPhamId(idHoaDon, idChiTietSanPham);
 
             if (!listCu.isEmpty()) {
-                BigDecimal giaCu = listCu.get(0).getDonGia();
-                String strGiaCu = String.format("%,.0f", giaCu);
-                String strGiaMoi = String.format("%,.0f", giaMoi);
+                BigDecimal giaCuTrongHD = listCu.get(0).getDonGia();
 
-                warningMessage = "Sản phẩm đã đổi giá từ " + strGiaCu + " thành " + strGiaMoi;
+                if (giaCuTrongHD.compareTo(giaMoi) != 0) {
+                    String strGiaCu = String.format("%,.0f", giaCuTrongHD);
+                    String strGiaMoi = String.format("%,.0f", giaMoi);
+
+                    warningMessage = "Sản phẩm " + ctsp.getSanPham().getTen() + " đã đổi giá từ " + strGiaCu + " thành " + strGiaMoi;
+                }
             }
 
             hdct = new HoaDonChiTiet();
@@ -190,7 +197,10 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
 
         capNhatLaiTongTienVaKhuyenMai(hd);
 
-        return new ThemSanPhamResponse(hdct, warningMessage);
+        List<HoaDonChiTiet> allRelatedHdct = hoaDonChiTietRepository
+                .findByHoaDonIdAndChiTietSanPhamId(idHoaDon, idChiTietSanPham);
+
+        return new ThemSanPhamResponse(hdct, allRelatedHdct, warningMessage);
     }
 
     @Override
@@ -243,17 +253,22 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
             if (pggCaNhanOpt.isPresent()) {
                 PhieuGiamGiaCaNhan pggCaNhan = pggCaNhanOpt.get();
                 if (Boolean.FALSE.equals(pggCaNhan.getTrangThai())) {
-                    isLoi = true; lyDo = "Phiếu giảm giá cá nhân của bạn đã bị vô hiệu hóa.";
+                    isLoi = true;
+                    lyDo = "Phiếu giảm giá cá nhân của bạn đã bị vô hiệu hóa.";
                 } else if (pggCaNhan.getNgayHetHan() != null && now.after(pggCaNhan.getNgayHetHan())) {
-                    isLoi = true; lyDo = "Phiếu giảm giá cá nhân của bạn đã hết hạn sử dụng.";
+                    isLoi = true;
+                    lyDo = "Phiếu giảm giá cá nhân của bạn đã hết hạn sử dụng.";
                 }
             } else {
                 if (Boolean.FALSE.equals(pgg.getTrangThai())) {
-                    isLoi = true; lyDo = "Chương trình khuyến mãi này đã kết thúc.";
+                    isLoi = true;
+                    lyDo = "Chương trình khuyến mãi này đã kết thúc.";
                 } else if (pgg.getNgayKetThuc() != null && now.after(pgg.getNgayKetThuc())) {
-                    isLoi = true; lyDo = "Phiếu giảm giá đã hết hạn chương trình.";
+                    isLoi = true;
+                    lyDo = "Phiếu giảm giá đã hết hạn chương trình.";
                 } else if (pgg.getNgayBatDau() != null && now.before(pgg.getNgayBatDau())) {
-                    isLoi = true; lyDo = "Chương trình khuyến mãi chưa bắt đầu.";
+                    isLoi = true;
+                    lyDo = "Chương trình khuyến mãi chưa bắt đầu.";
                 }
             }
 
@@ -306,7 +321,7 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
         BigDecimal soTienGiam = tinhSoTienDuocGiam(tongTienHang, hd.getPhieuGiamGia());
 
         BigDecimal tongTienSauTruVoucher = tongTienHang.subtract(soTienGiam);
-        if(tongTienSauTruVoucher.compareTo(BigDecimal.ZERO) < 0) tongTienSauTruVoucher = BigDecimal.ZERO;
+        if (tongTienSauTruVoucher.compareTo(BigDecimal.ZERO) < 0) tongTienSauTruVoucher = BigDecimal.ZERO;
 
         BigDecimal tongThanhToanCuoiCung = tongTienSauTruVoucher.add(phiShip);
 
@@ -330,6 +345,57 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
 
         return hoaDonRepository.save(hd);
     }
+
+    public HoaDonVoucherCheckResponse kiemTraVoucher(UUID hoaDonId) {
+        HoaDon hd = hoaDonRepository.findById(hoaDonId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn"));
+
+        BigDecimal tongTienHang = tinhTongTien(hoaDonId);
+
+        PhieuGiamGia pggHienTai = hd.getPhieuGiamGia();
+        BigDecimal giamHienTai = tinhSoTienDuocGiam(tongTienHang, pggHienTai);
+
+        PhieuGiamGia pggTotNhat = timPhieuGiamGiaTotNhat(
+                hoaDonId,
+                hd.getKhachHang() != null ? hd.getKhachHang().getId() : null
+        );
+
+        BigDecimal giamTotNhat = tinhSoTienDuocGiam(tongTienHang, pggTotNhat);
+
+        HoaDonVoucherCheckResponse res = new HoaDonVoucherCheckResponse();
+        res.setPhieuGiamGiaDangApDung(mapToVoucherInfo(pggHienTai));
+        res.setPhieuGiamGiaTotNhat(mapToVoucherInfo(pggTotNhat));
+        res.setSoTienGiamHienTai(giamHienTai);
+        res.setSoTienGiamTotNhat(giamTotNhat);
+
+        res.setCoMaTotHon(
+                pggTotNhat != null &&
+                        (pggHienTai == null ||
+                                giamTotNhat.compareTo(giamHienTai) > 0)
+        );
+
+        return res;
+    }
+
+    private VoucherInfo mapToVoucherInfo(PhieuGiamGia pgg) {
+        if (pgg == null) return null;
+
+        VoucherInfo info = new VoucherInfo();
+        info.setId(pgg.getId());
+        info.setMa(pgg.getMa());
+        info.setTen(pgg.getTen());
+
+        info.setHinhThucGiamGia(pgg.getHinhThucGiamGia());
+        info.setGiaTriGiam(pgg.getGiaTriGiam());
+        info.setGiaTriGiamToiDa(pgg.getGiaTriGiamToiDa());
+        info.setGiaTriGiamToiThieu(pgg.getGiaTriGiamToiThieu());
+
+        info.setNgayBatDau(pgg.getNgayBatDau());
+        info.setNgayKetThuc(pgg.getNgayKetThuc());
+
+        return info;
+    }
+
 
     public String generateNewMaDiaChi() {
         String maxMa = diaChiRepository.findMaxMa();
@@ -546,14 +612,19 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
         BigDecimal tongTienHang = hoaDonChiTietRepository.tongTienHoaDon(hd.getId());
         if (tongTienHang == null) tongTienHang = BigDecimal.ZERO;
 
-        BigDecimal soTienGiam = tinhSoTienDuocGiam(tongTienHang, hd.getPhieuGiamGia());
+        BigDecimal soTienGiam = BigDecimal.ZERO;
+        if (hd.getPhieuGiamGia() != null) {
+            soTienGiam = tinhSoTienDuocGiam(tongTienHang, hd.getPhieuGiamGia());
+        }
 
         BigDecimal tongTienSauTruVoucher = tongTienHang.subtract(soTienGiam);
         if (tongTienSauTruVoucher.compareTo(BigDecimal.ZERO) < 0) {
             tongTienSauTruVoucher = BigDecimal.ZERO;
         }
 
-        BigDecimal phiVanChuyen = hd.getPhiVanChuyen() != null ? hd.getPhiVanChuyen() : BigDecimal.ZERO;
+        BigDecimal phiVanChuyen = hd.getPhiVanChuyen() != null
+                ? hd.getPhiVanChuyen()
+                : BigDecimal.ZERO;
 
         BigDecimal tongTienSauGiam = tongTienSauTruVoucher.add(phiVanChuyen);
 

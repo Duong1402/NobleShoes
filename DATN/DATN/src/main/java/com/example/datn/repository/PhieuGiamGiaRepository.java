@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,4 +41,25 @@ public interface PhieuGiamGiaRepository extends JpaRepository<PhieuGiamGia, UUID
                 )
             """, nativeQuery = true)
     List<PhieuGiamGia> findValidCouponsForCustomer(@Param("customerId") UUID customerId);
+
+    @Query("""
+            SELECT pgg
+            FROM PhieuGiamGia pgg
+            WHERE pgg.trangThai = true
+              AND (pgg.ngayBatDau IS NULL OR pgg.ngayBatDau <= CURRENT_TIMESTAMP)
+              AND (pgg.ngayKetThuc IS NULL OR pgg.ngayKetThuc >= CURRENT_TIMESTAMP)
+              AND (:tongTien >= COALESCE(pgg.giaTriGiamToiThieu, 0))
+            ORDER BY
+              CASE
+                WHEN pgg.hinhThucGiamGia = true
+                  THEN LEAST(
+                    :tongTien * pgg.giaTriGiam / 100,
+                    pgg.giaTriGiamToiDa
+                  )
+                ELSE pgg.giaTriGiam
+              END DESC
+            """)
+    List<PhieuGiamGia> findVoucherTotNhat(@Param("tongTien") BigDecimal tongTien);
+
+
 }

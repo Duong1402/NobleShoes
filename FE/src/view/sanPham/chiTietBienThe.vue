@@ -6,7 +6,7 @@ import { useRoute } from "vue-router";
 import { useNotify } from "@/composables/useNotify";
 import axios from "@/service/axios.js";
 
-import { getChiTietSanPhamBySanPhamId } from "@/service/ChiTietSanPhamService";
+import { getAllChiTietSanPham } from "@/service/ChiTietSanPhamService";
 import {
   getAllDanhMuc,
   getAllThuongHieu,
@@ -140,7 +140,7 @@ const loadComboBox = async () => {
 // Load chi tiết sản phẩm
 const loadChiTietSP = async () => {
   try {
-    const res = await getChiTietSanPhamBySanPhamId(sanPhamId);
+    const res = await getAllChiTietSanPham(sanPhamId);
     const data = Array.isArray(res) ? res : res.data || [];
     chiTietSP.value = data.map((ct) => ({
       ...ct,
@@ -257,17 +257,12 @@ onMounted(async () => {
             <h3 class="fw-bold text-warning mb-1">Quản lý chi tiết sản phẩm</h3>
             <Breadcrumb class="mt-2 mb-0" />
           </div>
-          <div class="col-md-2">
-            <router-link to="/admin/san-pham" class="btn btn-secondary w-100">
-              <i class="fa fa-arrow-left me-1"></i>Quay lại
-            </router-link>
-          </div>
         </div>
       </div>
     </div>
 
     <!-- Bộ lọc -->
-    <!-- <div class="card mb-3 shadow-sm border-0">
+    <div class="card mb-3 shadow-sm border-0">
       <div class="card-body">
         <div class="row g-2 align-items-end">
           <div class="col-md-3">
@@ -386,14 +381,14 @@ onMounted(async () => {
               <i class="fa fa-undo me-1"></i>Đặt lại
             </button>
           </div>
-          <div class="col-md-2">
+          <!-- <div class="col-md-2">
             <router-link to="/admin/san-pham" class="btn btn-secondary w-100">
               <i class="fa fa-arrow-left me-1"></i>Quay lại
             </router-link>
-          </div>
+          </div> -->
         </div>
       </div>
-    </div> -->
+    </div>
 
     <!-- Inline edit form -->
     <div v-if="editingCTSP" class="card mb-3 shadow-sm border-0 p-3">
@@ -430,7 +425,7 @@ onMounted(async () => {
           <div class="row g-2">
             <div class="col-md-3">
               <label class="form-label">Tên SP</label>
-              <input class="form-control" v-model="editingCTSP.tenSanPham" />
+              <input class="form-control" v-model="editingCTSP.tenSP" />
             </div>
             <div class="col-md-3">
               <label class="form-label">Danh mục</label>
@@ -576,17 +571,14 @@ onMounted(async () => {
                   style="width: 40px; height: 40px; object-fit: cover"
                 />
               </td>
-              <td>{{ ct.tenSP }}</td>
-              <td>{{ danhMucList.find((d) => d.id === ct.danhMucId)?.ten }}</td>
+              <td>{{ ct.tenSanPham }}</td>
+              <td>{{ ct.danhMuc}}</td>
               <td>
-                {{ thuongHieuList.find((t) => t.id === ct.thuongHieuId)?.ten }}
+                {{ ct.thuongHieu}}
               </td>
               <td>{{ xuatXuList.find((x) => x.id === ct.xuatXuId)?.ten }}</td>
               <td>
-                {{
-                  mucDichSuDungList.find((m) => m.id === ct.mucDichSuDungId)
-                    ?.ten
-                }}
+                {{ ct.mucDich}}
               </td>
               <td>{{ ct.soLuongTon }}</td>
               <td>{{ ct.giaBan }}</td>

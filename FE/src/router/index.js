@@ -46,6 +46,8 @@ import BanHangTaiQuay from "@/view/banHang/banHangTaiQuay.vue";
 import TrangChuClient from "@/view/client/TrangChuClient.vue";
 import ThongKe from "@/view/thongKe/ThongKe.vue";
 import ChatLieu from "@/view/chatLieu/chatLieu.vue";
+import OrderStatus from "@/view/banHang/OrderStatus.vue";
+import ChiTietBienThe from "@/view/sanPham/chiTietBienThe.vue";
 
 const listRouter = [
   // 1. Login customer
@@ -93,6 +95,13 @@ const listRouter = [
         component: ChiTietSanPham,
         props: true,
         meta: { title: "Chi tiết sản phẩm" },
+      },
+      {
+        path: "san-pham/chi-tiet",
+        name: "ChiTietBienThe",
+        component: ChiTietBienThe,
+        props: true,
+        meta: { title: "Biến thể sản phẩm" },
       },
 
       // --- Các thuộc tính sản phẩm ---
@@ -260,6 +269,17 @@ const listRouter = [
       },
     ],
   },
+
+{
+  path: "/order/status",
+  name: "OrderStatus",
+  component: OrderStatus,
+  meta: {
+    requiresAuth: false, // 🔥 QUAN TRỌNG
+    title: "Kết quả thanh toán",
+  },
+},
+
 
   // 5. Default Redirect (SỬA Ở ĐÂY: Mặc định về trang login nhân viên)
   {

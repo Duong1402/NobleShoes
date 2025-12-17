@@ -593,10 +593,40 @@ const generateVariants = () => {
 };
 
 // ----------------- Cloudinary upload -----------------
+// const onImageChange = async (event, bt) => {
+//   const file = event.target.files[0];
+//   if (!file) return;
+//   if (bt.imagePreviews.length >= 3) return alert("Chỉ được tối đa 3 ảnh");
+
+//   try {
+//     const formData = new FormData();
+//     formData.append("file", file);
+//     formData.append("upload_preset", UPLOAD_PRESET);
+
+//     const res = await fetch(CLOUDINARY_URL, {
+//       method: "POST",
+//       body: formData,
+//     });
+//     const data = await res.json();
+
+//     bt.imagePreviews.push(data.secure_url);
+//     bt.images.push(data.secure_url);
+//   } catch (err) {
+//     console.error("Upload Cloudinary thất bại:", err);
+//     alert("Upload ảnh thất bại!");
+//   }
+// };
+
 const onImageChange = async (event, bt) => {
-  const file = event.target.files[0];
+  const input = event.target;
+  const file = input.files[0];
   if (!file) return;
-  if (bt.imagePreviews.length >= 3) return alert("Chỉ được tối đa 3 ảnh");
+
+  if (bt.imagePreviews.length >= 3) {
+    notify.error("Chỉ được tối đa 3 ảnh");
+    input.value = "";
+    return;
+  }
 
   try {
     const formData = new FormData();
@@ -612,10 +642,13 @@ const onImageChange = async (event, bt) => {
     bt.imagePreviews.push(data.secure_url);
     bt.images.push(data.secure_url);
   } catch (err) {
-    console.error("Upload Cloudinary thất bại:", err);
-    alert("Upload ảnh thất bại!");
+    notify.error("Upload ảnh thất bại!");
+  } finally {
+    // 🔥 QUAN TRỌNG
+    input.value = "";
   }
 };
+
 
 const removeImage = (bt, index) => {
   bt.imagePreviews.splice(index, 1);

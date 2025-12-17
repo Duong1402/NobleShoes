@@ -273,6 +273,7 @@ const confirmSave = async () => {
                   value="Cá nhân"
                   v-model="loaiPhieu"
                   @click="loadKhachHang"
+                  disabled
                 />
                 <label class="form-check-label">Cá nhân</label>
               </div>

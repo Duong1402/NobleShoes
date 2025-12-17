@@ -94,7 +94,7 @@ public class ChiTietSanPham {
         }
     }
 
-    @Transient // Không lưu vào DB
+    @Transient
     private String hinhAnhUrl;
 
 

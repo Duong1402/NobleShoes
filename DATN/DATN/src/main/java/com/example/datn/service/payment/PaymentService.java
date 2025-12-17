@@ -2,6 +2,7 @@ package com.example.datn.service.payment;
 
 import com.example.datn.config.VnpayHashUtils;
 import com.example.datn.dto.PaymentRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -31,7 +32,7 @@ public class PaymentService {
     }
 
     // Trong PaymentService.java (hoặc VNPayService.java)
-    public String createPaymentUrl(PaymentRequest paymentRequest) throws UnsupportedEncodingException {
+    public String createPaymentUrl(PaymentRequest paymentRequest, HttpServletRequest request) throws UnsupportedEncodingException {
 
         // Tạo mã giao dịch riêng
         String vnp_TxnRef = String.valueOf(System.currentTimeMillis());
@@ -55,10 +56,10 @@ public class PaymentService {
         vnp_Params.put("vnp_OrderType", "other");
         vnp_Params.put("vnp_Locale", paymentRequest.getLanguage());
         vnp_Params.put("vnp_ReturnUrl", this.getVnpReturnUrl());
-        vnp_Params.put("vnp_IpAddr", "127.0.0.1"); // Tốt nhất nên lấy từ request
+        vnp_Params.put("vnp_IpAddr",  getIpAddress(request)); // Tốt nhất nên lấy từ request
 
         // Định dạng ngày giờ
-        Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7"));
+        Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
         String vnp_CreateDate = formatter.format(cld.getTime());
         vnp_Params.put("vnp_CreateDate", vnp_CreateDate);
@@ -74,27 +75,29 @@ public class PaymentService {
         StringBuilder hashData = new StringBuilder();
         StringBuilder query = new StringBuilder();
 
-        for (int i = 0; i < fieldNames.size(); i++) {
-            String fieldName = fieldNames.get(i);
-            String fieldValue = vnp_Params.get(fieldName); // Lấy giá trị thô
+        boolean first = true;
 
-            if (fieldValue != null && fieldValue.length() > 0) {
+        for (String fieldName : fieldNames) {
+            String fieldValue = vnp_Params.get(fieldName);
 
-                // 💡 ĐIỂM SỬA 2: Append to query string (Encode TẤT CẢ giá trị khi đưa vào URL)
-                query.append(URLEncoder.encode(fieldName, StandardCharsets.US_ASCII.toString()));
-                query.append("=");
-                // Encode giá trị: Đảm bảo cả vnp_OrderInfo và các giá trị khác được encode tại đây
-                query.append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII.toString()));
+            if (fieldValue != null && !fieldValue.isEmpty()) {
 
-                // 💡 ĐIỂM SỬA 3: Append to hash data string (KHÔNG ENCODE GIÁ TRỊ)
-                hashData.append(fieldName);
-                hashData.append("=");
-                hashData.append(fieldValue); // Sử dụng giá trị thô
-
-                if (i < fieldNames.size() - 1) {
-                    query.append("&");
+                if (!first) {
                     hashData.append("&");
+                    query.append("&");
                 }
+
+                // HASH DATA (KHÔNG encode)
+                hashData.append(fieldName)
+                        .append("=")
+                        .append(fieldValue);
+
+                // QUERY STRING (CÓ encode)
+                query.append(URLEncoder.encode(fieldName, StandardCharsets.US_ASCII))
+                        .append("=")
+                        .append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII));
+
+                first = false;
             }
         }
 
@@ -117,4 +120,19 @@ public class PaymentService {
 
         return secureHash != null && secureHash.equals(vnp_SecureHash);
     }
+
+    private String getIpAddress(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+
+        if ("0:0:0:0:0:0:0:1".equals(ip)) {
+            ip = "127.0.0.1";
+        }
+
+        return ip;
+    }
+
 }

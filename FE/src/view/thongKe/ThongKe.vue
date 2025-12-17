@@ -106,9 +106,11 @@ const TRANG_THAI_MAP = {
   0: { label: "Chờ thanh toán", color: "#ffc107" },
   1: { label: "Chờ xác nhận", color: "#6c757d" },
   2: { label: "Đã xác nhận", color: "#0dcaf0" },
-  3: { label: "Đang giao", color: "#0d6efd" },
-  4: { label: "Hoàn thành", color: "#198754" },
-  5: { label: "Đã hủy", color: "#dc3545" },
+  3: { label: "Đang Chuẩn bị", color: "#6f42c1" },
+  4: { label: "Đang giao", color: "#0d6efd" },
+  5: { label: "Giao hàng thất bại", color: "#dc3545" },
+  6: { label: "Hoàn thành", color: "#198754" },
+  7: { label: "Đã hủy", color: "#343a40" },
 };
 
 const pieChartLegend = computed(() => {
@@ -1098,5 +1100,10 @@ const growthChartOptions = {
   padding-top: 0.25rem;
   padding-bottom: 0.25rem;
   border-color: #ddd;
+}
+/* Màu tím của trạng thái hóa đơn */
+.bg-purple {
+  background-color: #6f42c1 !important;
+  color: #fff !important;
 }
 </style>

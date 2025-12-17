@@ -49,17 +49,17 @@ public class VnpayHashUtils {
 
         StringBuilder hashData = new StringBuilder();
 
-        for (int i = 0; i < fieldNames.size(); i++) {
-            String fieldName = fieldNames.get(i);
+        for (String fieldName : fieldNames) {
+            if (fieldName.equals("vnp_SecureHash") || fieldName.equals("vnp_SecureHashType")) {
+                continue;
+            }
+
             String fieldValue = fields.get(fieldName);
-
-            // Chỉ hash các tham số VNPay, bỏ qua tham số SecureHash
-            if (fieldValue != null && fieldValue.length() > 0 && !fieldName.equals("vnp_SecureHash")) {
-                hashData.append(fieldName).append("=").append(fieldValue);
-
-                if (i < fieldNames.size() - 1) {
+            if (fieldValue != null && !fieldValue.isEmpty()) {
+                if (hashData.length() > 0) {
                     hashData.append("&");
                 }
+                hashData.append(fieldName).append("=").append(fieldValue);
             }
         }
         return hashData.toString();

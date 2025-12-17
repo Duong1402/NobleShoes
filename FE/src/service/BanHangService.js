@@ -71,6 +71,13 @@ export const apDungKhuyenMaiTuDong = (idHoaDon) => {
   );
 };
 
+export const kiemTraVoucher = (idHoaDon) => {
+  return axios.get(
+    `${API_URL_BAN_HANG}/hoa-don/${idHoaDon}/kiem-tra-voucher`
+  );
+};
+
+
 // Xóa sản phẩm khỏi hóa đơn
 export const xoaSanPhamKhoiHoaDon = (idHoaDon, idChiTietSanPham) => {
   return axios.delete(

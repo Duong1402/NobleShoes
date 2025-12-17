@@ -154,7 +154,7 @@
           </div>
 
           <!-- CCCD -->
-          <div class="col-md-6">
+          <!-- <div class="col-md-6">
             <label class="form-label">CCCD</label>
             <input
               v-model="nhanVien.cccd"
@@ -166,7 +166,7 @@
             <small v-if="v$.cccd.$error" class="text-danger">
               CCCD phải gồm đúng 12 số
             </small>
-          </div>
+          </div> -->
 
           <!-- Địa chỉ -->
           <div class="row g-3">
@@ -286,7 +286,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from "vue";
-import axios from "axios"; 
+import axios from "axios";
 import Breadcrumb from "@/components/common/Breadcrumb.vue";
 import Swal from "sweetalert2";
 import { useNotify } from "@/composables/useNotify";
@@ -374,7 +374,6 @@ async function updateNhanVien() {
     let newImageUrl = nhanVien.urlAnh;
 
     if (selectedFile.value) {
-      
       const formData = new FormData();
       formData.append("file", selectedFile.value);
       formData.append("upload_preset", "nobleshoes_preset");
@@ -393,8 +392,12 @@ async function updateNhanVien() {
       newImageUrl = data.secure_url;
     }
 
-    const provinceObj = provinces.value.find((p) => p.code === selectedProvince.value);
-    const districtObj = districts.value.find((d) => d.code === selectedDistrict.value);
+    const provinceObj = provinces.value.find(
+      (p) => p.code === selectedProvince.value
+    );
+    const districtObj = districts.value.find(
+      (d) => d.code === selectedDistrict.value
+    );
     const wardObj = wards.value.find((w) => w.code === selectedWard.value);
 
     const diaChiParts = [
@@ -408,15 +411,14 @@ async function updateNhanVien() {
       ...nhanVien,
       urlAnh: newImageUrl,
       diaChi: diaChiParts.join(", "),
-      chucVu: { id: nhanVien.chucVu.id } 
+      chucVu: { id: nhanVien.chucVu.id },
     };
 
     await updateNhanVienApi(props.id, updatedNhanVien);
 
     notify.success("Cập nhật nhân viên thành công!");
-    selectedFile.value = null; 
+    selectedFile.value = null;
     router.push({ name: "nhanVien" });
-    
   } catch (err) {
     console.error("❌ Lỗi cập nhật nhân viên:", err);
     notify.error("Cập nhật thất bại, vui lòng thử lại.");
@@ -446,34 +448,52 @@ async function confirmUpdate() {
 function parseDiaChi(fullAddress) {
   if (!fullAddress) return;
   const normalize = (str) =>
-    str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : "";
+    str
+      ? str
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .trim()
+      : "";
 
-  const parts = fullAddress.split(",").map((p) => p.trim()).reverse();
+  const parts = fullAddress
+    .split(",")
+    .map((p) => p.trim())
+    .reverse();
   const tinhName = parts[0] || "";
   const huyenName = parts[1] || "";
   const xaName = parts[2] || "";
 
-  const province = provinces.value.find(
-    (p) => normalize(tinhName).includes(normalize(p.name)) || normalize(p.name).includes(normalize(tinhName))
-  ) || null;
+  const province =
+    provinces.value.find(
+      (p) =>
+        normalize(tinhName).includes(normalize(p.name)) ||
+        normalize(p.name).includes(normalize(tinhName))
+    ) || null;
 
   if (province) {
     selectedProvince.value = province.code;
     districts.value = getDistricts(province.code);
   }
 
-  const district = districts.value.find(
-    (d) => normalize(huyenName).includes(normalize(d.name)) || normalize(d.name).includes(normalize(huyenName))
-  ) || null;
+  const district =
+    districts.value.find(
+      (d) =>
+        normalize(huyenName).includes(normalize(d.name)) ||
+        normalize(d.name).includes(normalize(huyenName))
+    ) || null;
 
   if (district) {
     selectedDistrict.value = district.code;
     wards.value = getWards(district.code);
   }
 
-  const ward = wards.value.find(
-    (w) => normalize(xaName).includes(normalize(w.name)) || normalize(w.name).includes(normalize(xaName))
-  ) || null;
+  const ward =
+    wards.value.find(
+      (w) =>
+        normalize(xaName).includes(normalize(w.name)) ||
+        normalize(w.name).includes(normalize(xaName))
+    ) || null;
 
   if (ward) {
     selectedWard.value = ward.code;
@@ -507,8 +527,8 @@ function handleImageChange(e) {
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: #ffc107 !important; 
-  box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25); 
+  border-color: #ffc107 !important;
+  box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
   outline: none !important;
 }
 </style>

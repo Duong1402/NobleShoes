@@ -28,7 +28,7 @@ export const useAuthStore = defineStore("auth", {
     return {
       token: token || null,
       userType: userType || null,
-      username: null,
+      username: username || null,
     };
   },
 
@@ -42,12 +42,11 @@ export const useAuthStore = defineStore("auth", {
 
   actions: {
     setLoginSuccess(token, userType) {
-      this.token = token;
-      this.userType = userType;
-
       // Giải mã thêm username nếu cần
       const decoded = jwtDecode(token);
       this.username = decoded.sub;
+      this.token = token;
+      this.userType = userType;
 
       localStorage.setItem("user_token", token);
       localStorage.setItem("user_type", userType);

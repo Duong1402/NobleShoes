@@ -6,14 +6,13 @@ import com.example.datn.service.payment.PaymentService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.UnsupportedEncodingException;
-import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.Map;
 
-@RestController
+@Controller
 @RequestMapping("/admin/vnpay")
 public class PaymentController {
 
@@ -21,13 +20,14 @@ public class PaymentController {
     private PaymentService paymentService;
 
     @PostMapping("/create-payment")
-    public ResponseEntity<?> createPayment(@RequestBody PaymentRequest paymentRequest)
+    public ResponseEntity<?> createPayment(@RequestBody PaymentRequest paymentRequest, HttpServletRequest request)
             throws UnsupportedEncodingException {
 
-        String paymentUrl = paymentService.createPaymentUrl(paymentRequest);
+        String paymentUrl = paymentService.createPaymentUrl(paymentRequest, request);
 
-        // Trả về URL cho Frontend
-        return ResponseEntity.ok(Map.of("code", "00", "message", "success", "data", paymentUrl));
+        return ResponseEntity.ok(
+                Map.of("code", "00", "message", "success", "data", paymentUrl)
+        );
     }
 
     @GetMapping("/return")
@@ -51,4 +51,25 @@ public class PaymentController {
             return "redirect:http://localhost:5173/order/status?vnp_TxnRef=" + txnRef + "&status=invalid_signature";
         }
     }
+
+    private String getClientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
+            return ip.split(",")[0];
+        }
+        return request.getRemoteAddr();
+    }
+
+    @PostMapping("/confirm")
+    public ResponseEntity<?> confirmPayment(@RequestBody Map<String, String> body) {
+        String txnRef = body.get("txnRef");
+        if (txnRef == null) {
+            return ResponseEntity.badRequest().body("Missing txnRef");
+        }
+
+        return ResponseEntity.ok(Map.of("message", "Payment confirmed"));
+    }
+
+
+
 }

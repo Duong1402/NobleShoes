@@ -26,18 +26,8 @@ const filterStatus = ref("all");
 
 // Pagination ✅ ĐÃ THÊM
 const currentPage = ref(1);
-const pageSize = ref(5); // số sản phẩm trên 1 trang
+const pageSize = ref(5); 
 
-// Load danh sách sản phẩm
-// const loadSanPham = async () => {
-//   try {
-//     const res = await getAllSanPham();
-//     // ⚠️ CHỈ TẢI DỮ LIỆU: Không sắp xếp ở đây để giữ mảng gốc
-//     sanPham.value = Array.isArray(res) ? res : res.data || [];
-//   } catch (err) {
-//     console.error("❌ Lỗi khi tải danh sách sản phẩm:", err);
-//   }
-// };
 const loadSanPham = async () => {
   try {
     const res = await getAllSanPham();
@@ -52,9 +42,9 @@ const loadSanPham = async () => {
 const preFilteredSanPham = computed(() => {
   return (sanPham.value || []).filter((sp) => {
     const matchesText =
-      (sp.ma || "").toLowerCase().includes(filterText.value.toLowerCase()) ||
+      (sp.thuongHieu || "").toLowerCase().includes(filterText.value.toLowerCase()) ||
+      (sp.xuatXu || "").toLowerCase().includes(filterText.value.toLowerCase()) ||
       (sp.ten || "").toLowerCase().includes(filterText.value.toLowerCase());
-
     const matchesStatus =
       filterStatus.value === "all" || Number(sp.trangThai) === Number(filterStatus.value);
 
@@ -240,7 +230,7 @@ const exportToExcel = () => {
           <div class="row g-3 align-items-start">
             <div class="col-md-6">
               <label class="form-label fw-bold">Tìm kiếm:</label>
-              <input type="text" class="form-control mt-1" placeholder="Mã, tên sản phẩm..." v-model="filterText" />
+              <input type="text" class="form-control mt-1" placeholder="Tên sản phẩm, xuất xứ...." v-model="filterText" />
             </div>
 
             <div class="col-md-6">

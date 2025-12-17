@@ -24,6 +24,13 @@ public class ChiTietSanPhamResponse {
     private Integer soLuongTon;
     private String tenXuatXu;
 
+
+    private String danhMuc;
+    private String thuongHieu;
+    private String mucDich;
+    private String chatLieu;
+
+
     private String urlAnh1;
     private String urlAnh2;
     private String urlAnh3;
@@ -44,6 +51,10 @@ public class ChiTietSanPhamResponse {
             this.kichThuoc = ctsp.getKichThuoc().getTen();
         }
 
+        if (ctsp.getChatLieu() != null) {
+            this.chatLieu = ctsp.getChatLieu().getTen();
+        }
+
         // 3. Map thông tin từ Sản phẩm cha
         SanPham sp = ctsp.getSanPham();
         if (sp != null) {
@@ -53,6 +64,17 @@ public class ChiTietSanPhamResponse {
             if (sp.getXuatXu() != null) {
                 this.tenXuatXu = sp.getXuatXu().getTen();
             }
+
+            if (sp.getDanhMuc() != null) {
+                this.danhMuc = sp.getDanhMuc().getTen();
+            }
+            if (sp.getThuongHieu() != null) {
+                this.thuongHieu = sp.getThuongHieu().getTen();
+            }
+            if (sp.getMucDichSuDung() != null) {
+                this.mucDich = sp.getMucDichSuDung().getTen();
+            }
+
 
             // Map Hình ảnh
             HinhAnh ha = sp.getHinhAnh();

@@ -5,6 +5,7 @@ import com.example.datn.entity.HoaDonChiTiet;
 import com.example.datn.entity.KhachHang;
 import com.example.datn.entity.PhieuGiamGia;
 import com.example.datn.expection.LoiPhieuGiamGiaException;
+import com.example.datn.model.Response.HoaDonVoucherCheckResponse;
 import com.example.datn.model.Response.ThemSanPhamResponse;
 import com.example.datn.model.request.ThanhToanRequest;
 import com.example.datn.repository.HoaDonRepository;
@@ -179,6 +180,15 @@ public class BanHangTaiQuayController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @GetMapping("/hoa-don/{id}/kiem-tra-voucher")
+    public ResponseEntity<HoaDonVoucherCheckResponse> kiemTraVoucher(
+            @PathVariable UUID id) {
+
+        return ResponseEntity.ok(
+                banHangTaiQuayService.kiemTraVoucher(id)
+        );
     }
 
 }

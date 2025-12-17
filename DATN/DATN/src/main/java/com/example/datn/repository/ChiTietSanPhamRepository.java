@@ -38,6 +38,30 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
             "WHERE sp.id = :sanPhamId")
     List<ChiTietSanPhamDTO> findChiTietSanPhamDTOBySanPhamId(@Param("sanPhamId") UUID sanPhamId);
 
+    @Query("""
+                SELECT new com.example.datn.dto.ChiTietSanPhamDTO(
+                    ct.id, sp.ma, sp.ten,
+                    d.ten, t.ten, x.ten, dg.ten, dy.ten, md.ten,
+                    ct.giaBan, ct.moTa,
+                    m.ten, k.ten, cl.ten,
+                    h.urlAnh1, h.urlAnh2, h.urlAnh3,
+                    ct.soLuongTon
+                )
+                FROM ChiTietSanPham ct
+                JOIN ct.sanPham sp
+                LEFT JOIN sp.danhMuc d
+                LEFT JOIN sp.thuongHieu t
+                LEFT JOIN sp.xuatXu x
+                LEFT JOIN sp.deGiay dg
+                LEFT JOIN sp.dayGiay dy
+                LEFT JOIN sp.mucDichSuDung md
+                LEFT JOIN ct.mauSac m
+                LEFT JOIN ct.kichThuoc k
+                LEFT JOIN ct.chatLieu cl
+                LEFT JOIN sp.hinhAnh h
+            """)
+    List<ChiTietSanPhamDTO> findChiTietSanPham();
+
 
     @Query("SELECT COUNT(ct) FROM ChiTietSanPham ct WHERE ct.sanPham.id = :sanPhamId")
     int countBySanPhamId(@Param("sanPhamId") UUID sanPhamId);

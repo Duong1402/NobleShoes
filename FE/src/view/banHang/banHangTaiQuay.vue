@@ -239,7 +239,7 @@
                     class="d-flex flex-column align-items-end justify-content-start pt-4"
                     style="width: 20%"
                   >
-                    <small class="text-muted mb-1">
+                    <small class="text-muted mb-1 d-flex align-items-center">
                       Đơn giá: {{ formatCurrency(sp.donGia) }}
                     </small>
 
@@ -787,7 +787,7 @@
                       <div class="text-end">
                         <span class="fw-bold text-danger fs-6">
                           -
-          {{ formatCurrency(hoaDon.phieuGiamGia.giaTriGiam) }}
+                          {{ formatCurrency(hoaDon.phieuGiamGia.giaTriGiam) }}
                         </span>
                         <br />
                         <small
@@ -864,14 +864,14 @@
               </div>
 
               <div
-  v-if="hoaDon && hoaDon.phieuGiamGia"
-  class="d-flex justify-content-between mb-1 text-success"
->
-  <span> <i class="fa-solid fa-gift me-1"></i> Khuyến mãi: </span>
-  <span class="fw-bold">
-   - {{ formatCurrency(hoaDon.phieuGiamGia.giaTriGiam) }}
-  </span>
-</div>
+                v-if="hoaDon && hoaDon.phieuGiamGia"
+                class="d-flex justify-content-between mb-1 text-success"
+              >
+                <span> <i class="fa-solid fa-gift me-1"></i> Khuyến mãi: </span>
+                <span class="fw-bold">
+                  - {{ formatCurrency(hoaDon.phieuGiamGia.giaTriGiam) }}
+                </span>
+              </div>
 
               <div
                 v-if="isBanGiaoHang"
@@ -1135,6 +1135,7 @@ const {
   isVnpayProcessing,
   tongTienCanThanhToan,
   handleThanhToan,
+  handleChonPhuongThuc,
 } = useThanhToan(
   notify,
   hoaDon,
@@ -1171,6 +1172,21 @@ const formatDate = (dateString) => {
   if (!dateString) return "";
   const date = new Date(dateString);
   return date.toLocaleDateString("vi-VN");
+};
+
+const showPriceWarning = (item) => {
+  if (
+    item.donGia === undefined ||
+    item.currentGiaBan === undefined ||
+    item.donGia === null ||
+    item.currentGiaBan === null
+  ) {
+    return false;
+  }
+  const donGia = Number(item.donGia);
+  const currentGiaBan = Number(item.currentGiaBan);
+
+  return donGia !== currentGiaBan;
 };
 
 // Init

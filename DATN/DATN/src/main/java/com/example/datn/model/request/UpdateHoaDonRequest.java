@@ -8,4 +8,5 @@ public class UpdateHoaDonRequest {
     private Integer trangThai;
     private String sdt;
     private String diaChiGiaoHang;
+    private String tenKhachHang;
 }

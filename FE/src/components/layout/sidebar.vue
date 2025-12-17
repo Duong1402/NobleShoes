@@ -144,7 +144,7 @@ const menus = [
     routeName: "PhieuGiamGia",
     children: [
       { text: "Phiếu giảm giá", route: "PhieuGiamGia" },
-      { text: "Đợt giảm giá", route: "DotGiamGia" },
+      // { text: "Đợt giảm giá", route: "DotGiamGia" },
     ],
   },
   {
@@ -154,6 +154,15 @@ const menus = [
     routeName: "SanPham",
     children: [
       { text: "Sản phẩm", route: "SanPham" },
+      { text: "Biến thể Sản phẩm", route: "ChiTietBienThe" },
+    ],
+  },
+  {
+    key: "SanPham",
+    title: "Danh sách thuộc tính",
+    icon: "fas fa-cube",
+    routeName: "SanPham",
+    children: [
       { text: "Danh mục", route: "DanhMuc" },
       { text: "Mục đích sử dụng", route: "MucDichSuDung" },
       { text: "Dây giầy", route: "DayGiay" },

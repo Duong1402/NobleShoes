@@ -33,7 +33,7 @@ public interface HoaDonChiTietRepository extends JpaRepository<HoaDonChiTiet, UU
             "JOIN hdct.chiTietSanPham ctsp " +
             "JOIN ctsp.sanPham sp " +
             "JOIN hdct.hoaDon hd " +
-            "WHERE hd.ngayTao BETWEEN :start AND :end AND hd.trangThai = 4 " + // Chỉ tính đơn HOÀN THÀNH
+            "WHERE hd.ngayTao BETWEEN :start AND :end AND hd.trangThai = 6 " + // Chỉ tính đơn HOÀN THÀNH
             "GROUP BY sp.hinhAnh.urlAnh1, sp.ten, hdct.donGia " +
             "ORDER BY SUM(hdct.soLuong) DESC")
     Page<SanPhamBanChayDto> findBestSellingProducts(

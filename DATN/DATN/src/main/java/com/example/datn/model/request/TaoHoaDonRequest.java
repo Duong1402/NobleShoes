@@ -18,10 +18,13 @@ public class TaoHoaDonRequest {
     private String diaChi;
     private String ghiChu;
 
+    /* ✅ Mã phiếu giảm giá (THÊM MỚI) */
+    private String maGiamGia;     // FE gửi mã (VD: "SALE10"). Nếu null/blank => không áp
+
     /* Tiền */
     private BigDecimal tamTinh;        // tổng tiền hàng
     private BigDecimal phiVanChuyen;   // phí ship
-    private BigDecimal giamGia;        // tổng giảm giá (nếu có)
+    private BigDecimal giamGia;        // tổng giảm giá (nếu có) - giữ để tương thích FE cũ
     private BigDecimal tongTien;       // tổng cuối cùng FE tính; nếu 0 BE tự tính
 
     /* Danh sách sản phẩm */

@@ -62,6 +62,7 @@ export function useGioHang(notify, hoaDon, hoaDonChoList) {
 
           const ctsp = itemBE.chiTietSanPham;
           let realStock = 0;
+          const currentWarning = oldItem?.warningMessage || null;
 
           if (
             ctsp &&
@@ -101,6 +102,7 @@ export function useGioHang(notify, hoaDon, hoaDonChoList) {
             idChiTietSP:
               ctsp?.id || itemBE.idChiTietSanPham || oldItem?.idChiTietSP,
 
+            warningMessage: currentWarning,
             soLuongTon: realStock,
           };
         });
@@ -130,7 +132,7 @@ export function useGioHang(notify, hoaDon, hoaDonChoList) {
     try {
       const res = await themSanPhamVaoHoaDon(hoaDon.value.id, sp.id, 1);
 
-      const { hoaDonChiTiet, message } = res.data;
+      const { allRelatedHdct, message } = res.data;
 
       if (message) {
         notify.info(message);
@@ -138,40 +140,39 @@ export function useGioHang(notify, hoaDon, hoaDonChoList) {
         notify.success("Đã thêm sản phẩm!");
       }
 
-      const newItemBE = hoaDonChiTiet;
-      const displayItem = {
-        ...newItemBE,
-
-        tenSanPham: sp.tenSanPham,
-        mauSac: sp.mauSac?.ten || sp.mauSac,
-        kichThuoc: sp.kichThuoc,
-        tenXuatXu: sp.tenXuatXu,
-        hinhAnhUrl: sp.hinhAnhUrl,
-        soLuongTon: sp.soLuongTon,
-        idChiTietSP: sp.id,
-      };
-
-      const idx = gioHang.value.findIndex((i) => i.id === displayItem.id);
-
-      if (idx === -1) {
-        gioHang.value.push(displayItem);
-      } else {
-        gioHang.value[idx] = { ...gioHang.value[idx], ...displayItem };
-      }
+      const idChiTietSP = sp.id;
+      const otherItems = gioHang.value.filter(
+        (item) => item.idChiTietSP !== idChiTietSP
+      );
+      const mappedRelatedHdct = allRelatedHdct.map((itemBE) => {
+        return {
+          ...itemBE,
+          tenSanPham: sp.tenSanPham,
+          mauSac: sp.mauSac?.ten || sp.mauSac,
+          kichThuoc: sp.kichThuoc,
+          tenXuatXu: sp.tenXuatXu,
+          hinhAnhUrl: sp.hinhAnhUrl,
+          soLuongTon: sp.soLuongTon,
+          idChiTietSP: sp.id,
+          currentGiaBan: sp.giaBan,
+          warningMessage: message ? message : null,
+        };
+      });
+      gioHang.value = [...otherItems, ...mappedRelatedHdct];
 
       hoaDon.value.sanPhamList = gioHang.value;
 
       await syncMoneyFromBackend();
 
-      if (message) {
-        const targetItem = gioHang.value.find(
-          (item) => item.id === hoaDonChiTiet.id
-        );
+      // if (message) {
+      //   const targetItem = gioHang.value.find(
+      //     (item) => item.id === hoaDonChiTiet.id
+      //   );
 
-        if (targetItem) {
-          targetItem.warningMessage = message;
-        }
-      }
+      //   if (targetItem) {
+      //     targetItem.warningMessage = message;
+      //   }
+      // }
     } catch (err) {
       let msg = "Không thể thêm sản phẩm!";
       const responseData = err.response?.data;
@@ -204,7 +205,7 @@ export function useGioHang(notify, hoaDon, hoaDonChoList) {
   };
 
   const handleUpdateTempSoLuong = (idChiTietHoaDon, valueRaw) => {
-    let newSoLuong = parseInt(valueRaw); 
+    let newSoLuong = parseInt(valueRaw);
     if (isNaN(newSoLuong) || newSoLuong < 1) {
       newSoLuong = 1;
     }
@@ -262,10 +263,35 @@ export function useGioHang(notify, hoaDon, hoaDonChoList) {
     const idKho = currentSp.idChiTietSP;
 
     try {
-      await themSanPhamVaoHoaDon(hoaDon.value.id, idKho, delta);
+      const res = await themSanPhamVaoHoaDon(hoaDon.value.id, idKho, delta);
+      const { allRelatedHdct, message } = res.data;
+
+      if (allRelatedHdct) {
+        const otherItems = gioHang.value.filter(
+          (item) => item.idChiTietSP !== idKho
+        );
+        const mappedRelatedHdct = allRelatedHdct.map((itemBE) => {
+          const baseInfo = {
+            tenSanPham: currentSp.tenSanPham,
+            mauSac: currentSp.mauSac,
+            kichThuoc: currentSp.kichThuoc,
+            tenXuatXu: currentSp.tenXuatXu,
+            hinhAnhUrl: currentSp.hinhAnhUrl,
+            soLuongTon: currentSp.soLuongTon,
+            idChiTietSP: currentSp.idChiTietSP,
+            currentGiaBan: currentSp.currentGiaBan,
+          };
+          return {
+            ...itemBE,
+            ...baseInfo,
+            warningMessage: message || null,
+          };
+        });
+        gioHang.value = [...otherItems, ...mappedRelatedHdct];
+        hoaDon.value.sanPhamList = gioHang.value;
+      }
 
       await syncMoneyFromBackend();
-
       notify.success("Cập nhật thành công!");
     } catch (err) {
       console.error(err);
@@ -273,6 +299,11 @@ export function useGioHang(notify, hoaDon, hoaDonChoList) {
       await syncMoneyFromBackend();
 
       const msg = err.response?.data?.message || "Lỗi cập nhật";
+      const targetItem = gioHang.value.find((i) => i.id === idChiTietHoaDon);
+      if (targetItem) {
+        targetItem.warningMessage = msg;
+      }
+
       if (
         typeof msg === "string" &&
         (msg.includes("tồn") || msg.includes("đủ"))

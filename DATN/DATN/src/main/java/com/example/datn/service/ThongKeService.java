@@ -26,8 +26,8 @@ public class ThongKeService {
     private final HoaDonRepository hoaDonRepository;
     private final HoaDonChiTietRepository hoaDonChiTietRepository;
     private final ChiTietSanPhamRepository chiTietSanPhamRepository;
-    private static final int TRANG_THAI_HUY = 5;
-    private static final int TRANG_THAI_HOAN_THANH = 4;
+    private static final int TRANG_THAI_HUY = 7;
+    private static final int TRANG_THAI_HOAN_THANH = 6;
 
 
     public OverviewResponse getOverviewData(Pageable lowStockPageable) {

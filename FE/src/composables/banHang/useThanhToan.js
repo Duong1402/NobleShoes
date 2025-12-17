@@ -5,6 +5,7 @@ import {
   thanhToan,
   getAllPhuongThucThanhToan,
   themPhuongThucMoi,
+  kiemTraVoucher,
 } from "@/service/BanHangService";
 import Swal from "sweetalert2";
 import axios from "axios";
@@ -202,30 +203,103 @@ export function useThanhToan(
 
     const tongTienCuoiCung = Number(tongTienSauGiam.value) || 0;
 
+    try {
+      const resCheck = await kiemTraVoucher(hoaDon.value.id);
+      const data = resCheck.data;
+
+      if (data?.coMaTotHon && data?.phieuGiamGiaTotNhat) {
+        const confirmVoucher = await Swal.fire({
+          title: "Có mã giảm giá tốt hơn",
+          html: `
+        <div style="text-align:left; font-size: 1.05em">
+          <p>
+            Mã đang áp dụng giảm:
+            <b>${(data.soTienGiamHienTai || 0).toLocaleString()} ₫</b>
+          </p>
+          <p>
+            Mã tốt hơn giảm:
+            <b style="color:#d33">
+              ${(data.soTienGiamTotNhat || 0).toLocaleString()} ₫
+            </b>
+          </p>
+          <hr/>
+          <p>
+            Bạn có muốn <b>tiếp tục thanh toán</b>
+            hay quay lại để chọn mã tốt hơn?
+          </p>
+        </div>
+      `,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Tiếp tục thanh toán",
+          cancelButtonText: "Chọn mã khác",
+          confirmButtonColor: "#28a745",
+          cancelButtonColor: "#3085d6",
+        });
+
+        if (!confirmVoucher.isConfirmed) {
+          notify.info("Vui lòng chọn mã giảm tốt hơn trước khi thanh toán.");
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("⚠️ Không kiểm tra được voucher:", e);
+    }
+
+    const tienHang = Number(hoaDon.value?.tongTien || 0);
+    const tienGiam = Number(hoaDon.value?.soTienGiamGia || 0);
+    const phiVC = isBanGiaoHang.value ? finalPhiShip : 0;
+    const tongThanhToan = tongTienCuoiCung;
+
     const confirm = await Swal.fire({
       title: "Xác nhận Thanh toán?",
       html: `
-    <div class="text-start" style="font-size: 1.1em;">
-       ${
-         isBanGiaoHang.value
-           ? `
-       <div style="display:flex; justify-content:space-between;">
-          <span>Phí vận chuyển:</span>
-          <strong>${finalPhiShip.toLocaleString()} ₫</strong>
-       </div>
-       <hr style="margin: 8px 0;">`
-           : ""
-       }
+  <div style="font-size:1.05em; text-align:left">
+    
+    <div style="display:flex; justify-content:space-between;">
+      <span>Tiền hàng:</span>
+      <strong>${tienHang.toLocaleString()} ₫</strong>
+    </div>
 
-       <div style="display:flex; justify-content:space-between; font-size: 1.2em; color: #d33;">
-          <span>TỔNG THANH TOÁN:</span>
-          <strong>${tongTienCuoiCung.toLocaleString()} ₫</strong>
-       </div>
+    ${
+      hoaDon.value?.phieuGiamGia?.ma
+        ? `
+     <div style="display:flex; justify-content:space-between;">
+       <span>Mã áp dụng:</span>
+       <strong>- ${hoaDon.value.phieuGiamGia.giaTriGiam.toLocaleString()} ₫</strong>
+     </div>`
+        : ""
+    }
 
-       <div style="margin-top:10px; font-style: italic; font-size: 0.9em;">
-          (${loaiHoaDonQuyetDinh})
-       </div>
-    </div>`,
+    ${
+      isBanGiaoHang.value
+        ? `
+        <div style="display:flex; justify-content:space-between;">
+          <span>Phí vận chuyển:</span>
+          <strong>${phiVC.toLocaleString()} ₫</strong>
+        </div>
+        `
+        : ""
+    }
+
+    <hr style="margin:10px 0"/>
+
+    <div style="
+      display:flex;
+      justify-content:space-between;
+      font-size:1.25em;
+      font-weight:bold;
+      color:#d33;
+    ">
+      <span>TỔNG THANH TOÁN:</span>
+      <span>${tongThanhToan.toLocaleString()} ₫</span>
+    </div>
+
+    <div style="margin-top:8px; font-size:0.9em; font-style:italic;">
+      (${loaiHoaDonQuyetDinh})
+    </div>
+  </div>
+  `,
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Thanh toán",
@@ -276,11 +350,16 @@ export function useThanhToan(
     }
   };
 
+  const handleChonPhuongThuc = (code) => {
+    phuongThucThanhToan.value = code;
+  };
+
   return {
     phuongThucThanhToan,
     isVnpayProcessing,
     tongTienCanThanhToan,
     handleVNPayPayment,
     handleThanhToan,
+    handleChonPhuongThuc,
   };
 }

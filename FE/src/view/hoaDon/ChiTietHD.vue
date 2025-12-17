@@ -19,15 +19,17 @@ const showHistory = ref(false);
 const lichSuThayDoi = ref([]);
 const lichSuHienThi = ref([]);
 
-const LOAI_HOA_DON = ["Online", "Tại cửa hàng"];
+const LOAI_HOA_DON = ["Online", "Tại cửa hàng", "ONLINE"];
 
 const TRANG_THAI_HOA_DON = {
   0: "Chờ thanh toán",
   1: "Chờ xác nhận",
   2: "Đã xác nhận",
-  3: "Đang giao",
-  4: "Hoàn thành",
-  5: "Đã hủy",
+  3: "Đang chuẩn bị",
+  4: "Đang giao",
+  5: "Giao hàng thất bại",
+  6: "Hoàn thành",
+  7: "Đã hủy",
 };
 
 const formatDateTime = (str) => {
@@ -47,39 +49,12 @@ const renderTimeline = () => {
 
   const currentStatus = Number(hoaDon.value.trangThai ?? 0);
   const currentType = hoaDon.value.loaiHoaDon;
-  const isTaiCuaHang =
-    currentType && currentType.toLowerCase() === "tại cửa hàng";
 
-  let allowedSteps = [];
-
-  if (isTaiCuaHang) {
-    allowedSteps = [0, 4];
-  } else {
-    allowedSteps = [1, 2, 3, 4];
-  }
-  const findTimeInHistory = (status) => {
-    const statusNum = Number(status);
-    const item = lichSuThayDoi.value.find(
-      (h) => Number(h.trangThaiMoi) === statusNum
-    );
-    let time =
-      item?.thoiGianCapNhat ||
-      item?.thoiGian ||
-      item?.ngayTao ||
-      item?.createDate ||
-      item?.createdAt;
-
-    if (!time && statusNum === currentStatus) {
-      time = hoaDon.value.ngayCapNhat || hoaDon.value.ngayTao;
-    }
-    return time || null;
-  };
-
-  if (currentStatus === 5) {
+  if (currentStatus === 7) {
     lichSuHienThi.value = [
       {
-        id: 5,
-        text: TRANG_THAI_HOA_DON[5],
+        id: 7,
+        text: TRANG_THAI_HOA_DON[7],
         thoiGian:
           hoaDon.value.thoiGianHuy ||
           hoaDon.value.ngayCapNhat ||
@@ -89,35 +64,74 @@ const renderTimeline = () => {
         isCurrent: true,
       },
     ];
-  } else {
-    const visibleSteps = allowedSteps.filter((step) => step <= currentStatus);
-
-    const anchorTime =
-      findTimeInHistory(currentStatus) ||
-      hoaDon.value.ngayCapNhat ||
-      new Date().toISOString();
-
-    lichSuHienThi.value = visibleSteps.map((step) => {
-      let thoiGian = findTimeInHistory(step);
-
-      if (!thoiGian) {
-        if (step === 0) {
-          thoiGian = hoaDon.value.ngayTao;
-        } else {
-          thoiGian = anchorTime;
-        }
-      }
-
-      return {
-        id: step,
-        text: TRANG_THAI_HOA_DON[step],
-        thoiGian: thoiGian,
-        isDone: true,
-        isCurrent: step === currentStatus,
-        isCanceled: false,
-      };
-    });
+    return;
   }
+
+  let allowedSteps = [];
+  switch ((currentType || "").toLowerCase()) {
+    case "tại cửa hàng":
+      allowedSteps = [0, 6];
+      break;
+
+    case "online":
+      allowedSteps = [1, 2, 3, 4, 5, 6];
+      break;
+
+    default:
+      allowedSteps = [currentStatus];
+  }
+
+  const findTimeInHistory = (status) => {
+    const item = lichSuThayDoi.value.find(
+      (h) => Number(h.trangThaiMoi) === Number(status)
+    );
+    let time =
+      item?.thoiGianCapNhat ||
+      item?.thoiGian ||
+      item?.ngayTao ||
+      item?.createDate ||
+      item?.createdAt;
+
+    if (!time && status === currentStatus) {
+      time = hoaDon.value.ngayCapNhat || hoaDon.value.ngayTao;
+    }
+    return time || null;
+  };
+
+  // --- 3. Lọc step hiển thị ---
+  let visibleSteps = allowedSteps.filter((step) => step <= currentStatus);
+
+  // Nếu hoàn thành (6) → bỏ step 5 nếu chưa có trong lịch sử
+  if (currentStatus === 6) {
+    const step5Happen = lichSuThayDoi.value.some(
+      (h) => Number(h.trangThaiMoi) === 5
+    );
+    if (!step5Happen) {
+      visibleSteps = visibleSteps.filter((step) => step !== 5);
+    }
+  }
+
+  const anchorTime =
+    findTimeInHistory(currentStatus) ||
+    hoaDon.value.ngayCapNhat ||
+    new Date().toISOString();
+
+  // --- 4. Map các step ---
+  lichSuHienThi.value = visibleSteps.map((step) => {
+    let thoiGian = findTimeInHistory(step);
+    if (!thoiGian) {
+      thoiGian = step === 0 ? hoaDon.value.ngayTao : anchorTime;
+    }
+    return {
+      id: step,
+      text: TRANG_THAI_HOA_DON[step],
+      thoiGian,
+      isDone: true,
+      isCurrent: step === currentStatus,
+      // chỉ đánh dấu canceled nếu currentStatus là 5
+      isCanceled: step === 5 && currentStatus === 5,
+    };
+  });
 };
 
 const loadData = async (id) => {
@@ -172,9 +186,10 @@ const handleSave = async () => {
         trangThai: hoaDon.value.trangThai,
         sdt: hoaDon.value.sdt,
         diaChiGiaoHang: hoaDon.value.diaChiGiaoHang,
+        tenKhachHang: hoaDon.value.tenKhachHang,
       });
       notify.success("Cập nhật thành công!");
-      router.push({ name: "HoaDon" });
+      router.push({ name: "ChiTietHD" });
     } catch (err) {
       console.error("Lỗi cập nhật:", err);
       notify.error("Cập nhật thất bại!");
@@ -187,22 +202,30 @@ const confirmChange = async (newStatus) => {
 
   let isConfirmed = false;
   let cancelReason = "";
+  let targetStatus = newStatus;
 
-  if (newStatus === 5) {
+  if (newStatus === 7) {
     const result = await Swal.fire({
       title: "Xác nhận hủy đơn hàng?",
       input: "text",
-      inputPlaceholder: "Nhập lý do hủy (không bắt buộc)",
+      inputPlaceholder: "Nhập lý do hủy ? *",
       showCancelButton: true,
       confirmButtonText: "Xác nhận hủy",
       cancelButtonText: "Đóng",
       icon: "warning",
       inputAttributes: { maxlength: 255 },
-      preConfirm: (note) => note?.trim() || "",
+      preConfirm: (note) => {
+        const trimmedNote = note?.trim();
+        if (!trimmedNote || trimmedNote.length === 0) {
+          return "Lý do hủy không được để trống! Vui lòng nhập chi tiết.";
+        }
+        return trimmedNote;
+      },
     });
     if (result.isConfirmed) {
       isConfirmed = true;
-      cancelReason = result.value || "";
+      cancelReason = result.value;
+      targetStatus = 7;
     }
   } else {
     const result = await Swal.fire({
@@ -218,56 +241,132 @@ const confirmChange = async (newStatus) => {
 
   if (isConfirmed) {
     try {
-      await updateHoaDon(hoaDon.value.id, {
-        trangThai: newStatus,
-        ghiChu: cancelReason,
-      });
-
-      notify.success(
-        newStatus === 5 ? "Đã hủy đơn hàng!" : "Cập nhật trạng thái thành công!"
-      );
-
       const now = new Date().toISOString();
-
       const userInfor = JSON.parse(localStorage.getItem("userData")) || {};
       const realName = userInfor.hoTen || "Quản lý";
 
-      hoaDon.value.trangThai = newStatus;
+      hoaDon.value.trangThai = targetStatus;
       hoaDon.value.ngayCapNhat = now;
-      if (newStatus === 5) hoaDon.value.thoiGianHuy = now;
-      currentStep.value = newStatus;
+      if (targetStatus === 7) hoaDon.value.thoiGianHuy = now;
 
       lichSuThayDoi.value.push({
-        trangThaiMoi: newStatus,
+        trangThaiMoi: targetStatus,
         thoiGian: now,
         thoiGianCapNhat: now,
         nguoiChinhSua: realName,
         ghiChu: cancelReason,
       });
+
       renderTimeline();
-      await loadData(hoaDon.value.id);
+
+      await updateHoaDon(hoaDon.value.id, {
+        trangThai: targetStatus,
+        ghiChu: cancelReason,
+      });
     } catch (err) {
       console.error("Lỗi cập nhật:", err);
       notify.error("Có lỗi xảy ra, vui lòng thử lại!");
-      loadData(hoaDon.value.id);
     }
   }
 };
 
+const getActionButtons = (status) => {
+  const buttons = [];
+
+  const createButton = (label, target, className) => ({
+    label,
+    target,
+    class: className,
+  });
+
+  switch (status) {
+    case 0: // Chờ thanh toán
+      buttons.push(
+        createButton("✅ Chờ xác nhận", 1, "btn btn-success btn-sm")
+      );
+      buttons.push(createButton("❌ Hủy", 7, "btn btn-outline-danger btn-sm"));
+      break;
+
+    case 1: // Chờ xác nhận
+      buttons.push(createButton("✅ Xác nhận", 2, "btn btn-success btn-sm"));
+      buttons.push(
+        createButton("🔙 Quay lại", 0, "btn btn-outline-secondary btn-sm")
+      );
+      buttons.push(createButton("❌ Hủy", 7, "btn btn-outline-danger btn-sm"));
+      break;
+
+    case 2: // Đã xác nhận
+      buttons.push(
+        createButton("🚚 Đang chuẩn bị", 3, "btn btn-primary btn-sm")
+      );
+      buttons.push(
+        createButton("🔙 Quay lại", 1, "btn btn-outline-secondary btn-sm")
+      );
+      buttons.push(createButton("❌ Hủy", 7, "btn btn-outline-danger btn-sm"));
+      break;
+
+    case 3: // Đang chuẩn bị
+      buttons.push(createButton("🚚 Đang giao", 4, "btn btn-primary btn-sm"));
+      buttons.push(
+        createButton("🔙 Quay lại", 2, "btn btn-outline-secondary btn-sm")
+      );
+      buttons.push(createButton("❌ Hủy", 7, "btn btn-outline-danger btn-sm"));
+      break;
+
+    case 4: // Đang giao
+      buttons.push(createButton("🎉 Hoàn thành", 6, "btn btn-success btn-sm"));
+      buttons.push(
+        createButton(
+          "❌ Giao hàng thất bại",
+          5,
+          "btn btn-outline-danger btn-sm"
+        )
+      );
+      // buttons.push(
+      //   createButton("🔙 Quay lại", 3, "btn btn-outline-secondary btn-sm")
+      // );
+      break;
+
+    case 5: // Giao hàng thất bại
+    case 7: // Đã hủy
+      buttons.push(
+        createButton(
+          "↩️ Khôi phục (Chờ xác nhận)",
+          1,
+          "btn btn-outline-primary btn-sm"
+        )
+      );
+      break;
+
+    case 6: // Hoàn thành
+      // Không có nút gì, chỉ hiển thị thông báo
+      break;
+
+    default:
+      break;
+  }
+
+  return buttons;
+};
+
 const getStepIcon = (stepId) => {
   switch (stepId) {
-    case 0:
+    case 0: // Chờ thanh toán
       return "fa-file-invoice-dollar";
-    case 1:
+    case 1: // Chờ xác nhận
       return "fa-clipboard-check";
-    case 2:
+    case 2: // Đã xác nhận
       return "fa-box-open";
-    case 3:
+    case 3: // Đang chuẩn bị
+      return "fa-boxes-packing";
+    case 4: // Đang giao
       return "fa-truck-fast";
-    case 4:
-      return "fa-check-circle";
-    case 5:
+    case 5: // Giao hàng thất bại / Đã hủy
       return "fa-ban";
+    case 6: // Hoàn thành
+      return "fa-check-circle";
+    case 7: // Đã hủy
+      return "fa-times-circle";
     default:
       return "fa-circle";
   }
@@ -276,17 +375,21 @@ const getStepIcon = (stepId) => {
 const getStepColor = (stepId) => {
   switch (stepId) {
     case 0:
-      return "#ffc107";
+      return "#ffc107"; // warning
     case 1:
-      return "#6c757d";
+      return "#6c757d"; // secondary
     case 2:
-      return "#0dcaf0";
+      return "#0dcaf0"; // info
     case 3:
-      return "#0d6efd";
+      return "#6f42c1"; // purple (chuẩn bị)
     case 4:
-      return "#198754";
+      return "#0d6efd"; // primary
     case 5:
-      return "#dc3545";
+      return "#dc3545"; // danger
+    case 6:
+      return "#198754"; // success
+    case 7:
+      return "#343a40"; // dark
     default:
       return "#e9ecef";
   }
@@ -320,6 +423,11 @@ const calculateProgressWidth = () => {
   const totalSteps = lichSuHienThi.value.length - 1;
   return (lastDoneIndex / totalSteps) * 100;
 };
+
+const isConfirmedOrBeyond = computed(() => {
+  const currentStatus = Number(hoaDon.value?.trangThai ?? 0);
+  return currentStatus >= 2 && currentStatus !== 5;
+});
 </script>
 
 <template>
@@ -458,11 +566,18 @@ const calculateProgressWidth = () => {
 
     <!-- Thông tin chung -->
     <div class="card shadow-sm mb-4 p-4">
-      <h5>Thông tin chung</h5>
+      <h4 class="fw-bold">
+        <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+        Thông tin chung
+      </h4>
       <div class="row g-3">
         <div class="col-md-6">
           <label>Tên khách hàng</label>
-          <input class="form-control" v-model="hoaDon.tenKhachHang" disabled />
+          <input
+            class="form-control"
+            v-model="hoaDon.tenKhachHang"
+            :disabled="isConfirmedOrBeyond"
+          />
         </div>
         <div class="col-md-6">
           <label>Tên nhân viên</label>
@@ -471,7 +586,11 @@ const calculateProgressWidth = () => {
 
         <div class="col-md-6">
           <label>Số điện thoại</label>
-          <input class="form-control" v-model="hoaDon.sdt" disabled />
+          <input
+            class="form-control"
+            v-model="hoaDon.sdt"
+            :disabled="isConfirmedOrBeyond"
+          />
         </div>
 
         <div class="col-md-6">
@@ -483,9 +602,11 @@ const calculateProgressWidth = () => {
                 'bg-warning text-dark': hoaDon.trangThai == 0,
                 'bg-secondary': hoaDon.trangThai == 1,
                 'bg-info': hoaDon.trangThai == 2,
-                'bg-primary': hoaDon.trangThai == 3,
-                'bg-success': hoaDon.trangThai == 4,
+                'bg-purple': hoaDon.trangThai == 3,
+                'bg-primary': hoaDon.trangThai == 4,
                 'bg-danger': hoaDon.trangThai == 5,
+                'bg-success': hoaDon.trangThai == 6,
+                'bg-dark': hoaDon.trangThai == 7,
               }"
             >
               {{ TRANG_THAI_HOA_DON[hoaDon.trangThai] }}
@@ -493,92 +614,14 @@ const calculateProgressWidth = () => {
           </div>
 
           <div class="mt-3 d-flex flex-wrap gap-2">
-            <!-- 0: Chờ thanh toán -->
-            <template v-if="hoaDon.trangThai == 0">
-              <button class="btn btn-success btn-sm" @click="confirmChange(1)">
-                ✅ Chờ xác nhận
-              </button>
-              <button
-                class="btn btn-outline-danger btn-sm"
-                @click="confirmChange(5)"
-              >
-                ❌ Hủy
-              </button>
-            </template>
-
-            <!-- 1: Chờ xác nhận -->
-            <template v-else-if="hoaDon.trangThai == 1">
-              <button class="btn btn-success btn-sm" @click="confirmChange(2)">
-                ✅ Xác nhận
-              </button>
-              <button
-                class="btn btn-outline-secondary btn-sm"
-                @click="confirmChange(0)"
-              >
-                🔙 Quay lại (Chờ thanh toán)
-              </button>
-              <button
-                class="btn btn-outline-danger btn-sm"
-                @click="confirmChange(5)"
-              >
-                ❌ Hủy
-              </button>
-            </template>
-
-            <!-- 2: Đã xác nhận -->
-            <template v-else-if="hoaDon.trangThai == 2">
-              <button class="btn btn-primary btn-sm" @click="confirmChange(3)">
-                🚚 Đang giao
-              </button>
-              <button
-                class="btn btn-outline-secondary btn-sm"
-                @click="confirmChange(1)"
-              >
-                🔙 Quay lại (Chờ xác nhận)
-              </button>
-              <button
-                class="btn btn-outline-danger btn-sm"
-                @click="confirmChange(5)"
-              >
-                ❌ Hủy
-              </button>
-            </template>
-
-            <!-- 3: Đang giao -->
-            <template v-else-if="hoaDon.trangThai == 3">
-              <button class="btn btn-success btn-sm" @click="confirmChange(4)">
-                🎉 Hoàn thành
-              </button>
-              <button
-                class="btn btn-outline-secondary btn-sm"
-                @click="confirmChange(2)"
-              >
-                🔙 Quay lại (Đã xác nhận)
-              </button>
-              <button
-                class="btn btn-outline-danger btn-sm"
-                @click="confirmChange(5)"
-              >
-                ❌ Hủy
-              </button>
-            </template>
-
-            <!-- 4: Hoàn thành -->
-            <template v-else-if="hoaDon.trangThai == 4">
-              <span class="text-success fw-bold fst-italic"
-                >Đơn hàng đã hoàn tất</span
-              >
-            </template>
-
-            <!-- 5: Đã hủy -->
-            <template v-else-if="hoaDon.trangThai == 5">
-              <button
-                class="btn btn-outline-primary btn-sm"
-                @click="confirmChange(1)"
-              >
-                ↩️ Khôi phục (Chờ xác nhận)
-              </button>
-            </template>
+            <button
+              v-for="(btn, i) in getActionButtons(hoaDon.trangThai)"
+              :key="i"
+              :class="btn.class"
+              @click="confirmChange(btn.target)"
+            >
+              {{ btn.label }}
+            </button>
           </div>
         </div>
 
@@ -608,8 +651,11 @@ const calculateProgressWidth = () => {
     </div>
 
     <!-- Danh sách sản phẩm -->
-    <div class="card shadow-sm mb-4 p-4 table-card">
-      <h5 class="fw-bold mb-3">Danh sách sản phẩm</h5>
+    <div class="card shadow-sm mb-4 p-4">
+      <h4 class="fw-bold mb-3">
+        <i class="fa-solid fa-clipboard-list me-2 text-warning"></i>
+        Danh sách sản phẩm
+      </h4>
       <div class="table-responsive">
         <table class="table align-middle">
           <thead class="table-light">
@@ -626,7 +672,7 @@ const calculateProgressWidth = () => {
           </thead>
           <tbody>
             <tr v-for="(sp, i) in hoaDon.chiTietSanPham" :key="i">
-              <td class="text-center">
+              <td>
                 <img
                   :src="sp.hinhAnhUrl"
                   class="img-thumbnail"
@@ -648,57 +694,79 @@ const calculateProgressWidth = () => {
 
     <!-- Tổng tiền -->
     <div class="card shadow-sm mb-5 p-4 outer-total-card">
-    <div class="row">
+      <div class="row">
         <div class="col-md-6">
-            <div class="card p-3 inner-card">
-                <p class="mb-1">
-                    <i class="fa-solid fa-tag text-primary me-2"></i>
-                    <strong>Phiếu giảm giá:</strong>
-                    {{ hoaDon.phieuGiamGiaResponse?.ten || "Không áp dụng" }}
-                </p>
-                <p
-                    v-if="hoaDon.phieuGiamGiaResponse?.giaTriGiam"
-                    class="mb-0 text-success"
-                >
-                    <i class="fa-solid fa-arrow-down-long me-2"></i>
-                    <strong>Giảm giá:</strong>
-                    -{{ hoaDon.phieuGiamGiaResponse.giaTriGiam.toLocaleString() }} ₫
-                </p>
-            </div>
+          <div class="card p-3 inner-card">
+            <p class="mb-1">
+              <i class="fa-solid fa-tag text-primary me-2"></i>
+              <strong>Phiếu giảm giá:</strong>
+              {{ hoaDon.phieuGiamGiaResponse?.ten || "Không áp dụng" }}
+            </p>
+            <p
+              v-if="hoaDon.phieuGiamGiaResponse?.giaTriGiam"
+              class="mb-0 text-success"
+            >
+              <i class="fa-solid fa-arrow-down-long me-2"></i>
+              <strong>Giảm giá:</strong>
+              -{{ hoaDon.phieuGiamGiaResponse.giaTriGiam.toLocaleString() }} ₫
+            </p>
+          </div>
         </div>
 
         <div class="col-md-6">
-            <div class="card p-3 text-end inner-card">
-                <p class="mb-1">
-                    <i class="fa-solid fa-cart-shopping me-2"></i>
-                    Tổng tiền hàng: {{ hoaDon.tongTien.toLocaleString() }} ₫
-                </p>
-                <p class="mb-1">
-                    <i class="fa-solid fa-truck-fast me-2"></i>
-                    Phí vận chuyển:
-                    {{
-                        hoaDon.phiVanChuyen
-                            ? hoaDon.phiVanChuyen.toLocaleString() + " ₫"
-                            : "Miễn phí (0 ₫)"
-                    }}
-                </p>
-                <hr class="my-2" />
-                <h5 class="fw-bold text-danger mb-0">
-                    <i class="fa-solid fa-credit-card me-2"></i>
-                    Tổng tiền thanh toán:
-                    {{
-                        (
-                            hoaDon.tongTienSauGiam ||
-                            hoaDon.tongTien ||
-                            0
-                        ).toLocaleString()
-                    }}
-                    ₫
-                </h5>
-            </div>
+          <div class="card p-3 inner-card">
+            <p class="mb-1 d-flex justify-content-between">
+              <span class="px-4">
+                <i class="fa-solid fa-cart-shopping me-2"></i>
+                Tổng tiền hàng:
+              </span>
+              <span class="px-4">
+                {{ hoaDon.tongTien.toLocaleString() }} ₫
+              </span>
+            </p>
+
+            <p
+              class="mb-1 d-flex justify-content-between"
+              v-if="
+                hoaDon.loaiHoaDon &&
+                hoaDon.loaiHoaDon.toLowerCase() === 'online'
+              "
+            >
+              <span class="px-4">
+                <i class="fa-solid fa-truck-fast me-2"></i>
+                Phí vận chuyển:
+              </span>
+              <span class="px-4">
+                {{
+                  hoaDon.phiVanChuyen
+                    ? hoaDon.phiVanChuyen.toLocaleString() + " ₫"
+                    : "(0 ₫)"
+                }}
+              </span>
+            </p>
+
+            <hr class="my-2" />
+
+            <h5 class="fw-bold text-danger mb-0 d-flex justify-content-between">
+              <span class="px-4">
+                <i class="fa-solid fa-credit-card me-2"></i>
+                Tổng tiền thanh toán:
+              </span>
+              <span class="px-4">
+                {{
+                  (
+                    hoaDon.tongTienSauGiam ||
+                    hoaDon.tongTien ||
+                    0
+                  ).toLocaleString()
+                }}
+                ₫
+              </span>
+            </h5>
+          </div>
         </div>
+      </div>
     </div>
-</div>
 
     <!-- Nút hành động -->
     <div class="d-flex justify-content-end gap-2">
@@ -873,5 +941,11 @@ const calculateProgressWidth = () => {
   .step-time {
     font-size: 0.65rem;
   }
+}
+
+/* Màu tím của trạng thái hóa đơn */
+.bg-purple {
+  background-color: #6f42c1 !important;
+  color: #fff !important;
 }
 </style>

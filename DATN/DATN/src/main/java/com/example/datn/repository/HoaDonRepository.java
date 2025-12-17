@@ -56,4 +56,18 @@ public interface HoaDonRepository extends JpaRepository<HoaDon, UUID>,
 
     @Query("SELECT h FROM HoaDon h LEFT JOIN FETCH h.phieuGiamGia WHERE h.id = :id")
     Optional<HoaDon> findByIdWithPhieuGiamGia(UUID id);
+
+    @Query("""
+                select h from HoaDon h
+                left join fetch h.phieuGiamGia p
+                where h.ma = :ma
+            """)
+    Optional<HoaDon> findByMaFetchPhieu(@Param("ma") String ma);
+
+    @Query("""
+    select h from HoaDon h
+    left join fetch h.phieuGiamGia p
+    where h.id = :id
+""")
+    Optional<HoaDon> findByIdFetchPhieu(@Param("id") UUID id);
 }

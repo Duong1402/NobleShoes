@@ -92,7 +92,7 @@ export function useHoaDon(notify, idNhanVien, resetGiaoHangCallback) {
     }
   };
 
-const handleApDungKhuyenMai = async () => {
+  const handleApDungKhuyenMai = async () => {
     if (!selectedHoaDonId.value) {
       return notify.warning("Chưa chọn hóa đơn!");
     }
@@ -103,7 +103,7 @@ const handleApDungKhuyenMai = async () => {
         "Vui lòng chọn khách hàng thành viên để dùng mã giảm giá!"
       );
     }
-    
+
     const khachHangSafe = { ...hoaDon.value.khachHang };
 
     try {
@@ -113,28 +113,29 @@ const handleApDungKhuyenMai = async () => {
       console.log("🔥 API Trả về:", res.data);
 
       if (typeof res.data === "object" && res.data.id) {
-        const updatedHoaDon = res.data; 
+        const updatedHoaDon = res.data;
         hoaDon.value = {
-          ...hoaDon.value,   
-          ...updatedHoaDon,  
-          
-          khachHang: (updatedHoaDon.khachHang && updatedHoaDon.khachHang.id) 
-                     ? updatedHoaDon.khachHang 
-                     : khachHangSafe,
-                     
-          sanPhamList: hoaDon.value.sanPhamList, 
+          ...hoaDon.value,
+          ...updatedHoaDon,
+
+          khachHang:
+            updatedHoaDon.khachHang && updatedHoaDon.khachHang.id
+              ? updatedHoaDon.khachHang
+              : khachHangSafe,
+
+          sanPhamList: hoaDon.value.sanPhamList,
         };
 
         const index = hoaDonChoList.value.findIndex(
           (h) => h.id === updatedHoaDon.id
         );
-        
+
         if (index !== -1) {
           const itemCu = hoaDonChoList.value[index];
 
           hoaDonChoList.value[index] = {
-            ...itemCu, 
-            tongTien: updatedHoaDon.tongTien,        
+            ...itemCu,
+            tongTien: updatedHoaDon.tongTien,
             tongTienSauGiam: updatedHoaDon.tongTienSauGiam,
             soTienGiamGia: updatedHoaDon.soTienGiamGia,
             phiVanChuyen: updatedHoaDon.phiVanChuyen,
@@ -155,7 +156,6 @@ const handleApDungKhuyenMai = async () => {
         } else {
           notify.warning("Hiện không có mã giảm giá nào phù hợp.");
         }
-        
       } else if (typeof res.data === "string") {
         notify.info(res.data);
       }
