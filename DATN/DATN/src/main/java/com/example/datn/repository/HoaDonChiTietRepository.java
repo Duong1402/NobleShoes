@@ -28,13 +28,20 @@ public interface HoaDonChiTietRepository extends JpaRepository<HoaDonChiTiet, UU
     Long sumSoLuongByHoaDonIdIn(@Param("hoaDonIds") List<UUID> hoaDonIds);
 
     @Query("SELECT new com.example.datn.dto.thongke.SanPhamBanChayDto(" +
-            "COALESCE(sp.hinhAnh.urlAnh1, ''), sp.ten, SUM(hdct.soLuong), hdct.donGia) " +
+            "COALESCE(sp.hinhAnh.urlAnh1, ''), " +
+            "ctsp.ma,"+
+            "sp.ten, " +
+            "ctsp.mauSac.ten, " +
+            "ctsp.kichThuoc.ten," +
+            "hdct.donGia, " +
+            "SUM(hdct.soLuong)) " + // lưu ý bỏ hdct.donGia nếu DTO không có trường này
             "FROM HoaDonChiTiet hdct " +
             "JOIN hdct.chiTietSanPham ctsp " +
             "JOIN ctsp.sanPham sp " +
             "JOIN hdct.hoaDon hd " +
-            "WHERE hd.ngayTao BETWEEN :start AND :end AND hd.trangThai = 6 " + // Chỉ tính đơn HOÀN THÀNH
-            "GROUP BY sp.hinhAnh.urlAnh1, sp.ten, hdct.donGia " +
+            "WHERE hd.ngayTao BETWEEN :start AND :end " +
+            "AND hd.trangThai = 6 " + // Chỉ tính đơn HOÀN THÀNH
+            "GROUP BY sp.hinhAnh.urlAnh1,ctsp.ma, sp.ten, ctsp.mauSac.ten, ctsp.kichThuoc.ten,hdct.donGia " +
             "ORDER BY SUM(hdct.soLuong) DESC")
     Page<SanPhamBanChayDto> findBestSellingProducts(
             @Param("start") LocalDate start,

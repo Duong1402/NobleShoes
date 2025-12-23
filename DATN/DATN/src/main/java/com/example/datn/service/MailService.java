@@ -32,7 +32,8 @@ public class MailService {
     private String fromEmail;
 
     // click mã đơn -> FE theo dõi
-    @Value("${app.frontend.order-tracking-base:http://localhost:5173/orders/}")
+    @Value("${app.frontend.order-tracking-base:http://localhost:5174" +
+            "/orders/}")
     private String trackingBase;
 
     private static final Locale VI_VN = new Locale("vi", "VN");

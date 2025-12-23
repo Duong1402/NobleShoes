@@ -19,7 +19,7 @@ public class PhieuGiamGiaService {
 
 
     public Page<PhieuGiamGia> findAll(int page, int size, String sortBy) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).ascending());
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "ma"));
         return repo.findAll(pageable);
     }
 

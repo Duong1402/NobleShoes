@@ -127,6 +127,9 @@ onBeforeUnmount(() => {
   </div>
 </template>
 <style scoped>
+.container-fluid {
+  padding-bottom: 50px;
+}
 .user-dropdown .dropdown-menu {
   right: 0;
   left: auto;

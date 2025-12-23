@@ -13,7 +13,10 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class SanPhamBanChayDto {
     private String hinhAnh;
+    private String maSanPham;
     private String tenSanPham;
-    private long soLuongBan;
+    private String mauSac;
+    private String kichThuoc;
     private BigDecimal giaTien;
+    private long soLuongBan;
 }

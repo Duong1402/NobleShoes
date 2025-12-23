@@ -15,7 +15,7 @@ import { Html5Qrcode } from "html5-qrcode";
 const router = useRouter();
 const notify = useNotify();
 
-const LOAI_HOA_DON = ["Online", "Tại cửa hàng"];
+const LOAI_HOA_DON = ["Online", "Tại cửa hàng", "Giao hàng"];
 
 const getTodayDate = () => {
   const today = new Date();
@@ -26,7 +26,7 @@ const getTodayDate = () => {
 };
 
 const TRANG_THAI_HOA_DON = {
-  0: { text: "Chờ thanh toán", class: "bg-warning text-dark" },
+  // 0: { text: "Hóa đơn chờ", class: "bg-warning text-dark" },
   1: { text: "Chờ xác nhận", class: "bg-secondary" },
   2: { text: "Đã xác nhận", class: "bg-info" },
   3: { text: "Đang chuẩn bị", class: "bg-purple" },
@@ -38,7 +38,7 @@ const TRANG_THAI_HOA_DON = {
 
 const tabs = ref([
   { label: "Tất cả", value: "" },
-  { label: "Chờ thanh toán", value: 0 },
+  // { label: "Hóa đơn chờ", value: 0 },
   { label: "Chờ xác nhận", value: 1 },
   { label: "Đã xác nhận", value: 2 },
   { label: "Đang chuẩn bị", value: 3 },
@@ -326,7 +326,7 @@ watch(itemsPerPage, () => {
                       <td>{{ hd.tenNhanVien }}</td>
                       <td>{{ formatDate(hd.ngayTao) }}</td>
                       <td class="text-danger fw-bold">
-                        {{ formatCurrency(hd.tongTienSauGiam ?? hd.tongTien) }}
+                        {{ formatCurrency(hd.tongTienSauGiam ?? 0) }}
                       </td>
                       <td>{{ hd.loaiHoaDon }}</td>
                       <td>

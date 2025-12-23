@@ -79,8 +79,10 @@ const filteredChiTietSP = computed(() =>
   chiTietSP.value.filter((ct) => {
     const matchKeyword =
       !filterKeyword.value ||
-      ct.tenSP.toLowerCase().includes(filterKeyword.value.toLowerCase()) ||
-      ct.maSP.toLowerCase().includes(filterKeyword.value.toLowerCase());
+      ct.tenSanPham
+        ?.toLowerCase()
+        .includes(filterKeyword.value.toLowerCase()) ||
+      ct.ma?.toLowerCase().includes(filterKeyword.value.toLowerCase());
     const matchDanhMuc =
       !filterDanhMuc.value || ct.danhMucId === filterDanhMuc.value;
     const matchThuongHieu =
@@ -144,17 +146,17 @@ const loadChiTietSP = async () => {
     const data = Array.isArray(res) ? res : res.data || [];
     chiTietSP.value = data.map((ct) => ({
       ...ct,
+      ma: ct.ma,
+      tenSP: ct.tenSanPham,
       soLuongTon: ct.soLuongTon || 0,
       danhMucId:
-        danhMucList.value.find((d) => d.ten === ct.tenDanhMuc)?.id || null,
+        danhMucList.value.find((d) => d.ten === ct.danhMuc)?.id || null,
       thuongHieuId:
-        thuongHieuList.value.find((t) => t.ten === ct.tenThuongHieu)?.id ||
-        null,
+        thuongHieuList.value.find((t) => t.ten === ct.thuongHieu)?.id || null,
       xuatXuId:
         xuatXuList.value.find((x) => x.ten === ct.tenXuatXu)?.id || null,
       mucDichSuDungId:
-        mucDichSuDungList.value.find((m) => m.ten === ct.mucDichSuDung)?.id ||
-        null,
+        mucDichSuDungList.value.find((m) => m.ten === ct.mucDich)?.id || null,
       mauSacId: mauSacList.value.find((m) => m.ten === ct.mauSac)?.id || null,
       kichThuocId:
         kichThuocList.value.find((k) => k.ten === ct.kichThuoc)?.id || null,
@@ -186,7 +188,7 @@ const onImageChangeInline = async (event) => {
 };
 
 const saveInline = async () => {
-  if (!editingCTSP.value.tenSP) {
+  if (!editingCTSP.value.tenSanPham) {
     notify.error("Tên sản phẩm không được để trống!");
     return;
   }
@@ -194,6 +196,18 @@ const saveInline = async () => {
     notify.error("Giá bán phải lớn hơn 0!");
     return;
   }
+
+  const result = await Swal.fire({
+    title: "Xác nhận cập nhật?",
+    text: "Bạn có chắc chắn muốn lưu thay đổi sản phẩm này không?",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: "Lưu",
+    cancelButtonText: "Huỷ",
+    reverseButtons: true,
+  });
+
+  if (!result.isConfirmed) return;
 
   const payload = {
     tenSP: editingCTSP.value.tenSP,
@@ -263,6 +277,11 @@ onMounted(async () => {
 
     <!-- Bộ lọc -->
     <div class="card mb-3 shadow-sm border-0">
+      <div class="card-header">
+        <div class="d-flex align-items-center">
+          <h4 class="card-title"><i class="fa fa-filter me-2"></i> Bộ Lọc</h4>
+        </div>
+      </div>
       <div class="card-body">
         <div class="row g-2 align-items-end">
           <div class="col-md-3">
@@ -424,6 +443,10 @@ onMounted(async () => {
         <div class="col-md-10">
           <div class="row g-2">
             <div class="col-md-3">
+              <label class="form-label">Mã SP</label>
+              <input class="form-control" v-model="editingCTSP.ma" disabled />
+            </div>
+            <div class="col-md-3">
               <label class="form-label">Tên SP</label>
               <input class="form-control" v-model="editingCTSP.tenSP" />
             </div>
@@ -547,6 +570,7 @@ onMounted(async () => {
           <thead class="table-warning text-center">
             <tr>
               <th>STT</th>
+              <th>Mã</th>
               <th>Hình ảnh</th>
               <th>Tên SP</th>
               <th>Danh mục</th>
@@ -564,6 +588,7 @@ onMounted(async () => {
           <tbody>
             <tr v-for="(ct, index) in pagedChiTietSP" :key="ct.id">
               <td>{{ (currentPage - 1) * pageSize + index + 1 }}</td>
+              <td>{{ ct.ma }}</td>
               <td class="text-center">
                 <img
                   :src="ct.hinhAnhUrl || 'https://via.placeholder.com/40'"
@@ -572,13 +597,13 @@ onMounted(async () => {
                 />
               </td>
               <td>{{ ct.tenSanPham }}</td>
-              <td>{{ ct.danhMuc}}</td>
+              <td>{{ ct.danhMuc }}</td>
               <td>
-                {{ ct.thuongHieu}}
+                {{ ct.thuongHieu }}
               </td>
               <td>{{ xuatXuList.find((x) => x.id === ct.xuatXuId)?.ten }}</td>
               <td>
-                {{ ct.mucDich}}
+                {{ ct.mucDich }}
               </td>
               <td>{{ ct.soLuongTon }}</td>
               <td>{{ ct.giaBan }}</td>
@@ -649,31 +674,70 @@ onMounted(async () => {
   font-size: 0.85rem;
   padding: 0.3rem 0.5rem;
   vertical-align: middle;
-  text-align: center; 
+  text-align: center;
 }
 
 .table thead th {
   font-weight: 600;
   width: auto;
 }
-.table th:nth-child(1), .table td:nth-child(1) { width: 5%; } /* STT */
-.table th:nth-child(2), .table td:nth-child(2) { width: 7%; } /* Hình ảnh */
-.table th:nth-child(3), .table td:nth-child(3) { width: 12%; } /* Tên SP */
-.table th:nth-child(4), .table td:nth-child(4) { width: 9%; } /* Danh mục */
-.table th:nth-child(5), .table td:nth-child(5) { width: 9%; } /* Thương hiệu */
-.table th:nth-child(6), .table td:nth-child(6) { width: 8%; } /* Xuất xứ */
-.table th:nth-child(7), .table td:nth-child(7) { width: 8%; } /* Mục đích */
-.table th:nth-child(8), .table td:nth-child(8) { width: 7%; } /* Số lượng tồn */
-.table th:nth-child(9), .table td:nth-child(9) { width: 9%; } /* Giá bán */
-.table th:nth-child(10), .table td:nth-child(10) { width: 7%; } /* Màu sắc */
-.table th:nth-child(11), .table td:nth-child(11) { width: 7%; } /* Kích thước */
-.table th:nth-child(12), .table td:nth-child(12) { width: 7%; } /* Chất liệu */
-.table th:nth-child(13), .table td:nth-child(13) { width: 5%; } /* Thao tác */
+.table th:nth-child(1),
+.table td:nth-child(1) {
+  width: 5%;
+} /* STT */
+.table th:nth-child(2),
+.table td:nth-child(2) {
+  width: 7%;
+} /* Hình ảnh */
+.table th:nth-child(3),
+.table td:nth-child(3) {
+  width: 12%;
+} /* Tên SP */
+.table th:nth-child(4),
+.table td:nth-child(4) {
+  width: 9%;
+} /* Danh mục */
+.table th:nth-child(5),
+.table td:nth-child(5) {
+  width: 9%;
+} /* Thương hiệu */
+.table th:nth-child(6),
+.table td:nth-child(6) {
+  width: 8%;
+} /* Xuất xứ */
+.table th:nth-child(7),
+.table td:nth-child(7) {
+  width: 8%;
+} /* Mục đích */
+.table th:nth-child(8),
+.table td:nth-child(8) {
+  width: 7%;
+} /* Số lượng tồn */
+.table th:nth-child(9),
+.table td:nth-child(9) {
+  width: 9%;
+} /* Giá bán */
+.table th:nth-child(10),
+.table td:nth-child(10) {
+  width: 7%;
+} /* Màu sắc */
+.table th:nth-child(11),
+.table td:nth-child(11) {
+  width: 7%;
+} /* Kích thước */
+.table th:nth-child(12),
+.table td:nth-child(12) {
+  width: 7%;
+} /* Chất liệu */
+.table th:nth-child(13),
+.table td:nth-child(13) {
+  width: 5%;
+} /* Thao tác */
 
 .table td {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
 }
 </style>

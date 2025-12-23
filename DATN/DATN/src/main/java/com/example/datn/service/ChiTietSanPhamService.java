@@ -128,7 +128,7 @@ public class ChiTietSanPhamService {
 
     // 5️⃣ API trả về response cho admin list (nếu controller đang gọi getAll())
     public List<ChiTietSanPhamResponse> getAll() {
-        return chiTietSanPhamRepository.findAll()
+        return chiTietSanPhamRepository.findAllOrderByMaDescNative()
                 .stream()
                 .map(ChiTietSanPhamResponse::new)
                 .collect(Collectors.toList());

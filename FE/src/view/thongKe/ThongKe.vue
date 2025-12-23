@@ -103,7 +103,7 @@ const pieChartOptions = ref({
 });
 
 const TRANG_THAI_MAP = {
-  0: { label: "Chờ thanh toán", color: "#ffc107" },
+  // 0: { label: "Hóa đơn chờ", color: "#ffc107" },
   1: { label: "Chờ xác nhận", color: "#6c757d" },
   2: { label: "Đã xác nhận", color: "#0dcaf0" },
   3: { label: "Đang Chuẩn bị", color: "#6f42c1" },
@@ -371,10 +371,11 @@ const growthChartData = computed(() => {
       labels: ["Không có dữ liệu"],
       datasets: [
         {
-          label: "Tăng trưởng",
+          label: "Tăng trưởng (%)",
           data: [0],
-          backgroundColor: "#f39c12",
-          borderColor: "#f39c12",
+          borderColor: "#6c757d",
+          backgroundColor: "rgba(108, 117, 125, 0.15)",
+          fill: true,
         },
       ],
     };
@@ -387,20 +388,74 @@ const growthChartData = computed(() => {
         label: "Tăng trưởng (%)",
         data: growthStats.value.map((s) => s.percentage),
         borderColor: "#0dcaf0",
-        backgroundColor: "rgba(13, 202, 240, 0.3)",
+        backgroundColor: "rgba(13, 202, 240, 0.2)",
         fill: true,
-        tension: 0.3,
+        tension: 0.45, // 🔥 mượt hơn
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        pointBackgroundColor: "#0dcaf0",
+        pointBorderWidth: 2,
+        pointBorderColor: "#212529",
       },
     ],
   };
 });
+
 const growthChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      labels: {
+        color: "#dee2e6",
+        font: { weight: "bold" },
+      },
+    },
+    tooltip: {
+      backgroundColor: "#212529",
+      borderColor: "#0dcaf0",
+      borderWidth: 1,
+      titleColor: "#0dcaf0",
+      bodyColor: "#fff",
+      callbacks: {
+        label: (ctx) => ` ${ctx.raw}%`,
+      },
+    },
+  },
   scales: {
-    y: { beginAtZero: true },
+    x: {
+      ticks: {
+        color: "#adb5bd",
+      },
+      grid: {
+        color: "rgba(255,255,255,0.05)",
+      },
+    },
+    y: {
+      beginAtZero: true,
+      ticks: {
+        color: "#adb5bd",
+        callback: (value) => value + "%",
+      },
+      grid: {
+        color: "rgba(255,255,255,0.08)",
+        borderDash: [4, 4],
+      },
+    },
   },
 };
+
+const FILTER_LABEL_MAP = {
+  NGAY: "ngày",
+  TUAN: "tuần",
+  THANG: "tháng",
+  NAM: "năm",
+  TUY_CHINH: "tùy chỉnh",
+};
+
+const selectedFilterLabel = computed(() => {
+  return FILTER_LABEL_MAP[selectedFilter.value] || "";
+});
 </script>
 
 <template>
@@ -721,7 +776,7 @@ const growthChartOptions = {
           <div class="card-header">
             <h5 class="mb-0 fw-bold">
               Danh sách sản phẩm bán chạy theo
-              {{ selectedFilter.toLowerCase() }}
+              {{ selectedFilterLabel }}
             </h5>
           </div>
           <div class="card-body p-0">
@@ -730,7 +785,10 @@ const growthChartOptions = {
                 <thead>
                   <tr style="background-color: #f39c12; color: white">
                     <th class="text-center" style="width: 80px">Ảnh</th>
+                    <th>Mã</th>
                     <th>Tên sản phẩm</th>
+                    <th class="text-center">Màu</th>
+                    <th class="text-center">Size</th>
                     <th class="text-center">Số lượng</th>
                     <th class="text-end">Giá tiền</th>
                   </tr>
@@ -767,7 +825,10 @@ const growthChartOptions = {
                         "
                       />
                     </td>
+                    <td>{{ product.maSanPham }}</td>
                     <td>{{ product.tenSanPham }}</td>
+                    <td class="text-center">{{ product.mauSac }}</td>
+                    <td class="text-center">{{ product.kichThuoc }}</td>
                     <td class="text-center">{{ product.soLuongBan }}</td>
                     <td class="text-end fw-bold">
                       {{ formatCurrency(product.giaTien) }}
@@ -846,7 +907,7 @@ const growthChartOptions = {
               <span class="text-nowrap">Số lượng dưới:</span>
               <input
                 type="number"
-                :value="10"
+                :value="5"
                 class="form-control form-control-sm"
                 style="width: 80px"
                 disabled
@@ -859,7 +920,10 @@ const growthChartOptions = {
                 <thead>
                   <tr style="background-color: #f39c12; color: white">
                     <th class="text-center" style="width: 80px">Ảnh</th>
+                    <th>Mã</th>
                     <th>Tên sản phẩm</th>
+                    <th class="text-center">Màu</th>
+                    <th class="text-center">Size</th>
                     <th class="text-center">Số lượng</th>
                     <th class="text-end">Giá tiền</th>
                   </tr>
@@ -895,7 +959,10 @@ const growthChartOptions = {
                         "
                       />
                     </td>
+                    <td>{{ product.maSanPham }}</td>
                     <td>{{ product.tenSanPham }}</td>
+                    <td class="text-center">{{ product.mauSac }}</td>
+                    <td class="text-center">{{ product.kichThuoc }}</td>
                     <td class="text-center fw-bold text-danger">
                       {{ product.soLuongTon }}
                     </td>
@@ -978,7 +1045,7 @@ const growthChartOptions = {
         <div class="card shadow-sm border-0 mb-4">
           <div class="card-header">
             <h5 class="mb-0 fw-bold">
-              Biểu đồ trạng thái {{ selectedFilter.toLowerCase() }}
+              Biểu đồ trạng thái {{ selectedFilterLabel }}
             </h5>
           </div>
           <div class="card-body">
@@ -1016,27 +1083,31 @@ const growthChartOptions = {
         </div>
 
         <div
-          class="card shadow-sm border-0"
-          style="background-color: #212529; color: white"
+          class="card shadow-lg border-0"
+          style="
+            background: linear-gradient(180deg, #212529, #1a1d20);
+            color: #fff;
+          "
         >
-          <div class="card-header" style="border-bottom: 1px solid #444">
-            <h5 class="mb-0 fw-bold">Tốc độ tăng trưởng của hàng</h5>
+          <div
+            class="card-header bg-transparent border-bottom border-secondary"
+          >
+            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+              <i class="fa-solid fa-chart-line text-info"></i>
+              Tốc độ tăng trưởng hàng
+            </h5>
           </div>
-          <div class="card-body p-0">
-            <div v-if="isOverviewLoading" class="text-center p-3">
-              <div
-                class="spinner-border spinner-border-sm text-white"
-                role="status"
-              ></div>
-              <!-- Biểu đồ đường-->
+
+          <div class="card-body position-relative" style="height: 260px">
+            <div v-if="isOverviewLoading" class="text-center pt-5">
+              <div class="spinner-border text-info" role="status"></div>
             </div>
-            <div v-if="!isOverviewLoading" style="height: 250px">
-              <Line :data="growthChartData" :options="growthChartOptions" />
-            </div>
-            <!-- Biểu đồ cột-->
-            <!-- <div v-if="!isOverviewLoading" style="height: 250px">
-              <Bar :data="growthChartData" :options="growthChartOptions" />
-            </div> -->
+
+            <Line
+              v-else
+              :data="growthChartData"
+              :options="growthChartOptions"
+            />
           </div>
         </div>
       </div>

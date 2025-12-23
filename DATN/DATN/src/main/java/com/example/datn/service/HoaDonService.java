@@ -14,7 +14,9 @@ import com.example.datn.repository.*;
 import com.example.datn.specification.HoaDonSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -45,7 +47,7 @@ public class HoaDonService {
     private final NhanVienRepository nhanVienRepository;
 
     private static final Map<Integer, String> TRANG_THAI_MAP = Map.of(
-            HoaDonStatus.CHO_THANH_TOAN, "Chờ thanh toán",
+            HoaDonStatus.HOA_DON_CHO, "Chờ thanh toán",
             HoaDonStatus.CHO_XAC_NHAN, "Chờ xác nhận",
             HoaDonStatus.DA_XAC_NHAN, "Đã xác nhận",
             HoaDonStatus.DANG_CHUAN_BI, "Đang chuẩn bị",
@@ -56,9 +58,20 @@ public class HoaDonService {
     );
 
     /* ================== ADMIN: SEARCH ================== */
-    public Page<HoaDonResponse> searchHoaDon(HoaDonFilterRequest filter, Pageable pageable) {
+    public Page<HoaDonResponse> searchHoaDon(
+            HoaDonFilterRequest filter,
+            int page,
+            int size
+    ) {
         Specification<HoaDon> spec = HoaDonSpecification.filter(filter);
-        return hoaDonRepository.findAll(spec, pageable).map(HoaDonResponse::new);
+
+        Sort sort = Sort.by("ngayTao").ascending(); // mới ở cuối
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        return hoaDonRepository
+                .findAll(spec, pageable)
+                .map(HoaDonResponse::new);
     }
 
     /* ================== ADMIN: DETAIL BY ID (+ lịch sử) ================== */
@@ -152,12 +165,16 @@ public class HoaDonService {
                 : normalizeText(request.getTenKhachHang());
 
         String loaiHD = hoaDon.getLoaiHoaDon();
-        boolean isOnline = loaiHD != null && "online".equalsIgnoreCase(loaiHD.trim());
+        String loai = loaiHD == null ? "" : loaiHD.trim();
 
-        if (isOnline && (diaChiMoi == null || diaChiMoi.isBlank())) {
+        boolean isGiaoHang =
+                loai.equalsIgnoreCase("online") ||
+                        loai.equalsIgnoreCase("giao hàng");
+
+        if (isGiaoHang && (diaChiMoi == null || diaChiMoi.isBlank())) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Đơn hàng Online bắt buộc phải có địa chỉ giao hàng!"
+                    "Đơn hàng giao hàng bắt buộc phải có địa chỉ giao hàng!"
             );
         }
 
@@ -369,9 +386,9 @@ public class HoaDonService {
 
         HoaDon hd = hoaDonRepository.findByMa(code.trim())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng"));
-        int st = hd.getTrangThai() == null ? HoaDonStatus.CHO_THANH_TOAN : hd.getTrangThai();
+        int st = hd.getTrangThai() == null ? HoaDonStatus.HOA_DON_CHO : hd.getTrangThai();
 
-        boolean allowCancel = (st == HoaDonStatus.CHO_THANH_TOAN || st == HoaDonStatus.CHO_XAC_NHAN);
+        boolean allowCancel = (st == HoaDonStatus.HOA_DON_CHO || st == HoaDonStatus.CHO_XAC_NHAN);
         if (!allowCancel) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Đơn hàng không thể hủy ở trạng thái hiện tại");
         }

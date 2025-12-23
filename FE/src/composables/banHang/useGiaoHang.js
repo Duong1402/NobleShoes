@@ -140,7 +140,7 @@ export function useGiaoHang(notify, tongTienHang, hoaDon) {
             quanHuyen: thongTinNguoiNhan.value.quanHuyen,
             phuongXa: thongTinNguoiNhan.value.phuongXa,
             diaChiCuThe: thongTinNguoiNhan.value.diaChiCuThe,
-            loaiHoaDon: "Online",
+            loaiHoaDon: "Giao hàng",
 
             phiVanChuyen: shipPrice,
           };

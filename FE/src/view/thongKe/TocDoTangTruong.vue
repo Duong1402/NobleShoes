@@ -15,7 +15,12 @@ const metrics = [
         <strong>{{ m.name }}</strong>
         <span class="value">{{ m.value }}</span>
       </div>
-      <span :class="{ up: m.change.startsWith('+'), down: m.change.startsWith('-') }">
+      <span
+        :class="{
+          up: m.change.startsWith('+'),
+          down: m.change.startsWith('-'),
+        }"
+      >
         {{ m.change }}
       </span>
     </div>

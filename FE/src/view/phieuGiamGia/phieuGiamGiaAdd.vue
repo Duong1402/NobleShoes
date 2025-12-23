@@ -62,7 +62,9 @@ const addPhieuGiamGia = async () => {
       }
 
       // 1️⃣ Tạo phiếu giảm giá
-      const { data: phieu } = await createPhieuGiamGia(JSON.parse(JSON.stringify(payload)));
+      const { data: phieu } = await createPhieuGiamGia(
+        JSON.parse(JSON.stringify(payload))
+      );
 
       // 2️⃣ Chuẩn bị dữ liệu phiếu cá nhân
       const payloadCaNhan = {
@@ -75,8 +77,8 @@ const addPhieuGiamGia = async () => {
       };
 
       // 3️⃣ Gửi dữ liệu cá nhân
-       res.value = await createPhieuGiamGiaCaNhan(payloadCaNhan);
-       if (!res) throw new Error("Lỗi khi thêm đợt giảm giá cá nhân");
+      res.value = await createPhieuGiamGiaCaNhan(payloadCaNhan);
+      if (!res) throw new Error("Lỗi khi thêm đợt giảm giá cá nhân");
     } else {
       // 🔹 Nếu là phiếu chung
       res.value = await createPhieuGiamGia(JSON.parse(JSON.stringify(payload)));
@@ -99,7 +101,6 @@ const addPhieuGiamGia = async () => {
     }
   }
 };
-
 
 // Tạo hàm confirm
 const confirmSave = async () => {
@@ -128,7 +129,7 @@ const confirmSave = async () => {
           class="page-header d-flex align-items-center justify-content-between"
         >
           <div>
-            <h3 class="fw-bold text-warning mb-1">Phiếu giảm giá add</h3>
+            <h3 class="fw-bold text-warning mb-1">Thêm phiếu giảm giá</h3>
             <Breadcrumb class="mt-1 mb-0" />
           </div>
         </div>
@@ -251,7 +252,7 @@ const confirmSave = async () => {
             ></textarea>
           </div>
           <!-- Loại giảm giá -->
-          <div class="col-md-6">
+          <!-- <div class="col-md-6">
             <label class="form-label d-block">Loại phiếu giảm giá</label>
             <div class="d-flex gap-3">
               <div class="form-check custom-radio">
@@ -278,7 +279,7 @@ const confirmSave = async () => {
                 <label class="form-check-label">Cá nhân</label>
               </div>
             </div>
-          </div>
+          </div> -->
         </div>
 
         <div></div>
@@ -314,9 +315,7 @@ const confirmSave = async () => {
                 <thead>
                   <tr style="text-align: center">
                     <th class="text-center">
-                      <input
-                        type="checkbox"
-                      />
+                      <input type="checkbox" />
                     </th>
                     <th>STT</th>
                     <th>Mã</th>

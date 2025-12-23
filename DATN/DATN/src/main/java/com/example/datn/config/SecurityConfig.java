@@ -74,7 +74,8 @@ public class SecurityConfig {
                                 "/error",
                                 // Public endpoints
                                 "/api/public/**", "/public/**",
-                                "/admin/vnpay/*","/api/*"
+                                "/admin/vnpay/**",
+                                "/api/**"
                         ).permitAll()
 
                         // 3. Authentication (Login/Register)

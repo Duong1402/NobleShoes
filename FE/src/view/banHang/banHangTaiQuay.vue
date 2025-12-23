@@ -724,9 +724,16 @@
                     </div>
                     <div class="text-end">
                       <span class="d-block small text-muted">Phí ship</span>
-                      <span class="fw-bolder fs-5 text-success">
-                        {{ formatCurrency(phiShip) }}
-                      </span>
+                      <input
+                        type="text"
+                        class="form-control form-control-sm fw-bolder text-success text-end"
+                        :value="formatCurrency(phiShip)"
+                        @input="
+                          phiShip = Number(
+                            $event.target.value.replace(/\D/g, '')
+                          )
+                        "
+                      />
                     </div>
                   </div>
                 </div>
@@ -886,62 +893,27 @@
               <div
                 class="d-flex justify-content-between align-items-center pt-1"
               >
-                <span class="fw-bold h6 mb-0">KHÁCH CẦN TRẢ:</span>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="fw-bold h6 mb-0">KHÁCH CẦN TRẢ:</span>
+
+                  <!-- ICON VÍ -->
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-warning d-flex align-items-center gap-1"
+                    data-bs-toggle="modal"
+                    data-bs-target="#chonPhuongThucThanhToanModal"
+                    title="Chọn phương thức thanh toán"
+                  >
+                    <i class="fa-solid fa-wallet"></i>
+                    <small v-if="phuongThucThanhToan">
+                      {{ phuongThucThanhToan }}
+                    </small>
+                  </button>
+                </div>
+
                 <span class="fw-bolder fs-4 text-danger">
                   {{ formatCurrency(hoaDon.tongTienSauGiam) }}
                 </span>
-              </div>
-            </div>
-
-            <div class="mb-3 text-start">
-              <h6 class="fw-bold small text-uppercase text-muted mb-2">
-                Phương thức thanh toán
-              </h6>
-
-              <div class="d-flex justify-content-between gap-2">
-                <div class="flex-fill">
-                  <button
-                    @click="handleChonPhuongThuc('CHUYEN_KHOAN')"
-                    :class="{
-                      'btn-warning text-white':
-                        phuongThucThanhToan === 'CHUYEN_KHOAN',
-                      'btn-outline-secondary':
-                        phuongThucThanhToan !== 'CHUYEN_KHOAN',
-                    }"
-                    class="btn w-100 btn-sm"
-                  >
-                    Chuyển khoản
-                  </button>
-                </div>
-
-                <div class="flex-fill">
-                  <button
-                    @click="handleChonPhuongThuc('TIEN_MAT')"
-                    :class="{
-                      'btn-warning text-white':
-                        phuongThucThanhToan === 'TIEN_MAT',
-                      'btn-outline-secondary':
-                        phuongThucThanhToan !== 'TIEN_MAT',
-                    }"
-                    class="btn w-100 btn-sm"
-                  >
-                    Tiền mặt
-                  </button>
-                </div>
-
-                <div class="flex-fill">
-                  <button
-                    @click="handleChonPhuongThuc('CA_HAI')"
-                    :class="{
-                      'btn-warning text-white':
-                        phuongThucThanhToan === 'CA_HAI',
-                      'btn-outline-secondary': phuongThucThanhToan !== 'CA_HAI',
-                    }"
-                    class="btn w-100 btn-sm"
-                  >
-                    Cả hai
-                  </button>
-                </div>
               </div>
             </div>
 
@@ -961,6 +933,89 @@
       </div>
     </div>
   </div>
+
+  <div
+    class="modal fade"
+    id="chonPhuongThucThanhToanModal"
+    tabindex="-1"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content rounded-4">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="fa-solid fa-wallet me-2 text-warning"></i>
+            Chọn phương thức thanh toán
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+          ></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="d-grid gap-2">
+            <!-- CHUYỂN KHOẢN -->
+            <button
+              type="button"
+              class="btn d-flex align-items-center gap-3 p-3"
+              :class="{
+                'btn-warning text-white':
+                  phuongThucThanhToan === 'CHUYEN_KHOAN',
+                'btn-outline-secondary': phuongThucThanhToan !== 'CHUYEN_KHOAN',
+              }"
+              @click="handleChonPhuongThuc('CHUYEN_KHOAN')"
+              data-bs-dismiss="modal"
+            >
+              <i class="fa-solid fa-building-columns fs-4"></i>
+              <div class="text-start">
+                <div class="fw-semibold">Chuyển khoản</div>
+                <small>Ngân hàng / QR Code</small>
+              </div>
+            </button>
+
+            <!-- TIỀN MẶT -->
+            <button
+              type="button"
+              class="btn d-flex align-items-center gap-3 p-3"
+              :class="{
+                'btn-warning text-white': phuongThucThanhToan === 'TIEN_MAT',
+                'btn-outline-secondary': phuongThucThanhToan !== 'TIEN_MAT',
+              }"
+              @click="handleChonPhuongThuc('TIEN_MAT')"
+              data-bs-dismiss="modal"
+            >
+              <i class="fa-solid fa-money-bill-wave fs-4"></i>
+              <div class="text-start">
+                <div class="fw-semibold">Tiền mặt</div>
+                <small>Thanh toán trực tiếp</small>
+              </div>
+            </button>
+
+            <!-- CẢ HAI -->
+            <!-- <button
+              type="button"
+              class="btn d-flex align-items-center gap-3 p-3"
+              :class="{
+                'btn-warning text-white': phuongThucThanhToan === 'CA_HAI',
+                'btn-outline-secondary': phuongThucThanhToan !== 'CA_HAI',
+              }"
+              @click="handleChonPhuongThuc('CA_HAI')"
+              data-bs-dismiss="modal"
+            >
+              <i class="fa-solid fa-layer-group fs-4"></i>
+              <div class="text-start">
+                <div class="fw-semibold">Cả hai</div>
+                <small>Tiền mặt + Chuyển khoản</small>
+              </div>
+            </button> -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div
     v-if="showDiaChiModal"
     class="modal d-block"
@@ -1046,7 +1101,7 @@ const formatCurrency = (amount) => {
 // Hàm hiển thị trạng thái (Nguyên nhân gây lỗi của bạn)
 const trangThaiText = (value) => {
   const map = {
-    0: "Chờ thanh toán",
+    0: "Hóa đơn chờ",
     1: "Chờ xác nhận",
     2: "Đã xác nhận",
     3: "Đang giao",

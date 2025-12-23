@@ -88,13 +88,28 @@ public class HoaDonResponse {
 
         // loaiHoaDon: ưu tiên giá trị thực trong DB, nếu null thì suy ra
         if (hd.getLoaiHoaDon() != null && !hd.getLoaiHoaDon().trim().isEmpty()) {
-            this.loaiHoaDon = hd.getLoaiHoaDon();
+
+            String loai = hd.getLoaiHoaDon().trim();
+
+            if ("ONLINE".equalsIgnoreCase(loai)) {
+                this.loaiHoaDon = "Online";
+
+            } else if ("Giao hàng".equalsIgnoreCase(loai)) {
+                this.loaiHoaDon = "Giao hàng";
+
+            } else {
+                // Tại quầy hoặc loại khác
+                this.loaiHoaDon = loai;
+            }
+
         } else {
-            // có địa chỉ => Online, không có => Tại quầy
-            this.loaiHoaDon = (this.diaChiGiaoHang != null && !this.diaChiGiaoHang.trim().isEmpty())
-                    ? "Online"
-                    : "Tại quầy";
+            // Không truyền loaiHoaDon → suy ra
+            this.loaiHoaDon =
+                    (this.diaChiGiaoHang != null && !this.diaChiGiaoHang.trim().isEmpty())
+                            ? "Giao hàng"
+                            : "Tại quầy";
         }
+
 
         // ===== LỊCH SỬ =====
         if (hd.getLichSuHoaDons() != null) {

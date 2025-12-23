@@ -48,6 +48,7 @@ import ThongKe from "@/view/thongKe/ThongKe.vue";
 import ChatLieu from "@/view/chatLieu/chatLieu.vue";
 import OrderStatus from "@/view/banHang/OrderStatus.vue";
 import ChiTietBienThe from "@/view/sanPham/chiTietBienThe.vue";
+import HoaDonPrint from "@/view/hoaDon/HoaDonPrint.vue";
 
 const listRouter = [
   // 1. Login customer
@@ -254,6 +255,12 @@ const listRouter = [
       },
     ],
   },
+  //router điều khiển in hóa đơn
+  {
+    path: "/hoa-don/:id",
+    name: "HoaDonPrint",
+    component: HoaDonPrint,
+  },
 
   // 4. Khu vực CLIENT (Customer)
   {
@@ -270,16 +277,26 @@ const listRouter = [
     ],
   },
 
-{
-  path: "/order/status",
-  name: "OrderStatus",
-  component: OrderStatus,
-  meta: {
-    requiresAuth: false, // 🔥 QUAN TRỌNG
-    title: "Kết quả thanh toán",
+  {
+    path: "/san-pham/:id", // Đường dẫn khớp với QR Code (VD: /san-pham/123)
+    name: "SanPhamClientDetail",
+    component: ChiTietBienThe, // Có thể tái sử dụng ChiTietBienThe hoặc tạo ClientDetail
+    props: true,
+    meta: {
+      requiresAuth: false, // Không cần đăng nhập để xem chi tiết sản phẩm
+      title: "Chi tiết sản phẩm",
+    },
   },
-},
 
+  {
+    path: "/order/status",
+    name: "OrderStatus",
+    component: OrderStatus,
+    meta: {
+      requiresAuth: false,
+      title: "Kết quả thanh toán",
+    },
+  },
 
   // 5. Default Redirect (SỬA Ở ĐÂY: Mặc định về trang login nhân viên)
   {
