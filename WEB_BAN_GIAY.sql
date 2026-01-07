@@ -97,17 +97,10 @@ CREATE TABLE chuc_vu (
     mo_ta NVARCHAR(100)
 );
 
-<<<<<<< HEAD
-INSERT INTO chuc_vu (ma, ten) VALUES
-('CV01',N'Quản trị viên'),
-('CV02',N'Nhân viên bán hàng'),
-('CV03',N'Nhân viên kho');
-=======
 INSERT INTO chuc_vu (id,ma, ten) VALUES
 ('3A4841A1-5147-42EA-A914-06D3AF833456','CV01',N'Admin'),
 ('11C9C8B5-CF92-47B8-B206-E9AE6966BBD7','CV02',N'Employee'),
 ('71C12336-2705-4B3B-A7CC-9FB50F464915','CV03',N'Customer');
->>>>>>> origin/Duong
 
 CREATE TABLE phuong_thuc_thanh_toan (
     id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
@@ -141,24 +134,14 @@ CREATE TABLE nhan_vien (
     trang_thai TINYINT DEFAULT 1, -- 0 la ngung hoat dong, 1 la dang hoat dong
     FOREIGN KEY (id_chuc_vu) REFERENCES chuc_vu(id)
 );
-<<<<<<< HEAD
-
-INSERT INTO nhan_vien (ma, ho_ten, email, tai_khoan, mat_khau) VALUES
-('NV01',N'Nguyễn Văn A','a@gmail.com','nva','123'),
-('NV02',N'Trần Thị B','b@gmail.com','ttb','123');
-=======
 INSERT INTO nhan_vien (ma, ho_ten, email, tai_khoan, mat_khau, id_chuc_vu) VALUES
 ('NV001',N'Nguyễn Văn A','a@gmail.com','nva','$2a$12$x341gC26M7mBhgWaw4ryOeN3bOl7oQLXuueYKktfzrm7hCrtkhale', '3A4841A1-5147-42EA-A914-06D3AF833456'),
 ('NV002',N'Trần Thị B','b@gmail.com','ttb','$2a$12$x341gC26M7mBhgWaw4ryOeN3bOl7oQLXuueYKktfzrm7hCrtkhale', '11C9C8B5-CF92-47B8-B206-E9AE6966BBD7');
->>>>>>> origin/Duong
 
 
 CREATE TABLE khach_hang (
     id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
-<<<<<<< HEAD
-=======
     id_chuc_vu UNIQUEIDENTIFIER,
->>>>>>> origin/Duong
     ma NVARCHAR(50) UNIQUE ,
     ho_ten NVARCHAR(200) ,
     sdt NVARCHAR(20),
@@ -174,21 +157,12 @@ CREATE TABLE khach_hang (
     nguoi_tao NVARCHAR(20),
     nguoi_sua NVARCHAR(20), 
     trang_thai TINYINT DEFAULT 1 -- 0 la ngung hoat dong, 1 la dang hoat dong
-<<<<<<< HEAD
-);
-
-INSERT INTO khach_hang (ma, ho_ten, email, tai_khoan, mat_khau) VALUES
-('KH01',N'Nguyễn Văn C','c@gmail.com','nvc','123'),
-('KH02',N'Lê Thị D','d@gmail.com','ltd','123');
-
-=======
     FOREIGN KEY (id_chuc_vu) REFERENCES chuc_vu(id)
 );
 
 INSERT INTO khach_hang (ma, ho_ten, email, tai_khoan, mat_khau, id_chuc_vu) VALUES
 ('KH001',N'Nguyễn Văn C','c@gmail.com','nvc','$2a$12$x341gC26M7mBhgWaw4ryOeN3bOl7oQLXuueYKktfzrm7hCrtkhale', '71C12336-2705-4B3B-A7CC-9FB50F464915'),
 ('KH002',N'Lê Thị D','d@gmail.com','ltd','$2a$12$x341gC26M7mBhgWaw4ryOeN3bOl7oQLXuueYKktfzrm7hCrtkhale', '71C12336-2705-4B3B-A7CC-9FB50F464915'); 
->>>>>>> origin/Duong
 
 CREATE TABLE dia_chi (
     id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
@@ -343,8 +317,6 @@ CREATE TABLE lich_su_hoa_don (
     FOREIGN KEY (id_hoa_don) REFERENCES hoa_don(id)
 );
 
-<<<<<<< HEAD
-=======
 CREATE TABLE password_reset_token (
     id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
     token VARCHAR(255) UNIQUE NOT NULL, 
@@ -353,16 +325,7 @@ CREATE TABLE password_reset_token (
     expiry_date DATETIME NOT NULL  
 );
 
-CREATE TABLE lich_su_hoa_don (
-    id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
-    id_hoa_don UNIQUEIDENTIFIER,
-    thoi_gian DATETIME,
-    nguoi_thuc_hien NVARCHAR(100),
-    ghi_chu NVARCHAR(100),
-    FOREIGN KEY (id_hoa_don) REFERENCES hoa_don(id)
-);
 
->>>>>>> origin/Duong
 -----------------------------------------------------------------------------------------------------------------------------------------
 -- Mục đích sử dụng
 INSERT INTO muc_dich_su_dung (ma, ten) VALUES
@@ -450,13 +413,6 @@ VALUES ('PGG005', N'Giảm sinh nhật', '2025-10-01', '2025-10-20', 1, 10, 1000
 ('PGG003', N'Giảm 20% cho sản phẩm mới', '2025-09-15', '2025-10-31', 1, 0.20, 100000, 150000, 0, N'Dành cho sản phẩm mới ra mắt'),
 ('PGG004', N'Voucher Black Friday', '2025-11-25', '2025-11-30', 1, 0.30, 1000000, 500000, 1, N'Áp dụng trong tuần Black Friday');
 
-<<<<<<< HEAD
--- Giả sử có khách hàng:
--- KH01: 11111111-1111-1111-1111-111111111111
--- KH02: 22222222-2222-2222-2222-222222222222
-
-=======
->>>>>>> origin/Duong
 -- Lấy id của phiếu giảm giá
 DECLARE @idPGG1 UNIQUEIDENTIFIER = (SELECT TOP 1 id FROM phieu_giam_gia WHERE ma = 'PGG001');
 DECLARE @idPGG2 UNIQUEIDENTIFIER = (SELECT TOP 1 id FROM phieu_giam_gia WHERE ma = 'PGG002');
