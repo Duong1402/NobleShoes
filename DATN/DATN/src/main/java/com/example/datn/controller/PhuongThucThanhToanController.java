@@ -2,35 +2,61 @@ package com.example.datn.controller;
 
 import com.example.datn.entity.PhuongThucThanhToan;
 import com.example.datn.service.PhuongThucThanhToanService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/phuong-thuc-thanh-toan")
+@RequestMapping("/admin/phuong-thuc-thanh-toan")
+@CrossOrigin(origins = "http://localhost:5173")
 public class PhuongThucThanhToanController {
-    private final PhuongThucThanhToanService service;
-    public PhuongThucThanhToanController(PhuongThucThanhToanService service) { this.service = service; }
+    @Autowired
+    private PhuongThucThanhToanService phuongThucThanhToanService;
 
+    public PhuongThucThanhToanController(PhuongThucThanhToanService service) {
+        this.phuongThucThanhToanService = service;
+    }
+
+    // 🔹 Lấy danh sách tất cả phương thức thanh toán
     @GetMapping
-    public List<PhuongThucThanhToan> all() { return service.findAll(); }
+    public ResponseEntity<List<PhuongThucThanhToan>> getAll() {
+        return ResponseEntity.ok(phuongThucThanhToanService.findAll());
+    }
 
+    // 🔹 Lấy chi tiết 1 phương thức theo id
     @GetMapping("/{id}")
-    public PhuongThucThanhToan one(@PathVariable UUID id) {
-        return service.findById(id).orElseThrow(() -> new NoSuchElementException("PhuongThucThanhToan not found"));
+    public ResponseEntity<PhuongThucThanhToan> getById(@PathVariable UUID id) {
+        return phuongThucThanhToanService.findAll().stream()
+                .filter(pt -> pt.getId().equals(id))
+                .findFirst()
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
+    // 🔹 Thêm mới phương thức thanh toán
     @PostMapping
-    public PhuongThucThanhToan create(@RequestBody PhuongThucThanhToan obj) { return service.save(obj); }
-
-    @PutMapping("/{id}")
-    public PhuongThucThanhToan update(@PathVariable UUID id, @RequestBody PhuongThucThanhToan obj) {
-        obj.setId(id);
-        return service.save(obj);
+    public ResponseEntity<PhuongThucThanhToan> create(@RequestBody PhuongThucThanhToan request) {
+        return ResponseEntity.ok(phuongThucThanhToanService.save(request));
     }
 
+    // 🔹 Cập nhật phương thức thanh toán
+    @PutMapping("/{id}")
+    public ResponseEntity<PhuongThucThanhToan> update(
+            @PathVariable UUID id,
+            @RequestBody PhuongThucThanhToan request
+    ) {
+        request.setId(id);
+        return ResponseEntity.ok(phuongThucThanhToanService.save(request));
+    }
+
+    // 🔹 Xóa phương thức thanh toán
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable UUID id) { service.deleteById(id); }
+    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+        phuongThucThanhToanService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
 }

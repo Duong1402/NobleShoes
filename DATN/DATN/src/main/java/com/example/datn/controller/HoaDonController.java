@@ -1,36 +1,61 @@
 package com.example.datn.controller;
 
-import com.example.datn.entity.HoaDon;
+import com.example.datn.model.Response.HoaDonDetailResponse;
+import com.example.datn.model.Response.HoaDonResponse;
+import com.example.datn.model.Response.LichSuHoaDonResponse;
+import com.example.datn.model.request.HoaDonFilterRequest;
+import com.example.datn.model.request.UpdateHoaDonRequest;
 import com.example.datn.service.HoaDonService;
+import com.example.datn.service.LichSuHoaDonService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/hoa-don")
+@RequestMapping("/admin/hoa-don")
+@CrossOrigin(origins = "http://localhost:5173")
 public class HoaDonController {
-    private final HoaDonService service;
-    public HoaDonController(HoaDonService service) { this.service = service; }
+
+    @Autowired
+    private HoaDonService hoaDonService;
+
+    @Autowired
+    private LichSuHoaDonService lichSuHoaDonService;
 
     @GetMapping
-    public List<HoaDon> all() { return service.findAll(); }
+    public ResponseEntity<Page<HoaDonResponse>> searchHoaDon(
+            HoaDonFilterRequest filter,
+            @PageableDefault(page = 0, size = 10) Pageable pageable
+    ) {
+        Page<HoaDonResponse> result = hoaDonService.searchHoaDon(filter, pageable);
+        return ResponseEntity.ok(result);
+    }
 
     @GetMapping("/{id}")
-    public HoaDon one(@PathVariable UUID id) {
-        return service.findById(id).orElseThrow(() -> new NoSuchElementException("HoaDon not found"));
+    public ResponseEntity<HoaDonDetailResponse> getHoaDonDetail(@PathVariable("id") UUID id) {
+        HoaDonDetailResponse detail = hoaDonService.getHoaDonDetail(id);
+        return ResponseEntity.ok(detail);
     }
-
-    @PostMapping
-    public HoaDon create(@RequestBody HoaDon obj) { return service.save(obj); }
 
     @PutMapping("/{id}")
-    public HoaDon update(@PathVariable UUID id, @RequestBody HoaDon obj) {
-        obj.setId(id);
-        return service.save(obj);
+    public ResponseEntity<HoaDonResponse> updateHoaDon(
+            @PathVariable("id") UUID id,
+            @RequestBody UpdateHoaDonRequest request
+    ) {
+        HoaDonResponse updated = hoaDonService.updateHoaDon(id, request);
+        return ResponseEntity.ok(updated);
     }
 
-    @DeleteMapping("/{id}")
-    public void delete(@PathVariable UUID id) { service.deleteById(id); }
+    @GetMapping("/{id}/lich-su")
+    public ResponseEntity<List<LichSuHoaDonResponse>> getLichSu(@PathVariable("id") UUID id) {
+        List<LichSuHoaDonResponse> history = lichSuHoaDonService.getLichSuByHoaDonId(id);
+        return ResponseEntity.ok(history);
+    }
 }

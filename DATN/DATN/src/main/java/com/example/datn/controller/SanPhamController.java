@@ -1,36 +1,62 @@
 package com.example.datn.controller;
 
-import com.example.datn.entity.SanPham;
+import com.example.datn.dto.SanPhamRequest;
 import com.example.datn.service.SanPhamService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/san-pham")
+@RequestMapping("/admin/san-pham")
+@CrossOrigin(originPatterns = "http://localhost:*")
+@RequiredArgsConstructor
 public class SanPhamController {
-    private final SanPhamService service;
-    public SanPhamController(SanPhamService service) { this.service = service; }
 
-    @GetMapping
-    public List<SanPham> all() { return service.findAll(); }
+    private final SanPhamService sanPhamService;
 
-    @GetMapping("/{id}")
-    public SanPham one(@PathVariable UUID id) {
-        return service.findById(id).orElseThrow(() -> new NoSuchElementException("SanPham not found"));
-    }
-
+    // POST: /admin/san-pham
     @PostMapping
-    public SanPham create(@RequestBody SanPham obj) { return service.save(obj); }
-
-    @PutMapping("/{id}")
-    public SanPham update(@PathVariable UUID id, @RequestBody SanPham obj) {
-        obj.setId(id);
-        return service.save(obj);
+    public ResponseEntity<?> addSanPham(@Valid @RequestBody SanPhamRequest request) {
+        try {
+            sanPhamService.saveSanPham(request);
+            return ResponseEntity.ok(Map.of("message", "Thêm sản phẩm thành công!"));
+        } catch (RuntimeException e) {
+            String msg = (e.getMessage() == null || e.getMessage().isBlank())
+                    ? "Dữ liệu không hợp lệ."
+                    : e.getMessage().replace("Lỗi: ", "");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", msg));
+        }
     }
 
-    @DeleteMapping("/{id}")
-    public void delete(@PathVariable UUID id) { service.deleteById(id); }
+    // GET: /admin/san-pham/all
+    @GetMapping("/all")
+    public ResponseEntity<?> getAllAdmin() {
+        return ResponseEntity.ok(sanPhamService.getAll());
+    }
+
+    // PATCH: /admin/san-pham/{id}/trang-thai?value=true
+    @PatchMapping("/{id}/trang-thai")
+    public ResponseEntity<?> updateTrangThaiParam(
+            @PathVariable UUID id,
+            @RequestParam("value") boolean value
+    ) {
+        sanPhamService.updateTrangThai(id, value);
+        return ResponseEntity.ok(Map.of("message", "Cập nhật trạng thái thành công!"));
+    }
+
+    // PATCH: /admin/san-pham/{id}/trang-thai-body  body: { "value": true }
+    @PatchMapping("/{id}/trang-thai-body")
+    public ResponseEntity<?> updateTrangThaiBody(
+            @PathVariable UUID id,
+            @RequestBody Map<String, Object> body
+    ) {
+        boolean value = Boolean.parseBoolean(String.valueOf(body.get("value")));
+        sanPhamService.updateTrangThai(id, value);
+        return ResponseEntity.ok(Map.of("message", "Cập nhật trạng thái thành công (body)!"));
+    }
 }

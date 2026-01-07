@@ -1,0 +1,18 @@
+package com.example.datn.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.util.UUID;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class SanPhamPublicDTO {
+    private UUID id;
+    private String ten;
+    private BigDecimal giaMin;
+    private String hinhAnh;
+}
