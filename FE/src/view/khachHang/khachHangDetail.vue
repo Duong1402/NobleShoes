@@ -340,7 +340,133 @@
                 </div>
               </div>
 
-              <div v-else class="card shadow-sm p-3 border-info"></div>
+              <div v-else class="card shadow-sm p-3 border-info">
+                <div
+                  class="d-flex justify-content-between align-items-center mb-3"
+                >
+                  <h6 class="fw-bold text-info m-0">
+                    {{
+                      currentAddressIndex !== null
+                        ? "Cập nhật địa chỉ"
+                        : "Thêm địa chỉ mới"
+                    }}
+                  </h6>
+                  <button
+                    class="btn btn-close"
+                    @click="closeAddressForm"
+                  ></button>
+                </div>
+
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <label class="form-label"
+                      >Tỉnh/Thành phố <span class="text-danger">*</span></label
+                    >
+                    <select
+                      class="form-select"
+                      v-model="currentAddressForm.tinhCode"
+                      @change="onDraftProvinceChange"
+                    >
+                      <option value="">— Chọn —</option>
+                      <option
+                        v-for="p in provinces"
+                        :key="p.code"
+                        :value="String(p.code)"
+                      >
+                        {{ p.name }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label"
+                      >Quận/Huyện <span class="text-danger">*</span></label
+                    >
+                    <select
+                      class="form-select"
+                      v-model="currentAddressForm.huyenCode"
+                      @change="onDraftDistrictChange"
+                      :disabled="!currentAddressForm.tinhCode"
+                    >
+                      <option value="">— Chọn —</option>
+                      <option
+                        v-for="d in draftDistricts"
+                        :key="d.code"
+                        :value="String(d.code)"
+                      >
+                        {{ d.name }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label"
+                      >Xã/Phường <span class="text-danger">*</span></label
+                    >
+                    <select
+                      class="form-select"
+                      v-model="currentAddressForm.xaCode"
+                      :disabled="!currentAddressForm.huyenCode"
+                    >
+                      <option value="">— Chọn —</option>
+                      <option
+                        v-for="w in draftWards"
+                        :key="w.code"
+                        :value="String(w.code)"
+                      >
+                        {{ w.name }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="col-12">
+                    <label class="form-label"
+                      >Địa chỉ cụ thể <span class="text-danger">*</span></label
+                    >
+                    <input
+                      v-model="currentAddressForm.chiTiet"
+                      type="text"
+                      class="form-control"
+                      placeholder="Số nhà, đường..."
+                    />
+                  </div>
+
+                  <div class="col-12">
+                    <div class="form-check">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="chkMacDinhEdit"
+                        v-model="currentAddressForm.macDinh"
+                        @change="handleDefaultChange"
+                      />
+                      <label class="form-check-label" for="chkMacDinhEdit">
+                        Đặt làm địa chỉ mặc định
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="col-12 text-end mt-3">
+                    <button
+                      class="btn btn-secondary me-2"
+                      @click="closeAddressForm"
+                    >
+                      Hủy bỏ
+                    </button>
+                    <button
+                      class="btn btn-warning text-white"
+                      @click="saveAddressToDraft"
+                    >
+                      <i class="fa fa-save"></i>
+                      {{
+                        currentAddressIndex !== null
+                          ? "Cập nhật"
+                          : "Thêm vào danh sách"
+                      }}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -387,12 +513,13 @@ import Breadcrumb from "@/components/common/Breadcrumb.vue";
 import { useNotify } from "@/composables/useNotify";
 import Swal from "sweetalert2";
 import axios from "axios";
-import { getKhachHangById, updateKhachHang } from "@/service/KhachHangService";
+import { getKhachHangById, updateKhachHang, uploadImage } from "@/service/KhachHangService";
 
 import {
   getDiaChiByKhachHangId,
   updateDiaChi,
   createDiaChi,
+  deleteDiaChi,
 } from "@/service/DiaChiService";
 
 const route = useRoute();
@@ -438,7 +565,6 @@ const currentAddressForm = reactive({
 
 const ready = ref(false);
 
-/* ====== READONLY FLAG ====== */
 const isReadOnly = computed(() => Number(form.trangThai) === 0);
 
 /* ====== ẢNH ====== */
@@ -457,9 +583,7 @@ const handleFileUpload = async (event) => {
   uploading.value = true;
   try {
     // Endpoint upload giống form thêm của bạn
-    const res = await axios.post("http://localhost:8080/api/upload", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const res = await uploadImage(formData);
 
     form.urlAnh = res?.data?.url ?? res?.data?.secure_url ?? res?.data ?? "";
     if (form.urlAnh) previewUrl.value = form.urlAnh;
@@ -471,8 +595,7 @@ const handleFileUpload = async (event) => {
   }
 };
 
-/* ====== ĐỊA CHỈ TOÀN QUỐC (LOAD TỪ OPEN API) ====== */
-const provincesData = ref([]); // [{ code, name, districts:[{code,name,wards:[{code,name}]}] }]
+const provincesData = ref([]);
 
 onMounted(async () => {
   if (!id) {
@@ -482,6 +605,10 @@ onMounted(async () => {
   await loadProvinces();
 
   await loadKhachHang();
+
+  if (newAddresses.value.length > 0) {
+    syncDetailToForm();
+  }
 
   ready.value = true;
 });
@@ -541,15 +668,6 @@ const provinces = computed(() => provincesData.value);
 const districts = computed(() => currentProvince.value?.districts ?? []);
 const wards = computed(() => currentDistrict.value?.wards ?? []);
 
-/* Reset liên kết khi đổi cấp */
-const onProvinceChange = () => {
-  form.huyenCode = "";
-  form.xaCode = "";
-};
-const onDistrictChange = () => {
-  form.xaCode = "";
-};
-
 /* Helpers */
 const toYMD = (d) => {
   if (!d) return null;
@@ -598,8 +716,6 @@ const buildPreviewHtml = () => `
 }
   </div>
 `;
-
-/* ====== LOGIC ĐỊA CHỈ NHÁP (DRAFT ADDRESS) ====== */
 
 // 1. COMPUTED cho Form Địa chỉ chi tiết
 const draftCurrentProvince = computed(
@@ -681,55 +797,83 @@ const openAddressForm = (index = null, isNew = false) => {
 
 const closeAddressForm = () => {
   isAddingNewAddress.value = false;
-  currentAddressIndex.value = null;
-  resetAddressForm(false);
+
+  if (newAddresses.value.length > 0) {
+    if (currentAddressIndex.value === null) {
+      currentAddressIndex.value = 0;
+    }
+    syncDetailToForm();
+  } else {
+    currentAddressIndex.value = null;
+    resetAddressForm(false);
+  }
 };
 
+/* ====== LOGIC LƯU ĐỊA CHỈ TẠM (DRAFT) ====== */
 const saveAddressToDraft = () => {
+  // 1. Validate cơ bản
   if (!isAddressFormValid.value) {
     notify.error("Vui lòng điền đầy đủ thông tin địa chỉ!");
     return;
   }
 
-  const tinhName = draftCurrentProvince.value?.name;
-  const huyenName = draftCurrentDistrict.value?.name;
-  const xaName = draftCurrentWard.value?.name;
+  // 2. TÌM TÊN TỪ MÃ CODE (QUAN TRỌNG: Để gửi lên server dạng chữ)
+  // Lấy object tỉnh/huyện/xã từ dữ liệu Open API dựa trên code đang chọn
+  const tinhObj = provincesData.value.find(
+    (p) => String(p.code) === String(currentAddressForm.tinhCode)
+  );
+  const huyenObj = tinhObj?.districts?.find(
+    (d) => String(d.code) === String(currentAddressForm.huyenCode)
+  );
+  const xaObj = huyenObj?.wards?.find(
+    (w) => String(w.code) === String(currentAddressForm.xaCode)
+  );
 
-  const newAddress = {
-    id: currentAddressForm.id,
+  const tinhName = tinhObj?.name || "";
+  const huyenName = huyenObj?.name || "";
+  const xaName = xaObj?.name || "";
+
+  // 3. Tạo object địa chỉ chuẩn hóa
+  const addressPayload = {
+    id: currentAddressForm.id, // Giữ ID nếu là sửa địa chỉ cũ
+
+    // CẶP DỮ LIỆU ĐỂ HIỂN THỊ UI (DROPDOWN)
     tinhCode: currentAddressForm.tinhCode,
     huyenCode: currentAddressForm.huyenCode,
     xaCode: currentAddressForm.xaCode,
-    diaChiCuThe: currentAddressForm.chiTiet.trim(),
-    macDinh: currentAddressForm.macDinh,
-    // Thêm các trường tên để dễ dàng lưu lên server
+
+    // CẶP DỮ LIỆU ĐỂ GỬI SERVER (LƯU DB)
     thanhPho: tinhName,
     huyen: huyenName,
     xa: xaName,
+    diaChiCuThe: currentAddressForm.chiTiet.trim(),
+
+    macDinh: currentAddressForm.macDinh,
   };
 
-  // 1. Xử lý Mặc Định: Gỡ mặc định của các địa chỉ khác
-  if (newAddress.macDinh) {
+  // 4. Xử lý Logic Mặc định (Chỉ 1 cái được true)
+  if (addressPayload.macDinh) {
     newAddresses.value.forEach((addr) => (addr.macDinh = false));
   } else if (newAddresses.value.length === 0) {
-    // Nếu chỉ có 1 địa chỉ, buộc phải là mặc định
-    newAddress.macDinh = true;
+    // Nếu đây là địa chỉ đầu tiên, bắt buộc là mặc định
+    addressPayload.macDinh = true;
   }
 
+  // 5. Cập nhật vào mảng
   if (currentAddressIndex.value !== null) {
-    // CẬP NHẬT
-    newAddresses.value[currentAddressIndex.value] = newAddress;
+    // Đang sửa
+    newAddresses.value[currentAddressIndex.value] = addressPayload;
     notify.success("Cập nhật địa chỉ thành công!");
   } else {
-    // THÊM MỚI
-    newAddresses.value.push(newAddress);
-    notify.success("Thêm địa chỉ thành công!");
+    // Thêm mới
+    newAddresses.value.push(addressPayload);
+    notify.success("Thêm địa chỉ vào danh sách thành công!");
   }
 
-  // Nếu không có địa chỉ nào là mặc định, set địa chỉ đầu tiên làm mặc định
+  // Đảm bảo luôn có 1 cái mặc định nếu danh sách > 0
   if (
-    !newAddresses.value.some((addr) => addr.macDinh) &&
-    newAddresses.value.length > 0
+    newAddresses.value.length > 0 &&
+    !newAddresses.value.some((a) => a.macDinh)
   ) {
     newAddresses.value[0].macDinh = true;
   }
@@ -739,13 +883,8 @@ const saveAddressToDraft = () => {
 
 const handleDefaultChange = () => {
   if (currentAddressForm.macDinh) {
-    // Tích chọn: logic gỡ mặc định của các địa chỉ khác sẽ xảy ra khi ấn Lưu/Cập nhật (saveAddressToDraft)
-    // Hiện tại chỉ đảm bảo currentAddressForm.macDinh là TRUE
   } else {
-    // Bỏ tích: Không cho phép bỏ tích nếu list có nhiều hơn 1 địa chỉ
     if (newAddresses.value.length > 0 || currentAddressIndex.value !== null) {
-      // Nếu có ít nhất 1 địa chỉ khác ngoài địa chỉ đang sửa, hoặc đang sửa một địa chỉ cũ
-      // Kiểm tra nếu đây là địa chỉ mặc định DUY NHẤT trong list (nếu đang sửa)
       const isOnlyDefault =
         newAddresses.value.filter((a) => a.macDinh).length === 1 &&
         newAddresses.value[currentAddressIndex.value]?.macDinh;
@@ -775,15 +914,30 @@ const confirmDeleteAddress = async (index) => {
   });
 
   if (result.isConfirmed) {
-    newAddresses.value.splice(index, 1);
-    notify.success("Đã xóa địa chỉ khỏi danh sách nháp.");
+    const addr = newAddresses.value[index];
 
-    // Đảm bảo luôn có 1 địa chỉ mặc định sau khi xóa
-    if (
-      !newAddresses.value.some((addr) => addr.macDinh) &&
-      newAddresses.value.length > 0
-    ) {
-      newAddresses.value[0].macDinh = true;
+    try {
+      // Nếu địa chỉ đã có id thì gọi API delete
+      if (addr.id) {
+        await deleteDiaChi(addr.id);
+        notify.success("Đã xóa địa chỉ khỏi cơ sở dữ liệu.");
+      } else {
+        notify.success("Đã xóa địa chỉ khỏi danh sách nháp.");
+      }
+
+      // Xóa khỏi array local
+      newAddresses.value.splice(index, 1);
+
+      // Đảm bảo luôn có 1 địa chỉ mặc định
+      if (
+        !newAddresses.value.some((a) => a.macDinh) &&
+        newAddresses.value.length > 0
+      ) {
+        newAddresses.value[0].macDinh = true;
+      }
+    } catch (err) {
+      console.error("❌ Lỗi xóa địa chỉ:", err);
+      notify.error("Xóa địa chỉ thất bại!");
     }
   }
 };
@@ -838,60 +992,86 @@ const goToNextAddress = () => {
   }
 };
 
-/* ====== LOAD KH ====== */
+/* ====== LOAD DỮ LIỆU TỪ SERVER ====== */
 async function loadKhachHang() {
   try {
+    // 1. Lấy thông tin KH
     const res = await getKhachHangById(id);
     const data = res?.data?.data ?? res?.data ?? {};
+    rawServer.value = { ...data };
 
-    rawServer.value = { ...data }; // giữ toàn bộ field gốc từ server (để merge)
+    // Fill Form Khách hàng
+    form.id = data.id;
+    form.ma = data.ma;
+    form.hoTen = data.hoTen;
+    form.email = data.email;
+    form.sdt = data.sdt;
+    form.gioiTinh = data.gioiTinh === true || data.gioiTinh == 1 ? 1 : 0;
+    form.ngaySinh = fDate(data.ngaySinh);
+    form.urlAnh = data.urlAnh;
+    form.trangThai = data.trangThai === true || data.trangThai == 1 ? 1 : 0;
 
-    // Set form Khách hàng (giữ nguyên)
-    form.id = data.id ?? null;
-    form.ma = data.ma ?? "";
-    form.hoTen = data.hoTen ?? "";
-    form.email = data.email ?? "";
-    form.sdt = data.sdt ?? "";
-    form.gioiTinh =
-      data.gioiTinh === true || data.gioiTinh === 1 || data.gioiTinh === "1"
-        ? 1
-        : 0;
-    form.ngaySinh = fDate(data.ngaySinh ?? data.dateOfBirth ?? "");
-    form.urlAnh = data.urlAnh ?? data.avatar ?? "";
-    form.trangThai =
-      data.trangThai === true || data.trangThai === 1 || data.trangThai === "1"
-        ? 1
-        : 0;
-
-    // Load tất cả Địa chỉ
+    // 2. Lấy danh sách Địa chỉ
     const resDiaChi = await getDiaChiByKhachHangId(id);
-    const diaChiList = Array.isArray(resDiaChi?.data) ? resDiaChi.data : [];
+    const serverAddressList = Array.isArray(resDiaChi?.data)
+      ? resDiaChi.data
+      : [];
 
-    // Reset và Parse TẤT CẢ địa chỉ từ server vào newAddresses
-    newAddresses.value = diaChiList.map((addr) => ({
-      id: addr.id,
-      diaChiCuThe: addr.diaChiCuThe,
-      macDinh: addr.macDinh || false,
-      thanhPho: addr.thanhPho,
-      huyen: addr.huyen,
-      xa: addr.xa,
-      // Các trường code sẽ được tìm và thêm vào sau (optional, chỉ cần các trường tên là đủ để gửi lên server)
-    }));
+    if (provincesData.value.length > 0) {
+      newAddresses.value = serverAddressList.map((addr) => {
+        let tCode = "",
+          hCode = "",
+          xCode = "";
 
-    if (newAddresses.value.length > 0) {
-      newAddresses.value = parseAddressNamesToCodes(newAddresses.value);
-      const defaultIndex = newAddresses.value.findIndex((addr) => addr.macDinh);
-      currentAddressIndex.value = defaultIndex >= 0 ? defaultIndex : 0;
-      syncDetailToForm();
+        // Tìm Tỉnh
+        const p = provincesData.value.find(
+          (p) => p.name === addr.thanhPho || p.name.includes(addr.thanhPho)
+        );
+        if (p) {
+          tCode = String(p.code);
+          // Tìm Huyện
+          const d = p.districts?.find(
+            (d) => d.name === addr.huyen || d.name.includes(addr.huyen)
+          );
+          if (d) {
+            hCode = String(d.code);
+            // Tìm Xã
+            const w = d.wards?.find(
+              (w) => w.name === addr.xa || w.name.includes(addr.xa)
+            );
+            if (w) xCode = String(w.code);
+          }
+        }
+
+        return {
+          id: addr.id,
+          macDinh: addr.macDinh,
+          diaChiCuThe: addr.diaChiCuThe,
+
+          // Dữ liệu Tên (để gửi lại server)
+          thanhPho: addr.thanhPho,
+          huyen: addr.huyen,
+          xa: addr.xa,
+
+          // Dữ liệu Code (để hiển thị Dropdown)
+          tinhCode: tCode,
+          huyenCode: hCode,
+          xaCode: xCode,
+        };
+      });
     } else {
-      currentAddressIndex.value = null;
+      // Fallback nếu chưa load được API tỉnh thành
+      newAddresses.value = serverAddressList;
     }
 
-    // Bỏ qua currentDiaChiId.value = diaChiData.id ?? null; cũ
-    // Bỏ qua parseAddressDataToCodes(diaChiData); cũ
+    // Nếu có địa chỉ, chọn cái mặc định để hiển thị
+    if (newAddresses.value.length > 0) {
+      const idx = newAddresses.value.findIndex((a) => a.macDinh);
+      currentAddressIndex.value = idx >= 0 ? idx : 0;
+    }
   } catch (err) {
-    console.error("❌ Lỗi load khách hàng:", err);
-    notify.error("Không thể tải thông tin khách hàng.");
+    console.error("Lỗi load KH:", err);
+    notify.error("Lỗi tải dữ liệu!");
   }
 }
 
@@ -944,71 +1124,62 @@ function parseAddressDataToCodes(addressData) {
   form.chiTiet = addressData.diaChiCuThe ?? "";
 }
 
-/* ====== SAVE (PUT) ====== */
-/* ====== SAVE (PUT) ====== */
+/* ====== SAVE (PUT) KHÁCH HÀNG & ĐỊA CHỈ ====== */
 async function saveKhachHang() {
-  // 0) Chặn sửa nếu ngừng hoạt động
+  // 1. Check ReadOnly
   if (isReadOnly.value) {
     notify.error("Khách hàng ngừng hoạt động — không cho phép cập nhật.");
     return;
-  } // 1) Validate tối thiểu
+  }
 
+  // 2. Validate Form Khách Hàng
   if (!form.ma || !form.hoTen || !form.email || !form.sdt) {
     notify.error("Vui lòng điền đầy đủ Mã, Họ tên, Email, SĐT!");
     return;
   }
-  if (!form.tinhCode) {
-    notify.error("Vui lòng chọn Tỉnh/Thành phố!");
-    return;
-  }
+
+  // 3. Validate Danh sách địa chỉ
   if (newAddresses.value.length === 0) {
     notify.error("Khách hàng phải có ít nhất một địa chỉ!");
     return;
   }
-  // Đảm bảo luôn có địa chỉ mặc định
+  // Đảm bảo logic mặc định lần cuối
   if (!newAddresses.value.some((addr) => addr.macDinh)) {
     newAddresses.value[0].macDinh = true;
   }
 
   try {
     const khachHangId = route.params.id || route.query.id;
-    const diaChiToSave = newAddresses.value;
 
-    // ===================================================
-    // ✅ BƯỚC 1: XỬ LÝ CREATE/UPDATE CHO TẤT CẢ ĐỊA CHỈ (dia_chi)
-    // ===================================================
-    const diaChiUpdatePromises = diaChiToSave.map((addr) => {
-      const payload = {
-        diaChiCuThe: addr.diaChiCuThe || null,
-        xa: addr.xa || null,
-        huyen: addr.huyen || null,
-        thanhPho: addr.thanhPho || null,
-        macDinh: addr.macDinh, // Luôn gửi trạng thái mặc định
+    // BƯỚC A: XỬ LÝ LƯU ĐỊA CHỈ (QUAN TRỌNG)
+    const addressPromises = newAddresses.value.map((addr) => {
+      // Payload gửi đi chỉ cần tên (Server lưu tên), ID và trạng thái
+      const apiPayload = {
+        diaChiCuThe: addr.diaChiCuThe,
+        xa: addr.xa, // Tên xã
+        huyen: addr.huyen, // Tên huyện
+        thanhPho: addr.thanhPho, // Tên thành phố
+        macDinh: addr.macDinh,
       };
 
       if (addr.id) {
-        // Địa chỉ ĐÃ CÓ trên DB (có ID) -> GỌI UPDATE (PUT)
-        return updateDiaChi(addr.id, payload);
+        // TRƯỜNG HỢP 1: ĐỊA CHỈ CŨ (Có ID) -> GỌI PUT
+        return updateDiaChi(addr.id, apiPayload);
       } else {
-        // Địa chỉ MỚI (chưa có ID) -> GỌI CREATE (POST)
         const createPayload = {
-          ...payload,
+          ...apiPayload,
           khachHang: { id: khachHangId },
         };
         return createDiaChi(createPayload);
       }
     });
 
-    // Chờ tất cả các cuộc gọi API Địa chỉ hoàn thành
-    await Promise.all(diaChiUpdatePromises);
+    // Chờ tất cả địa chỉ được lưu xong
+    await Promise.all(addressPromises);
 
-    // ===================================================
-    // 3. CHUẨN BỊ PAYLOAD CẬP NHẬT KHÁCH HÀNG (BẢNG khach_hang)
-    // ===================================================
-
-    // Lấy địa chỉ mặc định để đồng bộ vào field `diaChi` của bảng khach_hang
+    // BƯỚC B: CẬP NHẬT THÔNG TIN KHÁCH HÀNG
     const defaultAddress =
-      diaChiToSave.find((addr) => addr.macDinh) || diaChiToSave[0];
+      newAddresses.value.find((addr) => addr.macDinh) || newAddresses.value[0];
     const diaChiFullText = [
       defaultAddress.diaChiCuThe,
       defaultAddress.xa,
@@ -1018,67 +1189,37 @@ async function saveKhachHang() {
       .filter(Boolean)
       .join(", ");
 
-    // ... (Giữ nguyên logic base, safe, payload cũ)
-
-    const base = { ...(rawServer.value || {}) };
-    const safe = {
-      // ... (Các field khách hàng)
-      ma: (form.ma ?? "").trim(),
-      hoTen: (form.hoTen ?? "").trim(),
-      sdt: String(form.sdt ?? "").trim(),
-      email: (form.email ?? "").trim(),
-      gioiTinh: form.gioiTinh ? 1 : 0,
-      trangThai: form.trangThai ? 1 : 0,
+    const payloadKH = {
+      ...(rawServer.value || {}), // Merge dữ liệu gốc
+      ma: form.ma,
+      hoTen: form.hoTen,
+      sdt: form.sdt,
+      email: form.email,
+      gioiTinh: form.gioiTinh,
+      trangThai: form.trangThai,
       ngaySinh: toYMD(form.ngaySinh),
-      urlAnh: form.urlAnh || base.urlAnh || "",
-      // ✅ Đồng bộ địa chỉ full text vào bảng khach_hang
-      diaChi: diaChiFullText || base.diaChi || "",
+      urlAnh: form.urlAnh,
+      diaChi: diaChiFullText, // Cập nhật field địa chỉ hiển thị nhanh
     };
-    // ... (Giữ nguyên logic merge payload)
 
-    const payload = { ...base, ...safe };
-    delete payload.id;
-    delete payload.ngayTao;
-    delete payload.ngaySua;
-    delete payload.danhSachDiaChi;
-    delete payload.danhSachDiaChiKhachHang;
-    payload.danhSachDiaChi = null;
-    payload.danhSachDiaChiKhachHang = null;
+    // Loại bỏ các trường thừa không nên gửi lên PUT
+    delete payloadKH.id;
+    delete payloadKH.ngayTao;
+    delete payloadKH.ngaySua;
+    delete payloadKH.danhSachDiaChi;
 
-    console.groupCollapsed("🛰️ PUT /khach-hang merged payload");
-    console.log("PATH id:", String(id));
-    console.log("payload:", j(payload));
-    console.groupEnd();
+    // Gọi API update khách hàng
+    await updateKhachHang(String(id), payloadKH);
 
-    // 7) Call service PUT Khách hàng
-    await updateKhachHang(String(id), payload);
+    notify.success("Lưu thay đổi thành công!");
 
-    notify.success("Cập nhật khách hàng thành công!");
-    router.push("/admin/khach-hang");
+    // Load lại dữ liệu để đồng bộ ID mới của các địa chỉ vừa thêm
+    await loadKhachHang();
+    router.push({ name: "khachHang" });
   } catch (err) {
-    // ... Xử lý lỗi (Giữ nguyên)
-    const status = err?.response?.status;
-    const data = err?.response?.data;
-    const arrErrors = Array.isArray(data?.errors)
-      ? data.errors.map((e) => e?.defaultMessage || e?.message || j(e))
-      : Array.isArray(data)
-      ? data.map((e) => e?.message || j(e))
-      : [];
-
-    const msg =
-      data?.message ||
-      data?.error ||
-      (arrErrors.length ? arrErrors.join("; ") : "") ||
-      err?.message ||
-      "Cập nhật thất bại!";
-
-    console.groupCollapsed("❌ Lỗi cập nhật khách hàng");
-    console.error("Status:", status);
-    console.error("Response data:", j(data));
-    console.error("Axios error:", err);
-    console.groupEnd();
-
-    notify.error(`${status ? `Lỗi ${status}: ` : ""}${msg}`);
+    console.error("❌ Lỗi Save:", err);
+    const msg = err?.response?.data?.message || "Cập nhật thất bại!";
+    notify.error(msg);
   }
 }
 

@@ -1,12 +1,12 @@
 <template>
-  <div class="container-fluid mt-4 px-1">
+  <div class="container-fluid mt-4">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
         <div
           class="page-header d-flex align-items-center justify-content-between"
         >
           <div>
-            <h3 class="fw-bold text-warning mb-1">Phiếu giảm giá add</h3>
+            <h3 class="fw-bold text-warning mb-1">Thêm phiếu giảm giá</h3>
             <Breadcrumb class="mt-1 mb-0" />
           </div>
         </div>

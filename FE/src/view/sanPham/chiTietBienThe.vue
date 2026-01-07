@@ -6,7 +6,7 @@ import { useRoute } from "vue-router";
 import { useNotify } from "@/composables/useNotify";
 import axios from "@/service/axios.js";
 
-import { getChiTietSanPhamBySanPhamId } from "@/service/ChiTietSanPhamService";
+import { getAllChiTietSanPham } from "@/service/ChiTietSanPhamService";
 import {
   getAllDanhMuc,
   getAllThuongHieu,
@@ -79,8 +79,10 @@ const filteredChiTietSP = computed(() =>
   chiTietSP.value.filter((ct) => {
     const matchKeyword =
       !filterKeyword.value ||
-      ct.tenSP.toLowerCase().includes(filterKeyword.value.toLowerCase()) ||
-      ct.maSP.toLowerCase().includes(filterKeyword.value.toLowerCase());
+      ct.tenSanPham
+        ?.toLowerCase()
+        .includes(filterKeyword.value.toLowerCase()) ||
+      ct.ma?.toLowerCase().includes(filterKeyword.value.toLowerCase());
     const matchDanhMuc =
       !filterDanhMuc.value || ct.danhMucId === filterDanhMuc.value;
     const matchThuongHieu =
@@ -140,21 +142,21 @@ const loadComboBox = async () => {
 // Load chi tiết sản phẩm
 const loadChiTietSP = async () => {
   try {
-    const res = await getChiTietSanPhamBySanPhamId(sanPhamId);
+    const res = await getAllChiTietSanPham(sanPhamId);
     const data = Array.isArray(res) ? res : res.data || [];
     chiTietSP.value = data.map((ct) => ({
       ...ct,
+      ma: ct.ma,
+      tenSP: ct.tenSanPham,
       soLuongTon: ct.soLuongTon || 0,
       danhMucId:
-        danhMucList.value.find((d) => d.ten === ct.tenDanhMuc)?.id || null,
+        danhMucList.value.find((d) => d.ten === ct.danhMuc)?.id || null,
       thuongHieuId:
-        thuongHieuList.value.find((t) => t.ten === ct.tenThuongHieu)?.id ||
-        null,
+        thuongHieuList.value.find((t) => t.ten === ct.thuongHieu)?.id || null,
       xuatXuId:
         xuatXuList.value.find((x) => x.ten === ct.tenXuatXu)?.id || null,
       mucDichSuDungId:
-        mucDichSuDungList.value.find((m) => m.ten === ct.mucDichSuDung)?.id ||
-        null,
+        mucDichSuDungList.value.find((m) => m.ten === ct.mucDich)?.id || null,
       mauSacId: mauSacList.value.find((m) => m.ten === ct.mauSac)?.id || null,
       kichThuocId:
         kichThuocList.value.find((k) => k.ten === ct.kichThuoc)?.id || null,
@@ -186,7 +188,7 @@ const onImageChangeInline = async (event) => {
 };
 
 const saveInline = async () => {
-  if (!editingCTSP.value.tenSP) {
+  if (!editingCTSP.value.tenSanPham) {
     notify.error("Tên sản phẩm không được để trống!");
     return;
   }
@@ -201,9 +203,8 @@ const saveInline = async () => {
     icon: "question",
     showCancelButton: true,
     confirmButtonText: "Lưu",
-    cancelButtonText: "Hủy",
-    confirmButtonColor: "#3085d6",
-    cancelButtonColor: "#d33",
+    cancelButtonText: "Huỷ",
+    reverseButtons: true,
   });
 
   if (!result.isConfirmed) return;
@@ -270,21 +271,16 @@ onMounted(async () => {
             <h3 class="fw-bold text-warning mb-1">Quản lý chi tiết sản phẩm</h3>
             <Breadcrumb class="mt-2 mb-0" />
           </div>
-          <div class="col-md-2">
-            <router-link to="/admin/san-pham" class="btn btn-secondary w-100">
-              <i class="fa fa-arrow-left me-1"></i>Quay lại
-            </router-link>
-          </div>
         </div>
       </div>
     </div>
 
     <!-- Bộ lọc -->
-    <div class="card filter-card mb-3">
-      <div class="card-header filter-header">
-        <h4 class="card-title mb-0">
-          <i class="fa fa-filter me-2"></i> Bộ lọc
-        </h4>
+    <div class="card mb-3 shadow-sm border-0">
+      <div class="card-header">
+        <div class="d-flex align-items-center">
+          <h4 class="card-title"><i class="fa fa-filter me-2"></i> Bộ Lọc</h4>
+        </div>
       </div>
       <div class="card-body">
         <div class="row g-2 align-items-end">
@@ -299,7 +295,32 @@ onMounted(async () => {
               placeholder="Nhập mã hoặc tên sản phẩm..."
             />
           </div>
-
+          <div class="col-md-2">
+            <label class="form-label text-muted small mb-1">Danh mục</label>
+            <select class="form-select" v-model="filterDanhMuc">
+              <option value="">Tất cả</option>
+              <option
+                v-for="item in danhMucList"
+                :key="item.id"
+                :value="item.id"
+              >
+                {{ item.ten }}
+              </option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label text-muted small mb-1">Thương hiệu</label>
+            <select class="form-select" v-model="filterThuongHieu">
+              <option value="">Tất cả</option>
+              <option
+                v-for="item in thuongHieuList"
+                :key="item.id"
+                :value="item.id"
+              >
+                {{ item.ten }}
+              </option>
+            </select>
+          </div>
           <div class="col-md-2">
             <label class="form-label text-muted small mb-1">Màu sắc</label>
             <select class="form-select" v-model="filterMau">
@@ -313,7 +334,19 @@ onMounted(async () => {
               </option>
             </select>
           </div>
-
+          <div class="col-md-2">
+            <label class="form-label text-muted small mb-1">Chất liệu</label>
+            <select class="form-select" v-model="filterChatLieu">
+              <option value="">Tất cả</option>
+              <option
+                v-for="item in chatLieuList"
+                :key="item.id"
+                :value="item.id"
+              >
+                {{ item.ten }}
+              </option>
+            </select>
+          </div>
           <div class="col-md-2">
             <label class="form-label text-muted small mb-1">Kích cỡ</label>
             <select class="form-select" v-model="filterSize">
@@ -327,17 +360,51 @@ onMounted(async () => {
               </option>
             </select>
           </div>
-
+          <div class="col-md-2">
+            <label class="form-label text-muted small mb-1"
+              >Mục đích sử dụng</label
+            >
+            <select class="form-select" v-model="filterMucDich">
+              <option value="">Tất cả</option>
+              <option
+                v-for="item in mucDichSuDungList"
+                :key="item.id"
+                :value="item.id"
+              >
+                {{ item.ten }}
+              </option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label text-muted small mb-1"
+              >Khoảng giá (VND)</label
+            >
+            <div class="d-flex align-items-center gap-2">
+              <input
+                type="number"
+                v-model.number="filterMinPrice"
+                class="form-control"
+                placeholder="Từ"
+              />
+              <span>-</span>
+              <input
+                type="number"
+                v-model.number="filterMaxPrice"
+                class="form-control"
+                placeholder="Đến"
+              />
+            </div>
+          </div>
           <div class="col-md-2">
             <button class="btn btn-warning w-100" @click="resetFilters">
               <i class="fa fa-undo me-1"></i>Đặt lại
             </button>
           </div>
-          <div class="col-md-2">
+          <!-- <div class="col-md-2">
             <router-link to="/admin/san-pham" class="btn btn-secondary w-100">
               <i class="fa fa-arrow-left me-1"></i>Quay lại
             </router-link>
-          </div>
+          </div> -->
         </div>
       </div>
     </div>
@@ -375,6 +442,10 @@ onMounted(async () => {
 
         <div class="col-md-10">
           <div class="row g-2">
+            <div class="col-md-3">
+              <label class="form-label">Mã SP</label>
+              <input class="form-control" v-model="editingCTSP.ma" disabled />
+            </div>
             <div class="col-md-3">
               <label class="form-label">Tên SP</label>
               <input class="form-control" v-model="editingCTSP.tenSP" />
@@ -499,6 +570,7 @@ onMounted(async () => {
           <thead class="table-warning text-center">
             <tr>
               <th>STT</th>
+              <th>Mã</th>
               <th>Hình ảnh</th>
               <th>Tên SP</th>
               <th>Danh mục</th>
@@ -516,6 +588,7 @@ onMounted(async () => {
           <tbody>
             <tr v-for="(ct, index) in pagedChiTietSP" :key="ct.id">
               <td>{{ (currentPage - 1) * pageSize + index + 1 }}</td>
+              <td>{{ ct.ma }}</td>
               <td class="text-center">
                 <img
                   :src="ct.hinhAnhUrl || 'https://via.placeholder.com/40'"
@@ -523,17 +596,14 @@ onMounted(async () => {
                   style="width: 40px; height: 40px; object-fit: cover"
                 />
               </td>
-              <td>{{ ct.tenSP }}</td>
-              <td>{{ danhMucList.find((d) => d.id === ct.danhMucId)?.ten }}</td>
+              <td>{{ ct.tenSanPham }}</td>
+              <td>{{ ct.danhMuc }}</td>
               <td>
-                {{ thuongHieuList.find((t) => t.id === ct.thuongHieuId)?.ten }}
+                {{ ct.thuongHieu }}
               </td>
               <td>{{ xuatXuList.find((x) => x.id === ct.xuatXuId)?.ten }}</td>
               <td>
-                {{
-                  mucDichSuDungList.find((m) => m.id === ct.mucDichSuDungId)
-                    ?.ten
-                }}
+                {{ ct.mucDich }}
               </td>
               <td>{{ ct.soLuongTon }}</td>
               <td>{{ ct.giaBan }}</td>
@@ -669,73 +739,5 @@ onMounted(async () => {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 150px;
-}
-/* ===== FILTER CARD ===== */
-.filter-card {
-  border-radius: 10px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
-  border: none;
-}
-
-/* ===== HEADER ===== */
-.filter-header {
-  background: #fff;
-  border-bottom: 1px solid #eee;
-  padding: 12px 16px;
-}
-
-.filter-header .card-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-  display: flex;
-  align-items: center;
-}
-
-.filter-header i {
-  color: #f0ad4e; /* vàng bootstrap warning */
-  font-size: 16px;
-}
-
-/* ===== FORM CONTROLS ===== */
-.filter-card .form-control,
-.filter-card .form-select {
-  border-radius: 6px;
-  font-size: 14px;
-  height: 38px;
-}
-
-.filter-card .form-control::placeholder {
-  font-size: 13px;
-  color: #999;
-}
-
-/* ===== LABEL ===== */
-.filter-card .form-label {
-  font-weight: 500;
-}
-
-/* ===== BUTTONS ===== */
-.filter-card .btn {
-  height: 38px;
-  font-size: 14px;
-  border-radius: 6px;
-}
-
-.filter-card .btn-warning {
-  color: #fff;
-  font-weight: 500;
-}
-
-.filter-card .btn-secondary {
-  background: #6c757d;
-  border-color: #6c757d;
-}
-
-/* ===== MOBILE ===== */
-@media (max-width: 768px) {
-  .filter-header .card-title {
-    font-size: 16px;
-  }
 }
 </style>

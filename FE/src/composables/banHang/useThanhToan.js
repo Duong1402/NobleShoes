@@ -1,15 +1,14 @@
 // src/composables/banHang/useThanhToan.js
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { thanhToan } from "@/service/BanHangService";
+import {
+  thanhToan,
+  getAllPhuongThucThanhToan,
+  themPhuongThucMoi,
+  kiemTraVoucher,
+} from "@/service/BanHangService";
 import Swal from "sweetalert2";
 import axios from "axios";
-
-const PHUONG_THUC_ID_MAP = {
-  TIEN_MAT: "145B12D7-25E0-4B1A-AC21-CD64328FD446",
-  CHUYEN_KHOAN: "B6A1BBF4-E9DF-4C88-90F9-C89599679FDC",
-  CA_HAI: "AF15E02B-80D8-41CA-9C8C-D3ECB0B290C7",
-};
 
 export function useThanhToan(
   notify,
@@ -20,32 +19,93 @@ export function useThanhToan(
   tongTienSauGiam,
   isBanGiaoHang,
   phiShip,
-  thongTinNguoiNhan
+  thongTinNguoiNhan,
+  handleSyncMoney
 ) {
+  const dynamicPhuongThucMap = ref({
+    TIEN_MAT: null,
+    CHUYEN_KHOAN: null,
+    CA_HAI: null,
+  });
+
   const router = useRouter();
   const phuongThucThanhToan = ref("TIEN_MAT");
   const isVnpayProcessing = ref(false);
 
-  // 1. Tính tổng tiền CẦN THANH TOÁN (Logic quan trọng nhất)
-  const tongTienCanThanhToan = computed(() => {
-    const tienHang = Number(tongTienSauGiam.value) || 0;
-    const phi = Number(phiShip.value) || 0;
+  const initPhuongThucThanhToan = async () => {
+    try {
+      console.log("🔄 Đang tải danh sách PTTT...");
+      let res = await getAllPhuongThucThanhToan();
+      let list = res.data || [];
 
-    // 👇 Debug: F12 lên xem dòng này có nhảy số khi chọn khách không
-    console.log("Đang tính tiền:", {
-      tienHang,
-      phiShip: phi,
-      isGiaoHang: isBanGiaoHang.value,
-    });
+      if (list.length === 0) {
+        console.warn("⚠️ DB trống! Đang tự khởi tạo PTTT mặc định...");
 
-    // Nếu ĐANG BẬT GIAO HÀNG thì cộng ship, không thì thôi
-    if (isBanGiaoHang.value) {
-      return tienHang + phi;
+        await themPhuongThucMoi({
+          ma: "TIEN_MAT",
+          ten: "Tiền mặt",
+          trangThai: 1,
+        });
+        await themPhuongThucMoi({
+          ma: "CHUYEN_KHOAN",
+          ten: "Chuyển khoản",
+          trangThai: 1,
+        });
+        await themPhuongThucMoi({
+          ma: "CA_HAI",
+          ten: "Tiền mặt & Chuyển khoản",
+          trangThai: 1,
+        });
+
+        res = await getAllPhuongThucThanhToan();
+        list = res.data || [];
+      }
+
+      console.log("✅ Danh sách PTTT từ API:", list);
+
+      const tm = list.find(
+        (p) => p.ma === "TIEN_MAT" || p.ten.toLowerCase().includes("tiền mặt")
+      );
+      const ck = list.find(
+        (p) =>
+          p.ma === "CHUYEN_KHOAN" ||
+          p.ten.toLowerCase().includes("chuyển khoản")
+      );
+      const ch = list.find(
+        (p) => p.ma === "CA_HAI" || p.ten.toLowerCase().includes("kết hợp")
+      );
+
+      if (tm) dynamicPhuongThucMap.value.TIEN_MAT = tm.id;
+      if (ck) dynamicPhuongThucMap.value.CHUYEN_KHOAN = ck.id;
+      if (ch) dynamicPhuongThucMap.value.CA_HAI = ch.id;
+
+      console.log("✅ Map PTTT sau khi load:", dynamicPhuongThucMap.value);
+    } catch (e) {
+      console.error("❌ Lỗi load PTTT:", e);
     }
-    return tienHang;
+  };
+
+  onMounted(() => {
+    initPhuongThucThanhToan();
   });
 
-  // 2. Xử lý VNPay
+  const tongTienCanThanhToan = computed(() => {
+    // const tienHang = Number(tongTienSauGiam.value) || 0;
+    // const phi = Number(phiShip.value) || 0;
+
+    // console.log("Đang tính tiền:", {
+    //   tienHang,
+    //   phiShip: phi,
+    //   isGiaoHang: isBanGiaoHang.value,
+    // });
+
+    // if (isBanGiaoHang.value) {
+    //   return tienHang + phi;
+    // }
+    // return tienHang;
+    return Number(tongTienSauGiam.value) || 0;
+  });
+
   const handleVNPayPayment = async () => {
     if (!hoaDon.value) return notify.warning("Chưa có hóa đơn!");
     if (tongTienCanThanhToan.value <= 0)
@@ -61,7 +121,7 @@ export function useThanhToan(
       const res = await axios.post(
         "http://localhost:8080/admin/vnpay/create-payment",
         {
-          amount: tongTienCanThanhToan.value, // Đã bao gồm ship
+          amount: tongTienCanThanhToan.value,
           orderInfo: orderInfoClean,
           language: "vn",
         }
@@ -78,39 +138,34 @@ export function useThanhToan(
       isVnpayProcessing.value = false;
     }
   };
-
-  // 3. Hàm Thanh Toán
   const handleThanhToan = async () => {
     if (!hoaDon.value) return notify.warning("Chưa có hóa đơn!");
     if (gioHang.value.length === 0) return notify.warning("Giỏ hàng rỗng!");
 
     const selectedPtttCode = phuongThucThanhToan.value;
-    let thongTinGiaoHang = null;
-    let loaiHoaDonQuyetDinh = "Tại cửa hàng"; // Mặc định
 
-    // XỬ LÝ GIAO HÀNG
+    let thongTinGiaoHang = {};
+    let loaiHoaDonQuyetDinh = "Tại cửa hàng";
+    let finalPhiShip = 0;
+
     if (isBanGiaoHang.value) {
       const nguoiNhan = thongTinNguoiNhan.value;
-      const shipFee = Number(phiShip.value) || 0;
+      finalPhiShip = Number(phiShip.value) || 0;
 
       if (!nguoiNhan.hoTen || !nguoiNhan.sdt) {
         return notify.warning("Vui lòng điền đủ Tên, SĐT ");
       }
 
       let diaChiCuTheFinal = nguoiNhan.diaChiCuThe;
-
       if (!diaChiCuTheFinal) {
-        // Nếu khách lười không nhập số nhà, nhưng đã chọn dropdown Xã/Huyện/Tỉnh
         if (nguoiNhan.phuongXa && nguoiNhan.quanHuyen && nguoiNhan.tinhThanh) {
-          // Cho phép đi tiếp, nhưng gán tạm địa chỉ cụ thể bằng tên Xã
           diaChiCuTheFinal = nguoiNhan.phuongXa;
         } else {
-          // Nếu cả dropdown cũng chưa chọn thì mới báo lỗi
           return notify.warning("Vui lòng nhập địa chỉ nhận hàng!");
         }
       }
 
-      loaiHoaDonQuyetDinh = "Online"; // Hoặc "Giao hàng" tùy DB của bạn
+      loaiHoaDonQuyetDinh = "Giao hàng";
 
       const diaChiDayDu = [
         diaChiCuTheFinal,
@@ -123,56 +178,128 @@ export function useThanhToan(
         .join(", ");
 
       thongTinGiaoHang = {
-        tenNguoiNhan: nguoiNhan.hoTen,
+        tenKhachHang: nguoiNhan.hoTen,
         sdt: nguoiNhan.sdt,
-        diaChiNguoiNhan: diaChiDayDu,
-        phiShip: shipFee,
-        phiVanChuyen: shipFee,
+        diaChiGiaoHang: diaChiDayDu,
+
+        tinhThanh: nguoiNhan.tinhThanh,
+        quanHuyen: nguoiNhan.quanHuyen,
+        phuongXa: nguoiNhan.phuongXa,
+        diaChiCuThe: diaChiCuTheFinal,
       };
     }
 
-    // CHUYỂN KHOẢN
     if (selectedPtttCode === "CHUYEN_KHOAN") {
-      // Logic lưu tạm hóa đơn trước khi redirect (nếu cần)
       await handleVNPayPayment();
       return;
     }
 
-    // TIỀN MẶT
-    const idPhuongThuc = PHUONG_THUC_ID_MAP[selectedPtttCode];
-    if (!idPhuongThuc) return notify.error("Phương thức thanh toán lỗi!");
+    let idPhuongThuc = dynamicPhuongThucMap.value[selectedPtttCode];
+    if (!idPhuongThuc) {
+      await initPhuongThucThanhToan();
+      idPhuongThuc = dynamicPhuongThucMap.value[selectedPtttCode];
+      if (!idPhuongThuc) return notify.error(`Lỗi PTTT: ${selectedPtttCode}`);
+    }
 
-    // POPUP XÁC NHẬN
-    const shipDisplay = isBanGiaoHang.value ? Number(phiShip.value) || 0 : 0;
+    const tongTienCuoiCung = Number(tongTienSauGiam.value) || 0;
+
+    try {
+      const resCheck = await kiemTraVoucher(hoaDon.value.id);
+      const data = resCheck.data;
+
+      if (data?.coMaTotHon && data?.phieuGiamGiaTotNhat) {
+        const confirmVoucher = await Swal.fire({
+          title: "Có mã giảm giá tốt hơn",
+          html: `
+        <div style="text-align:left; font-size: 1.05em">
+          <p>
+            Mã đang áp dụng giảm:
+            <b>${(data.soTienGiamHienTai || 0).toLocaleString()} ₫</b>
+          </p>
+          <p>
+            Mã tốt hơn giảm:
+            <b style="color:#d33">
+              ${(data.soTienGiamTotNhat || 0).toLocaleString()} ₫
+            </b>
+          </p>
+          <hr/>
+          <p>
+            Bạn có muốn <b>tiếp tục thanh toán</b>
+            hay quay lại để chọn mã tốt hơn?
+          </p>
+        </div>
+      `,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Tiếp tục thanh toán",
+          cancelButtonText: "Chọn mã khác",
+          confirmButtonColor: "#28a745",
+          cancelButtonColor: "#3085d6",
+        });
+
+        if (!confirmVoucher.isConfirmed) {
+          notify.info("Vui lòng chọn mã giảm tốt hơn trước khi thanh toán.");
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("⚠️ Không kiểm tra được voucher:", e);
+    }
+
+    const tienHang = Number(hoaDon.value?.tongTien || 0);
+    const tienGiam = Number(hoaDon.value?.soTienGiamGia || 0);
+    const phiVC = isBanGiaoHang.value ? finalPhiShip : 0;
+    const tongThanhToan = tongTienCuoiCung;
 
     const confirm = await Swal.fire({
       title: "Xác nhận Thanh toán?",
       html: `
-        <div class="text-start" style="font-size: 1.1em;">
-           <div style="display:flex; justify-content:space-between;">
-              <span>Tiền hàng:</span>
-              <strong>${(
-                Number(tongTienSauGiam.value) || 0
-              ).toLocaleString()} ₫</strong>
-           </div>
-           ${
-             isBanGiaoHang.value
-               ? `
-           <div style="display:flex; justify-content:space-between;">
-              <span>Phí ship:</span>
-              <strong>${shipDisplay.toLocaleString()} ₫</strong>
-           </div>`
-               : ""
-           }
-           <hr style="margin: 8px 0;">
-           <div style="display:flex; justify-content:space-between; font-size: 1.2em; color: #d33;">
-              <span>Tổng thu:</span>
-              <strong>${tongTienCanThanhToan.value.toLocaleString()} ₫</strong>
-           </div>
-           <div style="margin-top:10px; font-style: italic; font-size: 0.9em;">
-              (${loaiHoaDonQuyetDinh})
-           </div>
-        </div>`,
+  <div style="font-size:1.05em; text-align:left">
+    
+    <div style="display:flex; justify-content:space-between;">
+      <span>Tiền hàng:</span>
+      <strong>${tienHang.toLocaleString()} ₫</strong>
+    </div>
+
+    ${
+      hoaDon.value?.phieuGiamGia?.ma
+        ? `
+     <div style="display:flex; justify-content:space-between;">
+       <span>Mã áp dụng:</span>
+       <strong>- ${hoaDon.value.phieuGiamGia.giaTriGiam.toLocaleString()} ₫</strong>
+     </div>`
+        : ""
+    }
+
+    ${
+      isBanGiaoHang.value
+        ? `
+        <div style="display:flex; justify-content:space-between;">
+          <span>Phí vận chuyển:</span>
+          <strong>${phiVC.toLocaleString()} ₫</strong>
+        </div>
+        `
+        : ""
+    }
+
+    <hr style="margin:10px 0"/>
+
+    <div style="
+      display:flex;
+      justify-content:space-between;
+      font-size:1.25em;
+      font-weight:bold;
+      color:#d33;
+    ">
+      <span>TỔNG THANH TOÁN:</span>
+      <span>${tongThanhToan.toLocaleString()} ₫</span>
+    </div>
+
+    <div style="margin-top:8px; font-size:0.9em; font-style:italic;">
+      (${loaiHoaDonQuyetDinh})
+    </div>
+  </div>
+  `,
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Thanh toán",
@@ -182,33 +309,49 @@ export function useThanhToan(
 
     if (!confirm.isConfirmed) return;
 
-    // GỌI API
     try {
       const requestData = {
         idPhuongThucThanhToan: idPhuongThuc,
         loaiHoaDon: loaiHoaDonQuyetDinh,
-        tongTien: tongTienCanThanhToan.value,
+
+        phiVanChuyen: finalPhiShip,
+
         ...thongTinGiaoHang,
       };
 
       await thanhToan(hoaDon.value.id, requestData);
 
-      // RESET SAU KHI THÀNH CÔNG
       const completedId = hoaDon.value.id;
       notify.success("Thanh toán thành công!");
-
       hoaDonChoList.value = hoaDonChoList.value.filter(
         (hd) => hd.id !== completedId
       );
       hoaDon.value = null;
       gioHang.value = [];
       selectedHoaDonId.value = null;
-
       router.push({ name: "ChiTietHD", params: { id: completedId } });
     } catch (err) {
-      console.error(err);
-      notify.error(err.response?.data?.message || "Thanh toán thất bại!");
+      let errorMessage = "Thanh toán thất bại!";
+      const resData = err.response?.data;
+      if (resData) {
+        if (typeof resData === "string") errorMessage = resData;
+        else if (resData.message) errorMessage = resData.message;
+        else if (resData.error) errorMessage = resData.error;
+      }
+      notify.error(errorMessage);
+      const keyword = errorMessage.toLowerCase();
+      if (
+        keyword.includes("phiếu") ||
+        keyword.includes("tổng tiền") ||
+        keyword.includes("hết hạn")
+      ) {
+        if (typeof handleSyncMoney === "function") await handleSyncMoney();
+      }
     }
+  };
+
+  const handleChonPhuongThuc = (code) => {
+    phuongThucThanhToan.value = code;
   };
 
   return {
@@ -217,5 +360,6 @@ export function useThanhToan(
     tongTienCanThanhToan,
     handleVNPayPayment,
     handleThanhToan,
+    handleChonPhuongThuc,
   };
 }

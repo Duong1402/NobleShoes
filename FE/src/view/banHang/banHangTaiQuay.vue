@@ -1,5 +1,5 @@
 <template>
-  <div class="container-fluid mt-4 px-1">
+  <div class="container-fluid mt-4">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
         <div
@@ -60,8 +60,8 @@
                     <span
                       class="badge text-uppercase"
                       :class="{
-                        'bg-success': hd.trangThai === 5,
-                        'bg-danger': hd.trangThai === 0,
+                        'bg-warning': hd.trangThai === 0,
+                        'bg-danger': hd.trangThai === 5,
                         'bg-secondary':
                           hd.trangThai !== 0 && hd.trangThai !== 5,
                       }"
@@ -164,6 +164,15 @@
                       </span>
                     </div>
 
+                    <div
+                      v-if="sp.warningMessage"
+                      class="alert alert-danger py-1 px-2 mb-2 d-flex align-items-center animate__animated animate__fadeIn"
+                      style="font-size: 0.85rem; border-radius: 4px"
+                    >
+                      <i class="fa-solid fa-circle-exclamation me-2"></i>
+                      <span class="text-danger">{{ sp.warningMessage }}</span>
+                    </div>
+
                     <div class="d-flex align-items-center mt-2">
                       <p
                         class="mb-0 me-2 small fw-semibold"
@@ -201,14 +210,12 @@
                             font-size: 0.9rem;
                             height: 28px;
                           "
-                          @input="
-                            handleUpdateTempSoLuong(sp.id, $event.target.value)
-                          "
-                          @blur.stop.prevent="
-                            handleCapNhatSoLuong(sp.id, $event.target.value)
-                          "
-                          @keyup.enter.stop.prevent="
-                            handleCapNhatSoLuong(sp.id, $event.target.value)
+                          @change="
+                            handleCapNhatSoLuong(
+                              sp.id,
+                              $event.target.value,
+                              $event.target
+                            )
                           "
                         />
 
@@ -232,7 +239,7 @@
                     class="d-flex flex-column align-items-end justify-content-start pt-4"
                     style="width: 20%"
                   >
-                    <small class="text-muted mb-1">
+                    <small class="text-muted mb-1 d-flex align-items-center">
                       Đơn giá: {{ formatCurrency(sp.donGia) }}
                     </small>
 
@@ -717,9 +724,16 @@
                     </div>
                     <div class="text-end">
                       <span class="d-block small text-muted">Phí ship</span>
-                      <span class="fw-bolder fs-5 text-success">
-                        {{ formatCurrency(phiShip) }}
-                      </span>
+                      <input
+                        type="text"
+                        class="form-control form-control-sm fw-bolder text-success text-end"
+                        :value="formatCurrency(phiShip)"
+                        @input="
+                          phiShip = Number(
+                            $event.target.value.replace(/\D/g, '')
+                          )
+                        "
+                      />
                     </div>
                   </div>
                 </div>
@@ -729,7 +743,7 @@
             <div class="mb-3 text-start border-bottom pb-3">
               <div
                 v-if="hoaDon && hoaDon.phieuGiamGia && hoaDon.phieuGiamGia.id"
-                class="mb-3 text-start border-bottom pb-3"
+                class="mb-3"
               >
                 <div
                   class="d-flex justify-content-between align-items-center mb-2"
@@ -738,10 +752,20 @@
                     <i class="fa-solid fa-ticket text-warning me-1"></i> Mã giảm
                     giá
                   </span>
+
+                  <div>
+                    <button
+                      class="btn btn-sm btn-outline-primary"
+                      @click="handleApDungKhuyenMai"
+                      title="Tìm mã tốt hơn"
+                    >
+                      <i class="fa-solid fa-ticket me-1"></i> Đổi mã khác
+                    </button>
+                  </div>
                 </div>
 
                 <div
-                  class="card shadow-sm border-0"
+                  class="card shadow-sm border-0 animate__animated animate__fadeIn"
                   style="
                     background-color: #f0fdf4;
                     border-left: 4px solid #198754 !important;
@@ -770,12 +794,7 @@
                       <div class="text-end">
                         <span class="fw-bold text-danger fs-6">
                           -
-                          {{
-                            formatCurrency(
-                              tongTienHang -
-                                (hoaDon.tongTienSauGiam || tongTienHang)
-                            )
-                          }}
+                          {{ formatCurrency(hoaDon.phieuGiamGia.giaTriGiam) }}
                         </span>
                         <br />
                         <small
@@ -805,13 +824,14 @@
                 </div>
               </div>
 
-              <div v-else class="mb-3 text-start border-bottom pb-3">
+              <div v-else class="mb-2">
                 <div
                   class="d-flex justify-content-between align-items-center mb-2"
                 >
-                  <span class="fw-bold small text-uppercase text-muted"
-                    >Mã giảm giá</span
-                  >
+                  <span class="fw-bold small text-uppercase text-muted">
+                    Mã giảm giá
+                  </span>
+
                   <button
                     class="btn btn-sm btn-outline-primary"
                     @click="handleApDungKhuyenMai"
@@ -821,17 +841,12 @@
                       hoaDon.khachHang.hoTen === 'Khách lẻ'
                     "
                   >
-                    <i class="fa-solid fa-ticket me-1"></i> Chọn mã
+                    <i class="fa-solid fa-plus-circle me-1"></i> Chọn mã
                   </button>
                 </div>
-                <div class="text-end small text-muted fst-italic">
-                  {{
-                    !hoaDon ||
-                    !hoaDon.khachHang ||
-                    hoaDon.khachHang.hoTen === "Khách lẻ"
-                      ? "*Chọn khách hàng thành viên"
-                      : "Chưa áp dụng mã nào"
-                  }}
+
+                <div class="text-end small fst-italic text-muted">
+                  Chưa áp dụng mã nào
                 </div>
               </div>
 
@@ -840,7 +855,7 @@
                   hoaDon &&
                   (!hoaDon.khachHang || hoaDon.khachHang.hoTen === 'Khách lẻ')
                 "
-                class="text-muted small fst-italic text-end"
+                class="text-muted small fst-italic text-end mt-1"
               >
                 <i class="fa-solid fa-circle-info me-1"></i>
                 *Chọn khách hàng thành viên để dùng mã
@@ -856,16 +871,12 @@
               </div>
 
               <div
-                v-if="
-                  hoaDon &&
-                  hoaDon.phieuGiamGia &&
-                  tongTienHang - hoaDon.tongTienSauGiam > 0
-                "
+                v-if="hoaDon && hoaDon.phieuGiamGia"
                 class="d-flex justify-content-between mb-1 text-success"
               >
                 <span> <i class="fa-solid fa-gift me-1"></i> Khuyến mãi: </span>
                 <span class="fw-bold">
-                  - {{ formatCurrency(tongTienHang - hoaDon.tongTienSauGiam) }}
+                  - {{ formatCurrency(hoaDon.phieuGiamGia.giaTriGiam) }}
                 </span>
               </div>
 
@@ -882,69 +893,27 @@
               <div
                 class="d-flex justify-content-between align-items-center pt-1"
               >
-                <span class="fw-bold h6 mb-0">KHÁCH CẦN TRẢ:</span>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="fw-bold h6 mb-0">KHÁCH CẦN TRẢ:</span>
+
+                  <!-- ICON VÍ -->
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-warning d-flex align-items-center gap-1"
+                    data-bs-toggle="modal"
+                    data-bs-target="#chonPhuongThucThanhToanModal"
+                    title="Chọn phương thức thanh toán"
+                  >
+                    <i class="fa-solid fa-wallet"></i>
+                    <small v-if="phuongThucThanhToan">
+                      {{ phuongThucThanhToan }}
+                    </small>
+                  </button>
+                </div>
+
                 <span class="fw-bolder fs-4 text-danger">
-                  {{
-                    formatCurrency(
-                      (hoaDon?.tongTienSauGiam !== null &&
-                      hoaDon?.tongTienSauGiam !== undefined
-                        ? hoaDon.tongTienSauGiam
-                        : tongTienHang) + (isBanGiaoHang ? phiShip : 0)
-                    )
-                  }}
+                  {{ formatCurrency(hoaDon.tongTienSauGiam) }}
                 </span>
-              </div>
-            </div>
-
-            <div class="mb-3 text-start">
-              <h6 class="fw-bold small text-uppercase text-muted mb-2">
-                Phương thức thanh toán
-              </h6>
-
-              <div class="d-flex justify-content-between gap-2">
-                <div class="flex-fill">
-                  <button
-                    @click="handleChonPhuongThuc('CHUYEN_KHOAN')"
-                    :class="{
-                      'btn-warning text-white':
-                        phuongThucThanhToan === 'CHUYEN_KHOAN',
-                      'btn-outline-secondary':
-                        phuongThucThanhToan !== 'CHUYEN_KHOAN',
-                    }"
-                    class="btn w-100 btn-sm"
-                  >
-                    Chuyển khoản
-                  </button>
-                </div>
-
-                <div class="flex-fill">
-                  <button
-                    @click="handleChonPhuongThuc('TIEN_MAT')"
-                    :class="{
-                      'btn-warning text-white':
-                        phuongThucThanhToan === 'TIEN_MAT',
-                      'btn-outline-secondary':
-                        phuongThucThanhToan !== 'TIEN_MAT',
-                    }"
-                    class="btn w-100 btn-sm"
-                  >
-                    Tiền mặt
-                  </button>
-                </div>
-
-                <div class="flex-fill">
-                  <button
-                    @click="handleChonPhuongThuc('CA_HAI')"
-                    :class="{
-                      'btn-warning text-white':
-                        phuongThucThanhToan === 'CA_HAI',
-                      'btn-outline-secondary': phuongThucThanhToan !== 'CA_HAI',
-                    }"
-                    class="btn w-100 btn-sm"
-                  >
-                    Cả hai
-                  </button>
-                </div>
               </div>
             </div>
 
@@ -964,6 +933,89 @@
       </div>
     </div>
   </div>
+
+  <div
+    class="modal fade"
+    id="chonPhuongThucThanhToanModal"
+    tabindex="-1"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content rounded-4">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="fa-solid fa-wallet me-2 text-warning"></i>
+            Chọn phương thức thanh toán
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+          ></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="d-grid gap-2">
+            <!-- CHUYỂN KHOẢN -->
+            <button
+              type="button"
+              class="btn d-flex align-items-center gap-3 p-3"
+              :class="{
+                'btn-warning text-white':
+                  phuongThucThanhToan === 'CHUYEN_KHOAN',
+                'btn-outline-secondary': phuongThucThanhToan !== 'CHUYEN_KHOAN',
+              }"
+              @click="handleChonPhuongThuc('CHUYEN_KHOAN')"
+              data-bs-dismiss="modal"
+            >
+              <i class="fa-solid fa-building-columns fs-4"></i>
+              <div class="text-start">
+                <div class="fw-semibold">Chuyển khoản</div>
+                <small>Ngân hàng / QR Code</small>
+              </div>
+            </button>
+
+            <!-- TIỀN MẶT -->
+            <button
+              type="button"
+              class="btn d-flex align-items-center gap-3 p-3"
+              :class="{
+                'btn-warning text-white': phuongThucThanhToan === 'TIEN_MAT',
+                'btn-outline-secondary': phuongThucThanhToan !== 'TIEN_MAT',
+              }"
+              @click="handleChonPhuongThuc('TIEN_MAT')"
+              data-bs-dismiss="modal"
+            >
+              <i class="fa-solid fa-money-bill-wave fs-4"></i>
+              <div class="text-start">
+                <div class="fw-semibold">Tiền mặt</div>
+                <small>Thanh toán trực tiếp</small>
+              </div>
+            </button>
+
+            <!-- CẢ HAI -->
+            <!-- <button
+              type="button"
+              class="btn d-flex align-items-center gap-3 p-3"
+              :class="{
+                'btn-warning text-white': phuongThucThanhToan === 'CA_HAI',
+                'btn-outline-secondary': phuongThucThanhToan !== 'CA_HAI',
+              }"
+              @click="handleChonPhuongThuc('CA_HAI')"
+              data-bs-dismiss="modal"
+            >
+              <i class="fa-solid fa-layer-group fs-4"></i>
+              <div class="text-start">
+                <div class="fw-semibold">Cả hai</div>
+                <small>Tiền mặt + Chuyển khoản</small>
+              </div>
+            </button> -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div
     v-if="showDiaChiModal"
     class="modal d-block"
@@ -1049,12 +1101,12 @@ const formatCurrency = (amount) => {
 // Hàm hiển thị trạng thái (Nguyên nhân gây lỗi của bạn)
 const trangThaiText = (value) => {
   const map = {
-    0: "Đã hủy",
+    0: "Hóa đơn chờ",
     1: "Chờ xác nhận",
     2: "Đã xác nhận",
-    3: "Chờ thanh toán",
-    4: "Đang giao",
-    5: "Hoàn thành",
+    3: "Đang giao",
+    4: "Hoàn thành",
+    5: "Đã hủy",
   };
   return map[value] || "Không xác định";
 };
@@ -1080,6 +1132,7 @@ const {
   tongTienHang,
   tongTienSauGiam,
   soTienGiamGia,
+  syncMoneyFromBackend,
   handleThemSanPham,
   handleUpdateTempSoLuong,
   handleCapNhatSoLuong,
@@ -1114,7 +1167,7 @@ const {
   searchResults,
   isGuestEditable,
   showAddGuestButton,
-  khachLeMacDinh,
+  khachLeInfo,
   assignKhachHang,
   handleTimKhachHang,
   handleThemNhanhKhachHang,
@@ -1137,6 +1190,7 @@ const {
   isVnpayProcessing,
   tongTienCanThanhToan,
   handleThanhToan,
+  handleChonPhuongThuc,
 } = useThanhToan(
   notify,
   hoaDon,
@@ -1146,7 +1200,8 @@ const {
   tongTienSauGiam,
   isBanGiaoHang,
   phiShip,
-  thongTinNguoiNhan
+  thongTinNguoiNhan,
+  syncMoneyFromBackend
 );
 
 // 6. Sản phẩm (Mới)
@@ -1174,6 +1229,21 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString("vi-VN");
 };
 
+const showPriceWarning = (item) => {
+  if (
+    item.donGia === undefined ||
+    item.currentGiaBan === undefined ||
+    item.donGia === null ||
+    item.currentGiaBan === null
+  ) {
+    return false;
+  }
+  const donGia = Number(item.donGia);
+  const currentGiaBan = Number(item.currentGiaBan);
+
+  return donGia !== currentGiaBan;
+};
+
 // Init
 onMounted(async () => {
   await loadSanPham();
@@ -1184,7 +1254,7 @@ onMounted(async () => {
     await nextTick();
 
     if (hoaDon.value && hoaDon.value.khachHang) {
-      const isKhachLe = hoaDon.value.khachHang.id === khachLeMacDinh.id;
+      const isKhachLe = hoaDon.value.khachHang.id === khachLeInfo.id;
 
       await assignKhachHang(hoaDon.value.khachHang, isKhachLe);
     }
@@ -1205,13 +1275,10 @@ onMounted(async () => {
 .empty-icon {
   width: 60px;
   height: 60px;
-  background-color: #ffc107; /* màu xanh dịu */
+  background-color: #ffc107;
 }
-/* Card to (cao bằng 2 card nhỏ bên trái) */
 .big-card {
-  height: calc(
-    (100% - 1rem) * 2 / 3
-  ); /* Tự động tính cao bằng 2/3 của cột trái */
+  height: calc((100% - 1rem) * 2 / 3);
 }
 
 .card:hover {
@@ -1220,15 +1287,14 @@ onMounted(async () => {
   transition: all 0.2s ease;
 }
 
-/* Nếu muốn cố định chiều cao cho các card nhỏ để dễ nhìn */
 .col-md-6 .card {
   height: auto;
 }
 .qr-btn {
-  height: 100%; /* Cùng chiều cao với ô input */
-  white-space: nowrap; /* Không xuống dòng */
-  font-size: 0.9rem; /* Nhỏ hơn một chút cho gọn */
-  padding: 0 10px; /* Giảm padding ngang */
+  height: 100%;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  padding: 0 10px;
 }
 .nav-tabs .nav-link.active {
   background-color: #ffc107;
@@ -1255,7 +1321,7 @@ onMounted(async () => {
 }
 
 .hoa-don-card {
-  flex: 0 0 180px; /* cố định kích thước mỗi card */
+  flex: 0 0 180px;
   min-height: 90px;
   background: #fff;
   border: 1px solid #ddd;
@@ -1274,13 +1340,12 @@ onMounted(async () => {
   letter-spacing: 0.3px;
 }
 .product-thumb {
-  width: 60px; /* Chiều rộng cố định */
-  height: 60px; /* Chiều cao cố định */
-  object-fit: cover; /* Đảm bảo ảnh không bị méo */
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
   border-radius: 4px;
   border: 1px solid #ddd;
 }
-/* CSS cho hình ảnh sản phẩm trong Giỏ hàng (Card 2) */
 .cart-thumb {
   width: 150px;
   height: 150px;

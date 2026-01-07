@@ -26,6 +26,19 @@
             </router-link>
           </li>
 
+          <!-- Thống kê -->
+          <li class="nav-item" :class="{ active: activeRoute === 'ThongKe' }">
+            <router-link
+              :to="{ name: 'ThongKe' }"
+              class="nav-link link-with-icon"
+            >
+              <div class="icon-title">
+                <i class="fa-solid fa-chart-line"></i>
+                <p class="mb-0">Thống kê</p>
+              </div>
+            </router-link>
+          </li>
+
           <!-- Mẫu menu có submenu -->
           <li class="nav-item" :class="{ active: activeRoute === 'BanHang' }">
             <router-link
@@ -85,19 +98,6 @@
               </div>
             </transition>
           </li>
-
-          <!-- Quản lý nhân viên -->
-          <li class="nav-item" :class="{ active: activeRoute === 'ThongKe' }">
-            <router-link
-              :to="{ name: 'ThongKe' }"
-              class="nav-link link-with-icon"
-            >
-              <div class="icon-title">
-                <i class="fa-solid fa-chart-line"></i>
-                <p class="mb-0">Thống kê</p>
-              </div>
-            </router-link>
-          </li>
         </ul>
       </div>
     </div>
@@ -142,7 +142,7 @@ const menus = [
     routeName: "PhieuGiamGia",
     children: [
       { text: "Phiếu giảm giá", route: "PhieuGiamGia" },
-      { text: "Đợt giảm giá", route: "DotGiamGia" },
+      // { text: "Đợt giảm giá", route: "DotGiamGia" },
     ],
   },
   {
@@ -152,12 +152,22 @@ const menus = [
     routeName: "SanPham",
     children: [
       { text: "Sản phẩm", route: "SanPham" },
+      { text: "Biến thể Sản phẩm", route: "ChiTietBienThe" },
+    ],
+  },
+  {
+    key: "ThuocTinh",
+    title: "Danh sách thuộc tính",
+    icon: "fas fa-list",
+    // routeName: "SanPham",
+    children: [
       { text: "Danh mục", route: "DanhMuc" },
       { text: "Mục đích sử dụng", route: "MucDichSuDung" },
       { text: "Dây giầy", route: "DayGiay" },
       { text: "Đế giày", route: "DeGiay" },
       { text: "Thương hiệu", route: "ThuongHieu" },
       { text: "Xuất xứ", route: "XuatXu" },
+      { text: "Chất liệu", route: "ChatLieu" },
     ],
   },
   {

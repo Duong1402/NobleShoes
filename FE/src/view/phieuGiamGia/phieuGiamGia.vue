@@ -20,8 +20,7 @@ import { all } from "axios";
 
 const phieuGiamGia = ref([]);
 const notify = useNotify();
-const selectedphieuGiamGia = ref({
-});
+const selectedphieuGiamGia = ref({});
 const errors = reactive({});
 const totalPages = ref(0);
 const page = ref(0);
@@ -63,10 +62,12 @@ onMounted(async () => {
 });
 
 // Hàm load danh sách phiếu giảm giá
+const allPhieuGiamGia = ref([]);
 const loadphieuGiamGia = async () => {
   try {
     const res = await getAllPhieuGiamGia(page.value, size.value);
     phieuGiamGia.value = res.content;
+    allPhieuGiamGia.value = res.content;
     totalPages.value = res.totalPages;
   } catch (err) {
     console.error("Lỗi khi tải danh sách phiếu giảm giá:", err);
@@ -102,7 +103,7 @@ const editphieuGiamGia = (p) => {
 
   // ✅ Deep copy tránh làm thay đổi list chính
   selectedphieuGiamGia.value = JSON.parse(JSON.stringify(normalized));
-console.log(selectedphieuGiamGia.value);
+  console.log(selectedphieuGiamGia.value);
   // ✅ Mở modal sửa
   window.history.pushState({}, "", `?id=${p.id}`);
   const modalEl = document.getElementById("detailModal");
@@ -139,7 +140,6 @@ const savephieuGiamGia = async () => {
     notify.error("Có lỗi khi cập nhật!");
   }
 };
-
 
 // Tạo hàm confirm
 const confirmSave = async () => {
@@ -184,8 +184,7 @@ const toggleTrangThai = async (p) => {
 };
 
 const filterPhieuGiamGia = computed(() => {
-  // Hàm lọc phiếu giảm giá (chưa triển khai)
-  return phieuGiamGia.value.filter((p) => {
+  return allPhieuGiamGia.value.filter((p) => {
     const matchesStatus =
       filterTrangThai.value === "all" ||
       (filterTrangThai.value === "active" && p.trangThai) ||
@@ -215,15 +214,46 @@ watch(
   }
 );
 
-const resetFilters = () => {
+const resetFilters = async () => {
   filterTrangThai.value = "all";
   searchQuery.value = "";
   filterNgayBatDau.value = "";
   filterNgayKetThuc.value = "";
+  page.value = 0;
+  await loadphieuGiamGia();
+};
+const getStatusCode = (p) => {
+  const now = new Date();
+  const start = new Date(p.ngayBatDau);
+  const end = new Date(p.ngayKetThuc);
+
+  // Ưu tiên kiểm tra xem có bị Admin tắt thủ công không
+  if (!p.trangThai) return 2;
+
+  if (now < start) return 0; // Sắp diễn ra
+  if (now > end) return 3; // Đã kết thúc
+  return 1; // Đang hoạt động
+};
+
+const getStatusLabel = (p) => {
+  const status = getStatusCode(p);
+  const labels = [
+    "Sắp diễn ra",
+    "Còn hoạt động",
+    "Ngừng hoạt động",
+    "Đã kết thúc",
+  ];
+  return labels[status];
+};
+
+const getStatusClass = (p) => {
+  const status = getStatusCode(p);
+  const classes = ["bg-info", "bg-success", "bg-danger", "bg-secondary"];
+  return classes[status];
 };
 </script>
 <template>
-  <div class="container-fluid mt-4 px-1">
+  <div class="container-fluid mt-4">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
         <div
@@ -251,7 +281,7 @@ const resetFilters = () => {
               <input
                 type="text"
                 class="form-control"
-                placeholder="Mã, tên, email..."
+                placeholder="Nhập mã, tên"
                 v-model="searchQuery"
                 required
               />
@@ -376,13 +406,10 @@ const resetFilters = () => {
                     <td>{{ p.giaTriGiamToiDa }}VNĐ</td>
                     <td>
                       <span
-                        class="badge rounded-pill fs-6 px-3 status-badge"
-                        :class="{
-                          'text-white bg-warning': p.trangThai,
-                          'text-white bg-danger': !p.trangThai,
-                        }"
+                        class="badge rounded-pill fs-6 px-3 status-badge text-white"
+                        :class="getStatusClass(p)"
                       >
-                        {{ p.trangThai ? "Còn hoạt động" : "Ngừng hoạt động" }}
+                        {{ getStatusLabel(p) }}
                       </span>
                     </td>
                     <td class="text-center align-middle">
@@ -582,7 +609,7 @@ const resetFilters = () => {
                         class="form-control"
                         v-model="selectedphieuGiamGia.giaTriGiamToiThieu"
                       />
-                      <div class="invalid-feedback">                      </div>
+                      <div class="invalid-feedback"></div>
                     </div>
 
                     <div class="col-md-6">

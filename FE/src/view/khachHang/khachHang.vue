@@ -5,7 +5,7 @@ import { useNotify } from "@/composables/useNotify";
 
 // Service Khách hàng
 import { getAllKhachHang, updateKhachHang } from "@/service/KhachHangService";
-import { getDiaChiByKhachHangId } from "@/service/DiaChiService";
+import { useDiaChiKhachHang } from "@/composables/khachHang/useDiaChiKhachHang";
 
 /* ============ STATE ============ */
 const notify = useNotify();
@@ -17,12 +17,6 @@ const statusFilter = ref("all"); // all | active | inactive
 
 // Ưu tiên ID KH vừa thêm (được set bên trang Thêm KH)
 const newFirstId = ref(null);
-
-const khachHangDiaChiMap = ref(new Map());
-
-const getDisplayAddress = (kh) => {
-  return khachHangDiaChiMap.value.get(kh.id) || "— Chưa có địa chỉ —";
-};
 
 /* ============ HELPERS ============ */
 const fDate = (d) => {
@@ -84,36 +78,6 @@ const loadKhachHang = async () => {
   } finally {
     isLoading.value = false;
   }
-};
-
-const loadDiaChiForKhachHang = async (khachHangList) => {
-  // Chỉ lấy địa chỉ của khách hàng mới hoặc chưa có trong Map
-  const promises = khachHangList
-    .filter((kh) => !khachHangDiaChiMap.value.has(kh.id))
-    .map(async (kh) => {
-      try {
-        // Gọi API lấy danh sách địa chỉ của KH này
-        // GIẢ ĐỊNH: findAllByKhachHangId(id) trả về List<DiaChi>
-        const res = await getDiaChiByKhachHangId(kh.id);
-        const addresses = res?.data ?? res ?? [];
-
-        if (addresses.length > 0) {
-          // Chọn địa chỉ đầu tiên (coi là mặc định)
-          const dc = addresses[0]; // Tạo chuỗi địa chỉ đầy đủ
-          const fullAddress = [dc.diaChiCuThe, dc.xa, dc.huyen, dc.thanhPho]
-            .filter(Boolean)
-            .join(", "); // Lưu vào Map
-          khachHangDiaChiMap.value.set(kh.id, fullAddress);
-        } else {
-          khachHangDiaChiMap.value.set(kh.id, "—");
-        }
-      } catch (e) {
-        console.warn(`Không thể lấy địa chỉ cho KH ID: ${kh.id}`, e);
-        khachHangDiaChiMap.value.set(kh.id, "— Lỗi tải địa chỉ —");
-      }
-    }); // Chờ tất cả các promise chạy xong
-
-  await Promise.all(promises);
 };
 
 onMounted(loadKhachHang);
@@ -277,10 +241,13 @@ const exportExcel = async () => {
     notify.error("Xuất Excel thất bại!");
   }
 };
+
+const { khachHangDiaChiMap, loadDiaChiForKhachHang, getDisplayAddress } =
+  useDiaChiKhachHang();
 </script>
 
 <template>
-  <div class="container-fluid mt-4 px-1">
+  <div class="container-fluid mt-4">
     <!-- Header -->
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">

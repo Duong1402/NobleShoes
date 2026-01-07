@@ -1,5 +1,5 @@
 <template>
-  <div class="container-fluid mt-4 px-1">
+  <div class="container-fluid mt-4">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
         <div
@@ -131,18 +131,18 @@
                 </span>
                 <span
                   v-if="currentDraftAddress?.macDinh && !isAddingNewAddress"
-                  class="badge bg-success ms-2"
+                  class="badge bg-warning ms-2"
                   >Mặc định</span
                 >
               </h5>
 
               <button
                 type="button"
-                class="btn btn-outline-primary"
+                class="btn btn-outline-warning"
                 @click="openAddressForm()"
                 v-if="!isAddingNewAddress"
               >
-                <i class="fa fa-plus me-1"></i> Thêm địa chỉ khác
+                <i class="fa fa-plus me-1"></i> Thêm địa chỉ
               </button>
             </div>
 
@@ -247,7 +247,7 @@
                     </button>
                     <button
                       type="button"
-                      class="btn btn-primary"
+                      class="btn btn-warning text-white"
                       @click="saveAddressToDraft()"
                     >
                       {{ isAddingNewAddress ? "Lưu Địa chỉ" : "Cập nhật" }}
@@ -311,11 +311,9 @@ import Breadcrumb from "@/components/common/Breadcrumb.vue";
 import { useNotify } from "@/composables/useNotify";
 import Swal from "sweetalert2";
 import axios from "axios";
-import { createKhachHang } from "@/service/KhachHangService";
-import {
-  createDiaChi,
-  // ...
-} from "@/service/DiaChiService";
+import { createKhachHang,uploadImage } from "@/service/KhachHangService";
+import { createDiaChi } from "@/service/DiaChiService";
+import { useDiaChiKhachHang } from "@/composables/khachHang/useDiaChiKhachHang";
 
 const router = useRouter();
 const notify = useNotify();
@@ -349,13 +347,7 @@ const handleFileUpload = async (event) => {
   uploading.value = true;
   try {
     // Sửa endpoint BE theo hệ thống của bạn
-    const res = await axios.post(
-      "http://localhost:8080/admin/upload",
-      formData,
-      {
-        headers: { "Content-Type": "multipart/form-data" },
-      }
-    );
+    const res = await uploadImage(formData);
 
     // Chuẩn hóa lấy URL
     form.urlAnh = res?.data?.url ?? res?.data?.secure_url ?? res?.data ?? "";
@@ -368,306 +360,8 @@ const handleFileUpload = async (event) => {
   }
 };
 
-/* ====== QUẢN LÝ DANH SÁCH ĐỊA CHỈ TRƯỚC KHI LƯU KHÁCH HÀNG (MỚI) ====== */
-
 const provincesData = ref([]);
-const newAddresses = ref([]);
-
-// 🟢 MỚI: Theo dõi index của địa chỉ đang được hiển thị trên form
-const currentAddressIndex = ref(0);
-
-// 🟢 MỚI: Dùng để xác định form đang ở chế độ 'Thêm mới' hay 'Sửa'
-const isAddingNewAddress = ref(false);
-
-const currentAddressForm = reactive({
-  tinhCode: "",
-  huyenCode: "",
-  xaCode: "",
-  chiTiet: "",
-  macDinh: false,
-  id: null,
-});
-
-// 🟢 MỚI: Lấy địa chỉ hiện tại từ danh sách nháp
-const currentDraftAddress = computed(() => {
-  if (isAddingNewAddress.value) return currentAddressForm;
-  if (newAddresses.value.length === 0) return null;
-  // Đảm bảo index nằm trong phạm vi
-  const index = Math.min(
-    currentAddressIndex.value,
-    newAddresses.value.length - 1
-  );
-  return newAddresses.value[index];
-});
-
-/* ------------------------------------------------ */
-/* --- Logic Đồng bộ Dữ liệu Địa chỉ ra Form --- */
-/* ------------------------------------------------ */
-
-// 🟢 MỚI: Hàm tìm Code từ Tên (Dùng cho logic sửa địa chỉ)
-// LƯU Ý: Đây là logic tạm thời vì API của bạn chỉ trả về Tên cho draft,
-// không phải CODE. Bạn cần sửa lại nếu BE của bạn trả về CODE
-const findCodeByName = (name, type) => {
-  if (!name) return "";
-  let target = null;
-  if (type === "tinh") {
-    target = provincesData.value.find((p) => p.name === name);
-  } else if (type === "huyen" && currentProvince.value) {
-    target = currentProvince.value.districts.find((d) => d.name === name);
-  } else if (type === "xa" && currentDistrict.value) {
-    target = currentDistrict.value.wards.find((w) => w.name === name);
-  }
-  return target?.code || "";
-};
-
-// 🟢 MỚI: Đồng bộ địa chỉ đang được chọn (currentDraftAddress) vào currentAddressForm
-const resetAddressForm = (makeDefault = true) => {
-  currentAddressForm.tinhCode = "";
-  currentAddressForm.huyenCode = "";
-  currentAddressForm.xaCode = "";
-  currentAddressForm.chiTiet = "";
-  currentAddressForm.macDinh = makeDefault && newAddresses.value.length === 0;
-  currentAddressForm.id = null;
-};
-
-const syncAddressToForm = (address) => {
-  if (!address) {
-    resetAddressForm();
-    return;
-  }
-  // Nếu đang ở chế độ sửa, phải tìm lại CODE dựa trên TÊN đã lưu
-  currentAddressForm.tinhCode = findCodeByName(address.thanhPho, "tinh");
-  currentAddressForm.huyenCode = findCodeByName(address.huyen, "huyen");
-  currentAddressForm.xaCode = findCodeByName(address.xa, "xa");
-
-  // Nếu không tìm thấy code (vì data chưa load kịp hoặc logic findCodeByName lỗi),
-  // sẽ cần phải xử lý thêm ở đây. Tạm thời cứ gán Tên
-  if (!currentAddressForm.tinhCode) {
-    // Nếu không tìm thấy code, set form về rỗng để người dùng nhập lại hoặc đợi load
-    currentAddressForm.tinhCode = "";
-  }
-
-  currentAddressForm.chiTiet = address.diaChiCuThe;
-  currentAddressForm.macDinh = address.macDinh;
-  currentAddressForm.id = address.id;
-};
-
-// 🟢 MỚI: Watch để đồng bộ form khi index thay đổi hoặc list được cập nhật
-watch(
-  [currentDraftAddress, isAddingNewAddress, provincesData], // Theo dõi cả provincesData để xử lý khi dữ liệu tỉnh load xong
-  () => {
-    if (isAddingNewAddress.value) {
-      // Khi đang thêm mới, không đồng bộ, giữ nguyên form reset
-      return;
-    }
-    // Nếu chuyển sang xem/sửa (và không phải thêm mới), thì đồng bộ địa chỉ
-    syncAddressToForm(currentDraftAddress.value);
-  },
-  { deep: true, immediate: true }
-);
-
-/* ------------------------------------------------ */
-/* --- Logic Chuyển đổi và Thao tác --- */
-/* ------------------------------------------------ */
-
-// Hàm hiển thị form nhập địa chỉ mới
-const openAddressForm = () => {
-  isAddingNewAddress.value = true;
-  currentAddressIndex.value = newAddresses.value.length; // Chuyển index tới cuối
-  resetAddressForm();
-};
-
-// Hàm đóng form nhập địa chỉ mới (chuyển về xem địa chỉ mặc định/đầu tiên)
-const closeAddressForm = () => {
-  isAddingNewAddress.value = false;
-  currentAddressIndex.value = 0; // Luôn quay về địa chỉ đầu tiên
-  // Đồng bộ lại form với địa chỉ ở index 0
-  syncAddressToForm(newAddresses.value[0]);
-};
-
-// Hàm Lưu Địa chỉ vào danh sách nháp (Dùng cho cả Thêm và Sửa)
-const saveAddressToDraft = () => {
-  if (!currentAddressForm.tinhCode || !currentAddressForm.chiTiet) {
-    notify.error("Vui lòng nhập đủ Tỉnh/Thành phố và Địa chỉ cụ thể.");
-    return;
-  }
-
-  const tinh = currentProvince.value?.name || "";
-  const huyen = currentDistrict.value?.name || "";
-  const xa = currentWard.value?.name || "";
-
-  // Tạo đối tượng địa chỉ nháp mới/cập nhật
-  const updatedDraftAddress = {
-    // Nếu đang sửa (có ID), dùng ID đó, không thì tạo UUID tạm thời
-    id: currentAddressForm.id || crypto.randomUUID(),
-    thanhPho: tinh,
-    huyen: huyen,
-    xa: xa,
-    diaChiCuThe: currentAddressForm.chiTiet.trim(),
-    macDinh: currentAddressForm.macDinh,
-  };
-
-  if (updatedDraftAddress.macDinh) {
-    // Nếu địa chỉ này được chọn làm mặc định, gỡ mặc định của tất cả các địa chỉ khác
-    newAddresses.value.forEach((addr) => (addr.macDinh = false));
-  }
-
-  if (isAddingNewAddress.value) {
-    // Trường hợp THÊM MỚI
-    newAddresses.value.push(updatedDraftAddress);
-    // Chuyển sang chế độ xem/sửa địa chỉ vừa thêm
-    isAddingNewAddress.value = false;
-    currentAddressIndex.value = newAddresses.value.length - 1;
-  } else {
-    // Trường hợp SỬA: Tìm và thay thế theo index đang xem
-    const index = currentAddressIndex.value;
-    if (index >= 0 && index < newAddresses.value.length) {
-      newAddresses.value[index] = updatedDraftAddress;
-    }
-  }
-
-  // Đảm bảo có ít nhất một địa chỉ mặc định sau khi lưu/cập nhật
-  if (
-    !newAddresses.value.some((a) => a.macDinh) &&
-    newAddresses.value.length > 0
-  ) {
-    newAddresses.value[0].macDinh = true;
-  }
-
-  notify.success(
-    currentAddressForm.id
-      ? "Cập nhật địa chỉ thành công."
-      : "Thêm địa chỉ thành công."
-  );
-
-  // Form sẽ tự đồng bộ nhờ watch, không cần gọi syncAddressToForm()
-};
-
-// Hàm Xóa Địa chỉ
-const deleteAddress = (addressId) => {
-  if (!confirm("Bạn có chắc chắn muốn xóa địa chỉ này khỏi danh sách?")) return;
-
-  const indexToDelete = newAddresses.value.findIndex((a) => a.id === addressId);
-
-  if (indexToDelete !== -1) {
-    const isDefault = newAddresses.value[indexToDelete].macDinh;
-    newAddresses.value.splice(indexToDelete, 1);
-
-    // Nếu list rỗng, chuyển sang chế độ thêm mới
-    if (newAddresses.value.length === 0) {
-      openAddressForm();
-      return;
-    }
-
-    // Nếu xóa địa chỉ mặc định, phải chọn địa chỉ đầu tiên còn lại làm mặc định
-    if (isDefault) {
-      newAddresses.value[0].macDinh = true;
-    }
-
-    // Điều chỉnh index: Nếu index bị xóa là index cuối, lùi lại 1
-    if (
-      currentAddressIndex.value > 0 &&
-      currentAddressIndex.value >= newAddresses.value.length
-    ) {
-      currentAddressIndex.value = newAddresses.value.length - 1;
-    }
-
-    // Đồng bộ lại form với địa chỉ mới (hoặc địa chỉ mới ở index cũ)
-    syncAddressToForm(newAddresses.value[currentAddressIndex.value]);
-  }
-};
-
-// Hàm Đặt Mặc Định
-// const setDefaultAddress = () => {
-//   if (currentDraftAddress.value && !isAddingNewAddress.value) {
-//     newAddresses.value.forEach((addr) => {
-//       addr.macDinh = addr.id === currentDraftAddress.value.id;
-//     });
-//     // Đồng bộ lại trạng thái checkbox trong form
-//     currentAddressForm.macDinh = true;
-//     notify.success("Đặt địa chỉ mặc định thành công.");
-//   }
-// };
-// Xử lý Checkbox đặt mặc định
-const handleDefaultChange = () => {
-  // Nếu đang ở chế độ THÊM MỚI
-  if (isAddingNewAddress.value) {
-    if (currentAddressForm.macDinh) {
-      // Khi thêm mới và chọn mặc định, gỡ mặc định của các địa chỉ khác trong danh sách nháp
-      newAddresses.value.forEach((addr) => (addr.macDinh = false));
-    }
-  }
-  // Nếu đang ở chế độ SỬA/XEM địa chỉ đã có (và người dùng vừa tích vào checkbox)
-  else if (currentDraftAddress.value && currentAddressForm.macDinh) {
-    // Áp dụng ngay lập tức: Gỡ mặc định của các địa chỉ khác
-    newAddresses.value.forEach((addr) => (addr.macDinh = false));
-
-    // Đặt địa chỉ hiện tại làm mặc định
-    currentDraftAddress.value.macDinh = true;
-    notify.success("Địa chỉ đã được đặt làm mặc định.");
-  }
-  // Trường hợp HẠNG CHẾ: Nếu bỏ tích và list có nhiều hơn 1 địa chỉ, KHÔNG CHO BỎ
-  else if (currentDraftAddress.value && !currentAddressForm.macDinh) {
-    // Nếu địa chỉ hiện tại đang là mặc định và người dùng bỏ chọn
-    if (currentDraftAddress.value.macDinh && newAddresses.value.length > 1) {
-      // Ngăn không cho bỏ chọn nếu đây là địa chỉ đang là mặc định
-      currentAddressForm.macDinh = true;
-      notify.warning(
-        "Cần có ít nhất một địa chỉ mặc định. Vui lòng đặt mặc định cho địa chỉ khác trước khi bỏ chọn cái này."
-      );
-    } else if (newAddresses.value.length === 1) {
-      // Nếu chỉ có 1 địa chỉ, không bao giờ cho phép bỏ mặc định
-      currentAddressForm.macDinh = true;
-    }
-  }
-};
-
-// 🟢 MỚI: Chuyển đổi địa chỉ
-const goToNextAddress = () => {
-  if (currentAddressIndex.value < newAddresses.value.length - 1) {
-    currentAddressIndex.value++;
-    isAddingNewAddress.value = false;
-  }
-};
-
-const goToPreviousAddress = () => {
-  if (currentAddressIndex.value > 0) {
-    currentAddressIndex.value--;
-    isAddingNewAddress.value = false;
-  }
-};
-
-/* ------------------------------------------------ */
-/* --- Logic Địa chỉ Toàn quốc --- */
-/* ------------------------------------------------ */
-
-const currentProvince = computed(
-  () =>
-    provincesData.value.find(
-      (p) => String(p.code) === String(currentAddressForm.tinhCode)
-    ) || null
-);
-const currentDistrict = computed(() => {
-  if (!currentProvince.value) return null;
-  return (
-    currentProvince.value.districts?.find(
-      (d) => String(d.code) === String(currentAddressForm.huyenCode)
-    ) || null
-  );
-});
-const currentWard = computed(() => {
-  if (!currentDistrict.value) return null;
-  return (
-    currentDistrict.value.wards?.find(
-      (w) => String(w.code) === String(currentAddressForm.xaCode)
-    ) || null
-  );
-});
-
-// Danh sách cho 3 select
 const provinces = computed(() => provincesData.value);
-const districts = computed(() => currentProvince.value?.districts ?? []);
-const wards = computed(() => currentDistrict.value?.wards ?? []);
 
 /* Reset liên kết khi đổi cấp */
 const onNewProvinceChange = () => {
@@ -677,10 +371,6 @@ const onNewProvinceChange = () => {
 const onNewDistrictChange = () => {
   currentAddressForm.xaCode = "";
 };
-
-/* ------------------------------------------------ */
-/* --- Logic Lưu & Preview --- */
-/* ------------------------------------------------ */
 
 /* Helpers */
 const toYMD = (d) => {
@@ -864,6 +554,22 @@ onMounted(async () => {
     }
   }
 });
+
+const {
+  newAddresses,
+  currentAddressIndex,
+  currentAddressForm,
+  isAddingNewAddress,
+  currentDraftAddress,
+  districts,
+  wards,
+  openAddressForm,
+  saveAddressToDraft,
+  deleteAddress,
+  handleDefaultChange,
+  nextAddress: goToNextAddress,
+  prevAddress: goToPreviousAddress,
+} = useDiaChiKhachHang(provincesData);
 </script>
 
 <style scoped>

@@ -1,13 +1,11 @@
 <script setup>
-import Breadcrumb from "@/components/common/Breadcrumb.vue";
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, onMounted, watch } from "vue";
 import {
   searchHoaDon,
   getHoaDonById,
   updateHoaDon,
 } from "@/service/HoaDonService";
 import { useNotify } from "@/composables/useNotify";
-// import { Modal } from "bootstrap";
 import Swal from "sweetalert2";
 import { useRouter } from "vue-router";
 import QRCode from "qrcode";
@@ -15,7 +13,52 @@ import * as XLSX from "xlsx";
 import { Html5Qrcode } from "html5-qrcode";
 
 const router = useRouter();
+const notify = useNotify();
+
+const LOAI_HOA_DON = ["Online", "Tại cửa hàng", "Giao hàng"];
+
+const getTodayDate = () => {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, "0");
+  const dd = String(today.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const TRANG_THAI_HOA_DON = {
+  // 0: { text: "Hóa đơn chờ", class: "bg-warning text-dark" },
+  1: { text: "Chờ xác nhận", class: "bg-secondary" },
+  2: { text: "Đã xác nhận", class: "bg-info" },
+  3: { text: "Đang chuẩn bị", class: "bg-purple" },
+  4: { text: "Đang giao", class: "bg-primary" },
+  5: { text: "Giao hàng thất bại", class: "bg-danger" },
+  6: { text: "Hoàn thành", class: "bg-success" },
+  7: { text: "Đã hủy", class: "bg-dark" },
+};
+
+const tabs = ref([
+  { label: "Tất cả", value: "" },
+  // { label: "Hóa đơn chờ", value: 0 },
+  { label: "Chờ xác nhận", value: 1 },
+  { label: "Đã xác nhận", value: 2 },
+  { label: "Đang chuẩn bị", value: 3 },
+  { label: "Đang giao", value: 4 },
+  { label: "Giao hàng thất bại", value: 5 },
+  { label: "Hoàn thành", value: 6 },
+  { label: "Đã hủy", value: 7 },
+]);
+
+const activeTab = ref("");
+
+const handleTabClick = (tab) => {
+  activeTab.value = tab.value;
+  filter.trangThai = tab.value;
+  loadHoaDon(0);
+};
+
 const hoaDonList = ref([]);
+const pagination = ref({ page: 0, size: 10, totalPages: 0, totalElements: 0 });
+
 const filter = reactive({
   ma: "",
   tenKhachOrNhanVien: "",
@@ -25,395 +68,125 @@ const filter = reactive({
   loaiDon: "",
   trangThai: "",
 });
-const tabs = ref([
-  { label: "Tất cả", value: "" },
-  { label: "Đã hủy", value: 0 },
-  { label: "Chờ xác nhận", value: 1 },
-  { label: "Đã xác nhận", value: 2 },
-  { label: "Chờ thanh toán", value: 3 },
-  { label: "Đang giao", value: 4 },
-  { label: "Hoàn thành", value: 5 },
-]);
-const activeTab = ref("");
-const handleTabClick = (tab) => {
-  activeTab.value = tab.value; // đổi tab đang chọn
-  filter.trangThai = tab.value; // gán vào bộ lọc
-  loadHoaDon(0); // gọi lại API
-};
-const pagination = ref({
-  page: 0,
-  size: 10,
-  totalPages: 0,
-  totalElements: 0,
-});
-const notify = useNotify();
-
-const currentPage = ref(1);
-const itemsPerPage = ref(5);
-const totalPages = ref(3);
-
-let detailModalInstance = null;
-const selectedHoaDon = ref(null);
-const modalMode = ref("view");
-
-const TRANG_THAI_HOA_DON = {
-  0: { text: "Đã hủy", class: "bg-danger" },
-  1: { text: "Chờ xác nhận", class: "bg-warning text-dark" },
-  2: { text: "Đã xác nhận", class: "bg-info" },
-  3: { text: "Chờ thanh toán", class: "bg-secondary" },
-  4: { text: "Đang giao", class: "bg-primary" },
-  5: { text: "Hoàn thành", class: "bg-success" },
-};
-const LOAI_HOA_DON = ["Online", "Tại cửa hàng"];
 
 onMounted(() => {
-  loadHoaDon();
+  const todayStr = getTodayDate();
+  filter.ngayTu = todayStr;
+  filter.ngayDen = todayStr;
 
-  const modalEl = document.getElementById("detailModal");
-  if (modalEl) {
-    detailModalInstance = new Modal(modalEl);
-  }
+  loadHoaDon();
 });
 
 const loadHoaDon = async (page = 0) => {
   try {
-    const params = {
-      page,
-      size: pagination.value.size,
-    };
-
+    const params = { page, size: Number(itemsPerPage.value) };
     if (filter.ma) params.ma = filter.ma.trim();
     if (filter.sdt) params.sdt = filter.sdt.trim();
     if (filter.tenKhachOrNhanVien)
       params.tenKhachOrNhanVien = filter.tenKhachOrNhanVien.trim();
     if (filter.ngayTu) params.ngayTu = filter.ngayTu;
     if (filter.ngayDen) params.ngayDen = filter.ngayDen;
-    if (filter.loaiDon) params.loaiDon = filter.loaiDon;
+    if (filter.loaiDon && filter.loaiDon.trim() !== "") {
+      const inputClean = filter.loaiDon.trim().toLowerCase();
+      const standardValue = LOAI_HOA_DON.find(
+        (item) => item.toLowerCase() === inputClean
+      );
+      params.loaiDon = standardValue || filter.loaiDon.trim();
+    }
     if (filter.trangThai !== "") params.trangThai = filter.trangThai;
 
     const res = await searchHoaDon(params);
     const data = res.data;
 
-    // ✅ Đảm bảo có dữ liệu để hiển thị
     hoaDonList.value = Array.isArray(data.content) ? data.content : [];
-
-    // ✅ Cập nhật thông tin phân trang
     pagination.value.page = data.number ?? 0;
     pagination.value.totalElements =
       data.totalElements ?? hoaDonList.value.length;
-
-    // ✅ Đảm bảo totalPages luôn >= 1
-    let totalPages =
-      data.totalPages ??
-      Math.ceil(pagination.value.totalElements / pagination.value.size);
-    pagination.value.totalPages = totalPages > 0 ? totalPages : 1;
+    pagination.value.totalPages = data.totalPages ?? 1;
   } catch (err) {
-    console.error("❌ Lỗi khi tải danh sách hóa đơn:", err);
-    notify.error("Tải dữ liệu hóa đơn thất bại!");
+    console.error("Lỗi tải hóa đơn:", err);
+    notify.error("Không tải được danh sách hóa đơn!");
   }
 };
 
-const handleViewDetail = (id) => {
+const formatDate = (d) => {
+  if (!d) return "N/A";
+  const [y, m, day] = d.split("-");
+  return `${day}/${m}/${y}`;
+};
+
+const formatCurrency = (value) =>
+  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
+    value
+  );
+
+const getTrangThai = (stt) =>
+  TRANG_THAI_HOA_DON[stt] || { text: "Không rõ", class: "bg-dark" };
+
+const handleViewDetail = (id) =>
   router.push({ name: "ChiTietHD", params: { id } });
-};
 
-const handleEditDetail = (id) => {
-  router.push({ name: "ChiTietHD", params: { id } });
-};
-// const handleViewDetail = async (id) => {
-//   modalMode.value = "view";
-//   await fetchAndShowModal(id);
-// };
+const handleSearch = () => loadHoaDon(0);
 
-// const handleEditDetail = async (id) => {
-//   modalMode.value = "edit";
-//   await fetchAndShowModal(id);
-// };
-
-// const fetchAndShowModal = async (id) => {
-//   try {
-//     const res = await getHoaDonById(id);
-//     selectedHoaDon.value = res.data;
-//     detailModalInstance.show();
-//   } catch (err) {
-//     console.error("Lỗi khi lấy chi tiết hóa đơn:", err);
-//     notify.error("Không thể tải chi tiết hóa đơn!");
-//   }
-// };
-
-const handleUpdate = async () => {
-  if (!selectedHoaDon.value) return;
-
-  const result = await Swal.fire({
-    title: "Xác nhận cập nhật?",
-    text: "Bạn có chắc muốn lưu các thay đổi cho hóa đơn này?",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonText: "Có, lưu lại",
-    cancelButtonText: "Hủy",
-    reverseButtons: true,
-    confirmButtonColor: "#ffc107",
-    cancelButtonColor: "#6c757d",
-  });
-
-  if (result.isConfirmed) {
-    try {
-      const id = selectedHoaDon.value.id;
-
-      const updateData = {
-        trangThai: selectedHoaDon.value.trangThai,
-        sdt: selectedHoaDon.value.sdt,
-        diaChiGiaoHang: selectedHoaDon.value.diaChiGiaoHang,
-      };
-
-      await updateHoaDon(id, updateData);
-
-      notify.success("Cập nhật hóa đơn thành công!");
-      detailModalInstance.hide();
-      await loadHoaDon(pagination.value.page);
-    } catch (err) {
-      console.error("Lỗi khi cập nhật hóa đơn:", err);
-      notify.error("Cập nhật thất bại!");
-    }
-  }
-};
-
-const handleSearch = () => {
-  loadHoaDon(0);
-};
 const handleReset = () => {
   filter.ma = "";
   filter.sdt = "";
   filter.tenKhachOrNhanVien = "";
-  filter.ngayTu = "";
-  filter.ngayDen = "";
   filter.loaiDon = "";
   filter.trangThai = "";
+
+  const todayStr = getTodayDate();
+  filter.ngayTu = todayStr;
+  filter.ngayDen = todayStr;
+
   loadHoaDon(0);
 };
+
 const handlePageChange = (newPage) => {
-  if (newPage >= 0 && newPage < pagination.value.totalPages) {
-    loadHoaDon(newPage);
-  }
+  if (newPage < 0 || newPage >= pagination.value.totalPages) return;
+
+  loadHoaDon(newPage);
 };
 
-const formatDate = (dateStr) => {
-  if (!dateStr) return "N/A";
-  const [year, month, day] = dateStr.split("-");
-  return `${day}/${month}/${year}`;
-};
-const formatCurrency = (value) => {
-  if (value === null || value === undefined) return "0 ₫";
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-  }).format(value);
-};
-const getTrangThai = (status) => {
-  return TRANG_THAI_HOA_DON[status] || { text: "Không rõ", class: "bg-dark" };
-};
+const handleExportExcel = () => {
+  if (!hoaDonList.value.length) return notify.warning("Không có dữ liệu!");
 
-const handleScanQRCode = () => {
-  Swal.fire({
-    title: "Quét mã QR hóa đơn",
-    html: `
-      <div id="qr-reader" style="width: 300px; margin: auto;"></div>
-      <div id="qr-reader-results" style="margin-top: 10px; font-weight: bold;"></div>
-    `,
-    showConfirmButton: false,
-    didOpen: () => {
-      const qrCodeRegionId = "qr-reader";
-      const html5QrCode = new Html5Qrcode(qrCodeRegionId);
+  const header = [
+    "Mã",
+    "Khách hàng",
+    "SĐT",
+    "Ngày",
+    "Tổng",
+    "Loại",
+    "Trạng thái",
+  ];
+  const rows = hoaDonList.value.map((hd) => [
+    hd.ma,
+    hd.tenKhachHang,
+    hd.sdt,
+    formatDate(hd.ngayTao),
+    hd.tongTienSauGiam + " ₫",
+    hd.loaiHoaDon,
+    getTrangThai(hd.trangThai).text,
+  ]);
 
-      html5QrCode
-        .start(
-          { facingMode: "environment" },
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-          },
-          (decodedText) => {
-            document.getElementById(
-              "qr-reader-results"
-            ).innerText = `Kết quả: ${decodedText}`;
-
-            // 👉 Ví dụ: nếu mã QR chứa mã hóa đơn
-            Swal.fire({
-              title: "Đã quét thành công!",
-              text: `Mã hóa đơn: ${decodedText}`,
-              icon: "success",
-              confirmButtonText: "Xem chi tiết",
-            }).then(() => {
-              // Gọi API hoặc mở chi tiết hóa đơn ở đây
-              // ví dụ: getHoaDonByMa(decodedText)
-            });
-
-            html5QrCode
-              .stop()
-              .catch((err) => console.error("Dừng camera lỗi:", err));
-          },
-          (errorMessage) => {
-            // Bỏ qua lỗi khi chưa nhận dạng được
-          }
-        )
-        .catch((err) => {
-          console.error("Không thể khởi tạo camera:", err);
-          Swal.fire("Lỗi", "Không thể truy cập camera!", "error");
-        });
-    },
-    willClose: () => {
-      Html5Qrcode.getCameras().then((cameras) => {
-        // Dừng tất cả camera khi đóng modal
-        if (cameras.length) {
-          const html5QrCode = new Html5Qrcode("qr-reader");
-          html5QrCode.stop().catch(() => {});
-        }
-      });
-    },
-  });
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Danh sách");
+  XLSX.writeFile(wb, "hoa_don.xlsx");
+  notify.success("Xuất Excel thành công!");
 };
 
-const handleExportExcel = async () => {
-  try {
-    if (!hoaDonList.value || hoaDonList.value.length === 0) {
-      notify.warning("Không có dữ liệu để xuất Excel!");
-      return;
-    }
+const itemsPerPage = ref(10);
 
-    const header = [
-      "Mã hóa đơn",
-      "Khách hàng",
-      "SĐT",
-      "Nhân viên",
-      "Ngày tạo",
-      "Tổng tiền",
-      "Loại đơn",
-      "Trạng thái",
-    ];
-
-    const rows = hoaDonList.value.map((hd) => [
-      hd.ma,
-      hd.tenKhachHang,
-      hd.sdt || "",
-      hd.tenNhanVien,
-      formatDate(hd.ngayTao),
-      hd.tongTien.toLocaleString() + " ₫",
-      hd.loaiHoaDon,
-      getTrangThai(hd.trangThai).text,
-    ]);
-
-    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Danh sách hóa đơn");
-
-    XLSX.writeFile(wb, "hoa_don.xlsx");
-
-    notify.success("Xuất file Excel thành công!");
-  } catch (err) {
-    console.error("Lỗi xuất Excel:", err);
-    notify.error("Xuất file Excel thất bại!");
-  }
-};
-
-const handlePrintPDF = async (id) => {
-  try {
-    const res = await getHoaDonById(id);
-    const hd = res.data;
-
-    if (!hd) {
-      notify.warning("Không tìm thấy dữ liệu hóa đơn!");
-      return;
-    }
-
-    // ✅ Sinh QR base64
-    const qrUrl = await QRCode.toDataURL(hd.ma);
-
-    const printWindow = window.open("", "_blank");
-
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Hóa đơn ${hd.ma}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            h2 { text-align: center; margin-bottom: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; }
-            .total { text-align: right; font-weight: bold; }
-            .footer { text-align: center; margin-top: 30px; font-size: 13px; color: gray; }
-            .qr-container { text-align: center; margin-top: 20px; }
-            .qr-container img { width: 150px; height: 150px; }
-          </style>
-        </head>
-        <body>
-          <h2>HÓA ĐƠN THANH TOÁN</h2>
-          <p><strong>Mã hóa đơn:</strong> ${hd.ma}</p>
-          <p><strong>Khách hàng:</strong> ${hd.tenKhachHang}</p>
-          <p><strong>Số điện thoại:</strong> ${hd.sdt || ""}</p>
-          <p><strong>Nhân viên:</strong> ${hd.tenNhanVien}</p>
-          <p><strong>Ngày tạo:</strong> ${formatDate(hd.ngayTao)}</p>
-          <p><strong>Loại đơn:</strong> ${hd.loaiHoaDon}</p>
-          <p><strong>Trạng thái:</strong> ${getTrangThai(hd.trangThai).text}</p>
-
-          <table>
-            <thead>
-              <tr>
-                <th>STT</th>
-                <th>Tên sản phẩm</th>
-                <th>Số lượng</th>
-                <th>Đơn giá</th>
-                <th>Thành tiền</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${(hd.chiTietSanPham || [])
-                .map(
-                  (sp, i) => `
-                    <tr>
-                      <td>${i + 1}</td>
-                      <td>${sp.tenSanPham}</td>
-                      <td>${sp.soLuong}</td>
-                      <td>${formatCurrency(sp.donGia)}</td>
-                      <td>${formatCurrency(sp.soLuong * sp.donGia)}</td>
-                    </tr>
-                  `
-                )
-                .join("")}
-              <tr>
-                <td colspan="4" class="total">Tổng tiền:</td>
-                <td class="total">${formatCurrency(hd.tongTien)}</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div class="qr-container">
-            <p><strong>Mã QR hóa đơn:</strong></p>
-            <img src="${qrUrl}" alt="QR Hóa đơn ${hd.ma}" />
-            <p style="font-size: 12px; color: gray;">Quét để tra cứu thông tin hóa đơn</p>
-          </div>
-
-          <div class="footer">
-            <p>Cảm ơn quý khách đã mua hàng tại <strong>Noble Shoes</strong>!</p>
-          </div>
-        </body>
-      </html>
-    `);
-
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-
-    notify.success("In hóa đơn thành công!");
-  } catch (err) {
-    console.error("Lỗi khi in hóa đơn:", err);
-    notify.error("Không thể in hóa đơn!");
-  }
-};
+watch(itemsPerPage, () => {
+  pagination.value.page = 0;
+  loadHoaDon(0);
+});
 </script>
 
 <template>
-  <div class="container-fluid mt-4 px-1">
+  <div class="container-fluid mt-4">
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
         <div
@@ -477,13 +250,13 @@ const handlePrintPDF = async (id) => {
             </p>
 
             <div class="d-flex align-items-center gap-2">
-              <button
+              <!-- <button
                 type="button"
                 class="btn btn-success"
                 @click="handleScanQRCode"
               >
                 <i class="fa fa-qrcode me-1"></i> Quét Mã
-              </button>
+              </button> -->
               <button
                 type="button"
                 class="btn btn-primary"
@@ -553,7 +326,7 @@ const handlePrintPDF = async (id) => {
                       <td>{{ hd.tenNhanVien }}</td>
                       <td>{{ formatDate(hd.ngayTao) }}</td>
                       <td class="text-danger fw-bold">
-                        {{ formatCurrency(hd.tongTien) }}
+                        {{ formatCurrency(hd.tongTienSauGiam ?? 0) }}
                       </td>
                       <td>{{ hd.loaiHoaDon }}</td>
                       <td>
@@ -603,6 +376,7 @@ const handlePrintPDF = async (id) => {
                 <select v-model="itemsPerPage" class="select">
                   <option value="5">5</option>
                   <option value="10">10</option>
+                  <option value="50">50</option>
                 </select>
                 <span>Hoá đơn</span>
               </div>
@@ -641,159 +415,6 @@ const handlePrintPDF = async (id) => {
         </div>
       </div>
     </div>
-    <!--<div
-      class="modal fade"
-      id="detailModal"
-      tabindex="-1"
-      aria-labelledby="detailModalLabel"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content" v-if="selectedHoaDon">
-          <div class="modal-header bg-warning text-white">
-            <h5 class="modal-title" id="detailModalLabel">
-              <span v-if="modalMode === 'view'"
-                >Chi tiết Hóa đơn: {{ selectedHoaDon.ma }}</span
-              >
-              <span v-if="modalMode === 'edit'"
-                >Cập nhật Hóa đơn: {{ selectedHoaDon.ma }}</span
-              >
-            </h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
-          </div>
-           Chi tiết 
-          <div class="modal-body">
-            <div class="row g-3">
-              <h5 class="mb-0 mt-3">Thông tin chung</h5>
-              <div class="col-md-6">
-                <label class="form-label">Tên khách hàng</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  :value="selectedHoaDon.tenKhachHang"
-                  disabled
-                />
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Tên nhân viên</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  :value="selectedHoaDon.tenNhanVien"
-                  disabled
-                />
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Ngày tạo</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  :value="formatDate(selectedHoaDon.ngayTao)"
-                  disabled
-                />
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Tổng tiền</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  :value="formatCurrency(selectedHoaDon.tongTien)"
-                  disabled
-                />
-              </div>
-
-              <h5 class="mb-0 mt-4">Thông tin vận hành (Có thể sửa)</h5>
-              <div class="col-md-6">
-                <label class="form-label fw-bold">Trạng thái đơn hàng</label>
-                <select
-                  class="form-select"
-                  v-model="selectedHoaDon.trangThai"
-                  :disabled="modalMode === 'view'"
-                >
-                  <option
-                    v-for="(value, key) in TRANG_THAI_HOA_DON"
-                    :key="key"
-                    :value="key"
-                  >
-                    {{ value.text }}
-                  </option>
-                </select>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Số điện thoại giao hàng</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  v-model="selectedHoaDon.sdt"
-                  :disabled="modalMode === 'view'"
-                />
-              </div>
-              <div class="col-12">
-                <label class="form-label">Địa chỉ giao hàng</label>
-                <textarea
-                  class="form-control"
-                  rows="2"
-                  v-model="selectedHoaDon.diaChiGiaoHang"
-                  :disabled="modalMode === 'view'"
-                ></textarea>
-              </div>
-
-              <h5 class="mb-1 mt-4">Danh sách sản phẩm</h5>
-              <div class="col-12">
-                <table class="table table-sm">
-                  <thead class="table-light">
-                    <tr>
-                      <th scope="col">Tên sản phẩm</th>
-                      <th scope="col" class="text-center">Số lượng</th>
-                      <th scope="col" class="text-end">Đơn giá</th>
-                      <th scope="col" class="text-end">Thành tiền</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="(item, index) in selectedHoaDon.chiTietSanPham"
-                      :key="index"
-                    >
-                      <td>{{ item.tenSanPham }}</td>
-                      <td class="text-center">{{ item.soLuong }}</td>
-                      <td class="text-end">
-                        {{ formatCurrency(item.donGia) }}
-                      </td>
-                      <td class="text-end fw-bold">
-                        {{ formatCurrency(item.thanhTien) }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              data-bs-dismiss="modal"
-            >
-              Đóng
-            </button>
-            <button
-              type="button"
-              class="btn btn-warning text-white"
-              @click="handleUpdate"
-              v-if="modalMode === 'edit'"
-            >
-              Lưu thay đổi
-            </button>
-          </div>
-        </div>
-      </div> 
-    </div> -->
   </div>
 </template>
 
@@ -1025,5 +646,9 @@ const handlePrintPDF = async (id) => {
 .badge[data-status="Đã Hủy"],
 .badge.da-huy {
   background-color: #dc3545 !important;
+}
+.bg-purple {
+  background-color: #6f42c1 !important;
+  color: #fff !important;
 }
 </style>

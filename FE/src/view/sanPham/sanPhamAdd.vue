@@ -1,9 +1,11 @@
 <template>
-  <div class="container-fluid mt-4 px-1">
+  <div class="container-fluid mt-4">
     <!-- Tiêu đề -->
     <div class="card shadow-sm border-0 mb-4">
       <div class="card-body py-2 px-3">
-        <div class="page-header d-flex align-items-center justify-content-between">
+        <div
+          class="page-header d-flex align-items-center justify-content-between"
+        >
           <div>
             <h3 class="fw-bold text-warning mb-1">Quản lý sản phẩm</h3>
             <Breadcrumb class="mt-1 mb-0" />
@@ -19,7 +21,12 @@
           <!-- Tên sản phẩm -->
           <div class="col-md-6">
             <label class="form-label">Tên sản phẩm</label>
-            <input v-model="form.tenSanPham" type="text" class="form-control" placeholder="Nhập tên sản phẩm" />
+            <input
+              v-model="form.tenSanPham"
+              type="text"
+              class="form-control"
+              placeholder="Nhập tên sản phẩm"
+            />
           </div>
 
           <!-- Mục đích sử dụng -->
@@ -93,15 +100,21 @@
             <label class="form-label">Xuất xứ</label>
             <select v-model="form.xuatXuId" class="form-select">
               <option disabled value="">-- Chọn xuất xứ --</option>
-              <option v-for="xx in xuatXuList" :key="xx.id" :value="xx.id">{{ xx.ten }}</option>
+              <option v-for="xx in xuatXuList" :key="xx.id" :value="xx.id">
+                {{ xx.ten }}
+              </option>
             </select>
           </div>
 
           <!-- Mô tả sản phẩm -->
           <div class="col-12">
             <label class="form-label">Mô tả sản phẩm</label>
-            <textarea v-model="form.moTa" class="form-control" rows="3"
-              placeholder="Nhập mô tả chi tiết sản phẩm"></textarea>
+            <textarea
+              v-model="form.moTa"
+              class="form-control"
+              rows="3"
+              placeholder="Nhập mô tả chi tiết sản phẩm"
+            ></textarea>
           </div>
         </div>
 
@@ -111,15 +124,36 @@
           <div class="col-md-6">
             <label class="form-label">Màu sắc</label>
             <div class="d-flex gap-2 align-items-center flex-wrap">
-              <div v-for="(m, index) in selectedMauSac" :key="index"
-                class="d-flex align-items-center gap-1 border rounded px-2 py-1" style="cursor: pointer;">
-                <div :style="{ backgroundColor: m.ma, width: '25px', height: '25px', borderRadius: '4px' }"></div>
+              <div
+                v-for="(m, index) in selectedMauSac"
+                :key="index"
+                class="d-flex align-items-center gap-1 border rounded px-2 py-1"
+                style="cursor: pointer"
+              >
+                <div
+                  :style="{
+                    backgroundColor: m.ma,
+                    width: '25px',
+                    height: '25px',
+                    borderRadius: '4px',
+                  }"
+                ></div>
                 <span>{{ m.ten }}</span>
-                <button type="button" class="btn btn-sm btn-outline-danger"
-                  @click="removeSelectedColor(index)">x</button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-danger"
+                  @click="removeSelectedColor(index)"
+                >
+                  x
+                </button>
               </div>
-              <button type="button" class="btn btn-outline-primary btn-sm" @click="showColorModal = true">+ Chọn
-                màu</button>
+              <button
+                type="button"
+                class="btn btn-outline-primary btn-sm"
+                @click="showColorModal = true"
+              >
+                + Chọn màu
+              </button>
             </div>
           </div>
 
@@ -127,54 +161,113 @@
           <div class="col-md-6">
             <label class="form-label">Kích thước</label>
             <div class="d-flex gap-2 align-items-center flex-wrap">
-              <div v-for="(k, index) in selectedKichThuoc" :key="index"
-                class="border rounded px-3 py-1 d-flex align-items-center gap-1" style="cursor: pointer;">
+              <div
+                v-for="(k, index) in selectedKichThuoc"
+                :key="index"
+                class="border rounded px-3 py-1 d-flex align-items-center gap-1"
+                style="cursor: pointer"
+              >
                 <span>{{ k.ten }}</span>
-                <button type="button" class="btn btn-sm btn-outline-danger"
-                  @click="removeSelectedSize(index)">x</button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-danger"
+                  @click="removeSelectedSize(index)"
+                >
+                  x
+                </button>
               </div>
-              <button type="button" class="btn btn-outline-primary btn-sm" @click="showSizeModal = true">+ Chọn kích
-                thước</button>
+              <button
+                type="button"
+                class="btn btn-outline-primary btn-sm"
+                @click="showSizeModal = true"
+              >
+                + Chọn kích thước
+              </button>
             </div>
           </div>
         </div>
 
         <!-- ===== MODAL CHỌN MÀU ===== -->
-        <div v-if="showColorModal" class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.4);">
+        <div
+          v-if="showColorModal"
+          class="modal d-block"
+          tabindex="-1"
+          style="background-color: rgba(0, 0, 0, 0.4)"
+        >
           <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content p-3">
               <h5 class="text-center fw-bold mb-3">Chọn màu sắc</h5>
 
               <!-- Danh sách màu -->
               <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
-                <div v-for="m in mauSacList" :key="m.id"
-                  class="position-relative p-2 rounded d-flex justify-content-center align-items-center" :style="{
+                <div
+                  v-for="m in mauSacList"
+                  :key="m.id"
+                  class="position-relative p-2 rounded d-flex justify-content-center align-items-center"
+                  :style="{
                     backgroundColor: m.ma,
                     width: '80px',
                     height: '40px',
                     cursor: 'pointer',
-                    border: selectedMauSac.some(c => c.id === m.id) ? '3px solid #007bff' : '1px solid #ccc'
-                  }" @click="selectColor(m)">
-                  <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 p-0 px-1"
-                    @click.stop="deleteColor(m)">x</button>
+                    border: selectedMauSac.some((c) => c.id === m.id)
+                      ? '3px solid #007bff'
+                      : '1px solid #ccc',
+                  }"
+                  @click="selectColor(m)"
+                >
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-danger position-absolute top-0 end-0 p-0 px-1"
+                    @click.stop="deleteColor(m)"
+                  >
+                    x
+                  </button>
                 </div>
               </div>
 
               <div class="text-center">
-                <button class="btn btn-secondary me-2" @click="closeColorModal">Đóng</button>
-                <button class="btn btn-primary" @click="showAddColorForm = true">Thêm mới</button>
+                <button class="btn btn-secondary me-2" @click="closeColorModal">
+                  Đóng
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  @click="showAddColorForm = true"
+                >
+                  Thêm mới
+                </button>
               </div>
 
               <!-- Form thêm màu -->
               <div v-if="showAddColorForm" class="border rounded p-3 mt-3">
                 <h6 class="fw-bold text-center mb-2">Thêm màu mới</h6>
                 <div class="d-flex gap-2 mb-2">
-                  <input v-model="newColorName" type="text" class="form-control" placeholder="Tên màu" />
-                  <input v-model="newColorCode" type="color" class="form-control form-control-color" />
+                  <input
+                    v-model="newColorName"
+                    type="text"
+                    class="form-control"
+                    placeholder="Tên màu"
+                  />
+                  <input
+                    v-model="newColorCode"
+                    type="color"
+                    class="form-control form-control-color"
+                  />
                 </div>
                 <div class="text-end">
-                  <button class="btn btn-success btn-sm me-2" @click="addNewColor">Lưu</button>
-                  <button class="btn btn-outline-secondary btn-sm" @click="showAddColorForm = false">Hủy</button>
+                  <button
+                    type="button"
+                    class="btn btn-success btn-sm me-2"
+                    @click="addNewColor"
+                  >
+                    Lưu
+                  </button>
+                  <button
+                    class="btn btn-outline-secondary btn-sm"
+                    @click="showAddColorForm = false"
+                  >
+                    Hủy
+                  </button>
                 </div>
               </div>
             </div>
@@ -182,35 +275,78 @@
         </div>
 
         <!-- ===== MODAL CHỌN KÍCH THƯỚC ===== -->
-        <div v-if="showSizeModal" class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.4);">
+        <div
+          v-if="showSizeModal"
+          class="modal d-block"
+          tabindex="-1"
+          style="background-color: rgba(0, 0, 0, 0.4)"
+        >
           <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content p-3">
               <h5 class="text-center fw-bold mb-3">Chọn kích thước</h5>
 
               <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
-                <div v-for="k in kichThuocList" :key="k.id" class="border rounded px-3 py-2"
-                  :class="{ 'border-2 border-primary': selectedKichThuoc.some(s => s.id === k.id) }"
-                  style="cursor:pointer" @click="selectSize(k)">
+                <div
+                  v-for="k in kichThuocList"
+                  :key="k.id"
+                  class="border rounded px-3 py-2"
+                  :class="{
+                    'border-2 border-primary': selectedKichThuoc.some(
+                      (s) => s.id === k.id
+                    ),
+                  }"
+                  style="cursor: pointer"
+                  @click="selectSize(k)"
+                >
                   {{ k.ten }}
-                  <button type="button" class="btn btn-sm btn-danger ms-2 py-0 px-1"
-                    @click.stop="deleteSize(k)">x</button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-danger ms-2 py-0 px-1"
+                    @click.stop="deleteSize(k)"
+                  >
+                    x
+                  </button>
                 </div>
               </div>
 
               <div class="text-center">
-                <button class="btn btn-secondary me-2" @click="closeSizeModal">Đóng</button>
-                <button class="btn btn-primary" @click="showAddSizeForm = true">Thêm mới</button>
+                <button class="btn btn-secondary me-2" @click="closeSizeModal">
+                  Đóng
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  @click="showAddSizeForm = true"
+                >
+                  Thêm mới
+                </button>
               </div>
 
               <!-- Form thêm kích thước -->
               <div v-if="showAddSizeForm" class="border rounded p-3 mt-3">
                 <h6 class="fw-bold text-center mb-2">Thêm kích thước mới</h6>
                 <div class="d-flex gap-2 mb-2">
-                  <input v-model="newSizeName" type="text" class="form-control" placeholder="Tên kích thước" />
+                  <input
+                    v-model="newSizeName"
+                    type="text"
+                    class="form-control"
+                    placeholder="Tên kích thước"
+                  />
                 </div>
                 <div class="text-end">
-                  <button class="btn btn-success btn-sm me-2" @click="addNewSize">Lưu</button>
-                  <button class="btn btn-outline-secondary btn-sm" @click="showAddSizeForm = false">Hủy</button>
+                  <button
+                    type="button"
+                    class="btn btn-success btn-sm me-2"
+                    @click="addNewSize"
+                  >
+                    Lưu
+                  </button>
+                  <button
+                    class="btn btn-outline-secondary btn-sm"
+                    @click="showAddSizeForm = false"
+                  >
+                    Hủy
+                  </button>
                 </div>
               </div>
             </div>
@@ -219,7 +355,9 @@
 
         <!-- Biến thể -->
         <div v-if="bienTheList.length" class="mt-4">
-          <h5 class="fw-bold text-secondary mb-3">Danh sách sản phẩm biến thể</h5>
+          <h5 class="fw-bold text-secondary mb-3">
+            Danh sách sản phẩm biến thể
+          </h5>
           <div class="table-responsive">
             <table class="table table-bordered align-middle">
               <thead class="table-light">
@@ -237,25 +375,62 @@
               <tbody>
                 <tr v-for="(bt, index) in bienTheList" :key="index">
                   <td>{{ index + 1 }}</td>
-                  <td><input v-model="bt.ten" type="text" class="form-control" /></td>
+                  <td>
+                    <input v-model="bt.ten" type="text" class="form-control" />
+                  </td>
                   <td>{{ bt.mauSac.ten }}</td>
                   <td>{{ bt.kichThuoc.ten }}</td>
-                  <td><input v-model.number="bt.gia" type="number" class="form-control" min="0" /></td>
-                  <td><input v-model.number="bt.soLuong" type="number" class="form-control" min="0" /></td>
+                  <td>
+                    <input
+                      v-model.number="bt.gia"
+                      type="number"
+                      class="form-control"
+                      min="0"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      v-model.number="bt.soLuong"
+                      type="number"
+                      class="form-control"
+                      min="0"
+                    />
+                  </td>
 
                   <!-- Ảnh Cloudinary -->
                   <td>
                     <div class="d-flex flex-wrap gap-2">
-                      <div v-for="(img, i) in bt.imagePreviews" :key="i" class="position-relative">
-                        <img :src="img" width="70" height="70" class="rounded shadow" />
-                        <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0"
-                          @click="removeImage(bt, i)">x</button>
+                      <div
+                        v-for="(img, i) in bt.imagePreviews"
+                        :key="i"
+                        class="position-relative"
+                      >
+                        <img
+                          :src="img"
+                          width="70"
+                          height="70"
+                          class="rounded shadow"
+                        />
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-danger position-absolute top-0 end-0"
+                          @click="removeImage(bt, i)"
+                        >
+                          x
+                        </button>
                       </div>
 
-                      <label v-if="bt.imagePreviews.length < 3"
+                      <label
+                        v-if="bt.imagePreviews.length < 3"
                         class="border rounded d-flex justify-content-center align-items-center"
-                        style="width: 70px; height: 70px; cursor: pointer;">
-                        <input type="file" accept="image/*" @change="onImageChange($event, bt)" hidden />
+                        style="width: 70px; height: 70px; cursor: pointer"
+                      >
+                        <input
+                          type="file"
+                          accept="image/*"
+                          @change="onImageChange($event, bt)"
+                          hidden
+                        />
                         <span class="text-muted">+</span>
                       </label>
                     </div>
@@ -263,7 +438,13 @@
 
                   <!-- Nút xoá biến thể -->
                   <td class="text-center">
-                    <button class="btn btn-outline-danger btn-sm" type="button" @click="removeBienThe(index)">❌</button>
+                    <button
+                      class="btn btn-outline-danger btn-sm"
+                      type="button"
+                      @click="removeBienThe(index)"
+                    >
+                      ❌
+                    </button>
                   </td>
                 </tr>
               </tbody>
@@ -284,15 +465,34 @@
     </div>
 
     <!-- Modal chọn màu (component) -->
-    <SelectMauSacModal v-if="showMauSacModal" :mauSacList="mauSacList" :selected="selectedMauSac"
-      @update="(val) => { selectedMauSac = val; generateVariants(); }" @refresh="loadData"
-      @close="showMauSacModal = false" />
+    <SelectMauSacModal
+      v-if="showMauSacModal"
+      :mauSacList="mauSacList"
+      :selected="selectedMauSac"
+      @update="
+        (val) => {
+          selectedMauSac = val;
+          generateVariants();
+        }
+      "
+      @refresh="loadData"
+      @close="showMauSacModal = false"
+    />
 
     <!-- Modal chọn kích thước (component) -->
-    <SelectKichThuocModal v-if="showKichThuocModal" :kichThuocList="kichThuocList" :selected="selectedKichThuoc"
-      @update="(val) => { selectedKichThuoc = val; generateVariants(); }" @refresh="loadData"
-      @close="showKichThuocModal = false" />
-
+    <SelectKichThuocModal
+      v-if="showKichThuocModal"
+      :kichThuocList="kichThuocList"
+      :selected="selectedKichThuoc"
+      @update="
+        (val) => {
+          selectedKichThuoc = val;
+          generateVariants();
+        }
+      "
+      @refresh="loadData"
+      @close="showKichThuocModal = false"
+    />
   </div>
 </template>
 
@@ -302,6 +502,23 @@ import { useRouter } from "vue-router";
 import Breadcrumb from "@/components/common/Breadcrumb.vue";
 import { useNotify } from "@/composables/useNotify";
 import Swal from "sweetalert2";
+
+import {
+  getMucDichSuDung,
+  getDanhMuc,
+  getThuongHieu,
+  getMauSac,
+  createMauSac,
+  deleteMauSac,
+  getKichThuoc,
+  createKichThuoc,
+  deleteKichThuoc,
+  getDeGiay,
+  getDayGiay,
+  getChatLieu,
+  getXuatXu,
+  createSanPham,
+} from "@/service/SanPhamService";
 // import SelectMauSacModal from "@/components/sanPham/SelectMauSacModal.vue";
 // import SelectKichThuocModal from "@/components/sanPham/SelectKichThuocModal.vue";
 
@@ -376,10 +593,40 @@ const generateVariants = () => {
 };
 
 // ----------------- Cloudinary upload -----------------
+// const onImageChange = async (event, bt) => {
+//   const file = event.target.files[0];
+//   if (!file) return;
+//   if (bt.imagePreviews.length >= 3) return alert("Chỉ được tối đa 3 ảnh");
+
+//   try {
+//     const formData = new FormData();
+//     formData.append("file", file);
+//     formData.append("upload_preset", UPLOAD_PRESET);
+
+//     const res = await fetch(CLOUDINARY_URL, {
+//       method: "POST",
+//       body: formData,
+//     });
+//     const data = await res.json();
+
+//     bt.imagePreviews.push(data.secure_url);
+//     bt.images.push(data.secure_url);
+//   } catch (err) {
+//     console.error("Upload Cloudinary thất bại:", err);
+//     alert("Upload ảnh thất bại!");
+//   }
+// };
+
 const onImageChange = async (event, bt) => {
-  const file = event.target.files[0];
+  const input = event.target;
+  const file = input.files[0];
   if (!file) return;
-  if (bt.imagePreviews.length >= 3) return alert("Chỉ được tối đa 3 ảnh");
+
+  if (bt.imagePreviews.length >= 3) {
+    notify.error("Chỉ được tối đa 3 ảnh");
+    input.value = "";
+    return;
+  }
 
   try {
     const formData = new FormData();
@@ -395,10 +642,13 @@ const onImageChange = async (event, bt) => {
     bt.imagePreviews.push(data.secure_url);
     bt.images.push(data.secure_url);
   } catch (err) {
-    console.error("Upload Cloudinary thất bại:", err);
-    alert("Upload ảnh thất bại!");
+    notify.error("Upload ảnh thất bại!");
+  } finally {
+    // 🔥 QUAN TRỌNG
+    input.value = "";
   }
 };
+
 
 const removeImage = (bt, index) => {
   bt.imagePreviews.splice(index, 1);
@@ -412,29 +662,32 @@ const removeBienThe = (index) => {
 // ----------------- Load data comboboxs -----------------
 const loadData = async () => {
   try {
-    const [
-      mdRes, dmRes, thRes, msRes, ktRes, dgRes, dyRes, clRes, xxRes
-    ] = await Promise.all([
-      fetch("http://localhost:8080/admin/muc-dich-su-dung"),
-      fetch("http://localhost:8080/admin/danh-muc"),
-      fetch("http://localhost:8080/admin/thuong-hieu"),
-      fetch("http://localhost:8080/admin/mau-sac"),
-      fetch("http://localhost:8080/admin/kich-thuoc"),
-      fetch("http://localhost:8080/admin/de-giay"),
-      fetch("http://localhost:8080/admin/day-giay"),
-      fetch("http://localhost:8080/admin/chat-lieu"),
-      fetch("http://localhost:8080/admin/xuat-xu"),
-    ]);
+    const [mdRes, dmRes, thRes, msRes, ktRes, dgRes, dyRes, clRes, xxRes] =
+      await Promise.all([
+        getMucDichSuDung(),
+        getDanhMuc(),
+        getThuongHieu(),
+        getMauSac(),
+        getKichThuoc(),
+        getDeGiay(),
+        getDayGiay(),
+        getChatLieu(),
+        getXuatXu(),
+      ]);
 
-    mucDichList.value = await mdRes.json();
-    danhMucList.value = await dmRes.json();
-    thuongHieuList.value = await thRes.json();
-    mauSacList.value = await msRes.json();
-    kichThuocList.value = await ktRes.json();
-    deGiayList.value = await dgRes.json();
-    dayGiayList.value = await dyRes.json();
-    chatLieuList.value = await clRes.json();
-    xuatXuList.value = await xxRes.json();
+    mucDichList.value = await mdRes.data;
+    danhMucList.value = await dmRes.data;
+    thuongHieuList.value = await thRes.data;
+    mauSacList.value = await msRes.data;
+    kichThuocList.value = await ktRes.data.sort((a, b) => {
+      const numA = parseInt(a.ten);
+      const numB = parseInt(b.ten);
+      return numA - numB;
+    });
+    deGiayList.value = await dgRes.data;
+    dayGiayList.value = await dyRes.data;
+    chatLieuList.value = await clRes.data;
+    xuatXuList.value = await xxRes.data;
   } catch (err) {
     console.error("Lỗi load dữ liệu:", err);
   }
@@ -442,51 +695,48 @@ const loadData = async () => {
 
 // ----------------- Thêm sản phẩm -----------------
 const addSanPham = async () => {
+  const payload = {
+    ten: form.tenSanPham,
+    idDanhMuc: form.danhMucId,
+    idThuongHieu: form.thuongHieuId,
+    idMucDichSuDung: form.mucDichSuDungId,
+    idDeGiay: form.deGiayId,
+    idDayGiay: form.dayGiayId,
+    idXuatXu: form.xuatXuId,
+    moTa: form.moTa,
+    chiTietSanPham: bienTheList.value.map((bt) => ({
+      ten: bt.ten,
+      idMauSac: bt.mauSac.id,
+      idKichThuoc: bt.kichThuoc.id,
+      idChatLieu: form.chatLieuId,
+      giaBan: bt.gia,
+      soLuongTon: bt.soLuong,
+      images: bt.images,
+    })),
+  };
+
   try {
-    const payload = {
-      ten: form.tenSanPham,
-      idDanhMuc: form.danhMucId,
-      idThuongHieu: form.thuongHieuId,
-      idMucDichSuDung: form.mucDichSuDungId,
-      idDeGiay: form.deGiayId,
-      idDayGiay: form.dayGiayId,
-      idXuatXu: form.xuatXuId,
-      moTa: form.moTa,
-      chiTietSanPham: bienTheList.value.map(bt => ({
-        ten: bt.ten,
-        idMauSac: bt.mauSac.id,
-        idKichThuoc: bt.kichThuoc.id,
-        idChatLieu: form.chatLieuId,
-        giaBan: bt.gia,
-        soLuongTon: bt.soLuong,
-        images: bt.images
-      }))
-    };
-
-    const res = await fetch("http://localhost:8080/admin/san-pham", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    // 🚨 PHẦN NÀY CẦN SỬA ĐỂ BẮT LỖI TỪ BODY JSON CỦA BACK-END
-    if (!res.ok) {
-      let errorData = { message: "Đã xảy ra lỗi không xác định từ Server." };
-      try {
-        // Cố gắng đọc body JSON (nơi chứa thông báo chi tiết)
-        errorData = await res.json();
-      } catch (e) {
-        console.warn("Lỗi đọc JSON từ phản hồi:", e);
-      }
-      // Ném lỗi với thông báo chi tiết từ Back-end
-      throw new Error(errorData.message || `Lỗi Server (${res.status}): ${errorData.error || errorData.title || "Lỗi không rõ"}`);
-    }
+    await createSanPham(payload);
 
     notify.success("Thêm sản phẩm thành công!");
-    router.push("/admin/san-pham");
+    router.push("/admin/san-pham/chi-tiet");
   } catch (err) {
     console.error("Lỗi khi thêm sản phẩm:", err.message);
-    // Hiển thị thông báo chi tiết vừa được ném từ khối if (!res.ok)
+
+    let errorMessage = "Đã xảy ra lỗi không xác định.";
+
+    if (err.response && err.response.data) {
+      const errorData = err.response.data;
+
+      errorMessage =
+        errorData.message ||
+        errorData.error ||
+        errorData.title ||
+        `Lỗi Server (${err.response.status})`;
+    } else {
+      errorMessage = err.message || "Lỗi kết nối Server.";
+    }
+
     notify.error(err.message);
   }
 };
@@ -532,7 +782,9 @@ const validateForm = () => {
 
   // 3. Kiểm tra Biến thể đã được tạo chưa
   if (!bienTheList.value.length) {
-    notify.error("Vui lòng chọn ít nhất 1 Màu sắc và Kích thước để tạo biến thể!");
+    notify.error(
+      "Vui lòng chọn ít nhất 1 Màu sắc và Kích thước để tạo biến thể!"
+    );
     return false;
   }
 
@@ -576,48 +828,33 @@ const confirmSave = async () => {
 const addNewColor = async () => {
   if (!newColorName.value.trim()) return alert("Vui lòng nhập tên màu!");
   try {
-    const res = await fetch("http://localhost:8080/admin/mau-sac", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ten: newColorName.value,
-        ma: newColorCode.value,
-      }),
+    await createMauSac({
+      ten: newColorName.value,
+      ma: newColorCode.value,
     });
-    if (!res.ok) throw new Error("Thêm màu thất bại");
-    // refresh danh sách từ server để có ID thật
+
+    notify.success("Thêm màu thành công!");
+
     await loadData();
+
     newColorName.value = "";
     newColorCode.value = "#000000";
     showAddColorForm.value = false;
   } catch (err) {
     console.error(err);
-    alert("Không thể thêm màu mới!");
+
+    const errorMsg = err.response?.data?.message || "Không thể thêm màu mới!";
+    notify.error(errorMsg);
   }
 };
 
 const addNewSize = async () => {
-  if (!newSizeName.value.trim()) return notify.error("Vui lòng nhập tên kích thước!"); // Dùng notify thay vì alert
+  if (!newSizeName.value.trim())
+    return notify.error("Vui lòng nhập tên kích thước!"); // Dùng notify thay vì alert
   try {
-    const res = await fetch("http://localhost:8080/admin/kich-thuoc", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ten: newSizeName.value,
-      }),
+    await createKichThuoc({
+      ten: newSizeName.value,
     });
-
-    // 💡 LOGIC SỬA LỖI: Bắt thông báo chi tiết từ Back-end
-    if (!res.ok) {
-      let errorData = {};
-      try {
-        errorData = await res.json();
-      } catch (e) {
-        // Không làm gì nếu không đọc được JSON
-      }
-      // Ném lỗi với thông báo chi tiết (vd: "Kích thước đã tồn tại!")
-      throw new Error(errorData.message || `Lỗi Server (${res.status}): Không thể thêm kích thước.`);
-    }
 
     notify.success("Thêm kích thước thành công!"); // Dùng notify
     await loadData();
@@ -625,7 +862,9 @@ const addNewSize = async () => {
     showAddSizeForm.value = false;
   } catch (err) {
     console.error(err);
-    notify.error(err.message); // ⬅️ Hiển thị lỗi chi tiết
+    const errorMsg =
+      err.response?.data?.message || "Lỗi Server: Không thể thêm kích thước.";
+    notify.error(errorMsg);
   }
 };
 
@@ -633,11 +872,12 @@ const addNewSize = async () => {
 const deleteColor = async (mau) => {
   if (!confirm(`Bạn có chắc muốn xóa màu "${mau.ten}"?`)) return;
   try {
-    const res = await fetch(`http://localhost:8080/admin/mau-sac/${mau.id}`, { method: "DELETE" });
-    if (!res.ok) throw new Error("Xóa thất bại");
+    await deleteMauSac(mau.id);
+
+    notify.success("Xóa màu thành công!");
     await loadData();
     // nếu màu đã chọn thì loại khỏi selected
-    selectedMauSac.value = selectedMauSac.value.filter(c => c.id !== mau.id);
+    selectedMauSac.value = selectedMauSac.value.filter((c) => c.id !== mau.id);
     generateVariants();
   } catch (err) {
     console.error(err);
@@ -648,35 +888,26 @@ const deleteColor = async (mau) => {
 const deleteSize = async (size) => {
   if (!confirm(`Bạn có chắc muốn xóa kích thước "${size.ten}"?`)) return;
   try {
-    const res = await fetch(`http://localhost:8080/admin/kich-thuoc/${size.id}`, { method: "DELETE" });
-
-    // 💡 LOGIC SỬA LỖI: Bắt thông báo chi tiết từ Back-end
-    if (!res.ok) {
-      let errorData = {};
-      try {
-        errorData = await res.json();
-      } catch (e) {
-        // Không làm gì nếu không đọc được JSON
-      }
-      // Ném lỗi với thông báo chi tiết (vd: "Không thể xóa vì đã có sản phẩm sử dụng.")
-      throw new Error(errorData.message || `Lỗi Server (${res.status}): Xóa kích thước thất bại.`);
-    }
+    await deleteKichThuoc(size.id);
 
     notify.success("Xóa kích thước thành công!"); // Dùng notify
     await loadData();
-    selectedKichThuoc.value = selectedKichThuoc.value.filter(s => s.id !== size.id);
+    selectedKichThuoc.value = selectedKichThuoc.value.filter(
+      (s) => s.id !== size.id
+    );
     generateVariants();
   } catch (err) {
     console.error(err);
-    notify.error(err.message); // ⬅️ Hiển thị lỗi chi tiết
+    const errorMsg = err.response?.data?.message || "Lỗi xóa kích thước.";
+    notify.error(errorMsg);
   }
 };
 
 // ----------------- Chọn / bỏ chọn màu & size (toggle, không đóng modal) -----------------
 const selectColor = (mau) => {
-  const exists = selectedMauSac.value.find(c => c.id === mau.id);
+  const exists = selectedMauSac.value.find((c) => c.id === mau.id);
   if (exists) {
-    selectedMauSac.value = selectedMauSac.value.filter(c => c.id !== mau.id);
+    selectedMauSac.value = selectedMauSac.value.filter((c) => c.id !== mau.id);
   } else {
     selectedMauSac.value.push(mau);
   }
@@ -684,9 +915,11 @@ const selectColor = (mau) => {
 };
 
 const selectSize = (size) => {
-  const exists = selectedKichThuoc.value.find(k => k.id === size.id);
+  const exists = selectedKichThuoc.value.find((k) => k.id === size.id);
   if (exists) {
-    selectedKichThuoc.value = selectedKichThuoc.value.filter(k => k.id !== size.id);
+    selectedKichThuoc.value = selectedKichThuoc.value.filter(
+      (k) => k.id !== size.id
+    );
   } else {
     selectedKichThuoc.value.push(size);
   }
@@ -702,12 +935,17 @@ const removeSelectedSize = (i) => {
   generateVariants();
 };
 
-const closeColorModal = () => { showColorModal.value = false; showAddColorForm.value = false; };
-const closeSizeModal = () => { showSizeModal.value = false; showAddSizeForm.value = false; };
+const closeColorModal = () => {
+  showColorModal.value = false;
+  showAddColorForm.value = false;
+};
+const closeSizeModal = () => {
+  showSizeModal.value = false;
+  showAddSizeForm.value = false;
+};
 
 // ----------------- Khởi tạo -----------------
 onMounted(loadData);
-
 </script>
 
 <style scoped>
