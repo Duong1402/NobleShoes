@@ -70,19 +70,10 @@ public interface ChiTietSanPhamRepository extends JpaRepository<ChiTietSanPham, 
     String findMaxMaCTSP();
 
     @Query("SELECT new com.example.datn.dto.thongke.SanPhamSapHetHangDto(" +
-            "COALESCE(sp.hinhAnh.urlAnh1, ''),ctsp.ma, sp.ten, ctsp.mauSac.ten, ctsp.kichThuoc.ten, ctsp.soLuongTon, ctsp.giaBan) " +
+            "COALESCE(sp.hinhAnh.urlAnh1, ''), sp.ten, ctsp.soLuongTon, ctsp.giaBan) " +
             "FROM ChiTietSanPham ctsp JOIN ctsp.sanPham sp " +
-            "WHERE ctsp.soLuongTon < 6 " +
+            "WHERE ctsp.soLuongTon < 10 " +
             "ORDER BY ctsp.soLuongTon ASC")
     Page<SanPhamSapHetHangDto> findSanPhamSapHetHang(Pageable pageable);
-
-    @Query(
-            value = """
-                      SELECT * FROM chi_tiet_san_pham
-                      ORDER BY CAST(SUBSTRING(ma, 5, LEN(ma)) AS INT) DESC
-                    """,
-            nativeQuery = true
-    )
-    List<ChiTietSanPham> findAllOrderByMaDescNative();
 
 }

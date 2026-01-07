@@ -195,19 +195,6 @@ const saveInline = async () => {
     return;
   }
 
-  const result = await Swal.fire({
-    title: "Xác nhận cập nhật?",
-    text: "Bạn có chắc chắn muốn lưu thay đổi sản phẩm này không?",
-    icon: "question",
-    showCancelButton: true,
-    confirmButtonText: "Lưu",
-    cancelButtonText: "Hủy",
-    confirmButtonColor: "#3085d6",
-    cancelButtonColor: "#d33",
-  });
-
-  if (!result.isConfirmed) return;
-
   const payload = {
     tenSP: editingCTSP.value.tenSP,
     danhMucId: editingCTSP.value.danhMucId,
@@ -280,12 +267,7 @@ onMounted(async () => {
     </div>
 
     <!-- Bộ lọc -->
-    <div class="card filter-card mb-3">
-      <div class="card-header filter-header">
-        <h4 class="card-title mb-0">
-          <i class="fa fa-filter me-2"></i> Bộ lọc
-        </h4>
-      </div>
+    <!-- <div class="card mb-3 shadow-sm border-0">
       <div class="card-body">
         <div class="row g-2 align-items-end">
           <div class="col-md-3">
@@ -299,7 +281,32 @@ onMounted(async () => {
               placeholder="Nhập mã hoặc tên sản phẩm..."
             />
           </div>
-
+          <div class="col-md-2">
+            <label class="form-label text-muted small mb-1">Danh mục</label>
+            <select class="form-select" v-model="filterDanhMuc">
+              <option value="">Tất cả</option>
+              <option
+                v-for="item in danhMucList"
+                :key="item.id"
+                :value="item.id"
+              >
+                {{ item.ten }}
+              </option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label text-muted small mb-1">Thương hiệu</label>
+            <select class="form-select" v-model="filterThuongHieu">
+              <option value="">Tất cả</option>
+              <option
+                v-for="item in thuongHieuList"
+                :key="item.id"
+                :value="item.id"
+              >
+                {{ item.ten }}
+              </option>
+            </select>
+          </div>
           <div class="col-md-2">
             <label class="form-label text-muted small mb-1">Màu sắc</label>
             <select class="form-select" v-model="filterMau">
@@ -313,7 +320,19 @@ onMounted(async () => {
               </option>
             </select>
           </div>
-
+          <div class="col-md-2">
+            <label class="form-label text-muted small mb-1">Chất liệu</label>
+            <select class="form-select" v-model="filterChatLieu">
+              <option value="">Tất cả</option>
+              <option
+                v-for="item in chatLieuList"
+                :key="item.id"
+                :value="item.id"
+              >
+                {{ item.ten }}
+              </option>
+            </select>
+          </div>
           <div class="col-md-2">
             <label class="form-label text-muted small mb-1">Kích cỡ</label>
             <select class="form-select" v-model="filterSize">
@@ -327,7 +346,41 @@ onMounted(async () => {
               </option>
             </select>
           </div>
-
+          <div class="col-md-2">
+            <label class="form-label text-muted small mb-1"
+              >Mục đích sử dụng</label
+            >
+            <select class="form-select" v-model="filterMucDich">
+              <option value="">Tất cả</option>
+              <option
+                v-for="item in mucDichSuDungList"
+                :key="item.id"
+                :value="item.id"
+              >
+                {{ item.ten }}
+              </option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label text-muted small mb-1"
+              >Khoảng giá (VND)</label
+            >
+            <div class="d-flex align-items-center gap-2">
+              <input
+                type="number"
+                v-model.number="filterMinPrice"
+                class="form-control"
+                placeholder="Từ"
+              />
+              <span>-</span>
+              <input
+                type="number"
+                v-model.number="filterMaxPrice"
+                class="form-control"
+                placeholder="Đến"
+              />
+            </div>
+          </div>
           <div class="col-md-2">
             <button class="btn btn-warning w-100" @click="resetFilters">
               <i class="fa fa-undo me-1"></i>Đặt lại
@@ -340,7 +393,7 @@ onMounted(async () => {
           </div>
         </div>
       </div>
-    </div>
+    </div> -->
 
     <!-- Inline edit form -->
     <div v-if="editingCTSP" class="card mb-3 shadow-sm border-0 p-3">
@@ -377,7 +430,7 @@ onMounted(async () => {
           <div class="row g-2">
             <div class="col-md-3">
               <label class="form-label">Tên SP</label>
-              <input class="form-control" v-model="editingCTSP.tenSP" />
+              <input class="form-control" v-model="editingCTSP.tenSanPham" />
             </div>
             <div class="col-md-3">
               <label class="form-label">Danh mục</label>
@@ -604,138 +657,31 @@ onMounted(async () => {
   font-size: 0.85rem;
   padding: 0.3rem 0.5rem;
   vertical-align: middle;
-  text-align: center;
+  text-align: center; 
 }
 
 .table thead th {
   font-weight: 600;
   width: auto;
 }
-.table th:nth-child(1),
-.table td:nth-child(1) {
-  width: 5%;
-} /* STT */
-.table th:nth-child(2),
-.table td:nth-child(2) {
-  width: 7%;
-} /* Hình ảnh */
-.table th:nth-child(3),
-.table td:nth-child(3) {
-  width: 12%;
-} /* Tên SP */
-.table th:nth-child(4),
-.table td:nth-child(4) {
-  width: 9%;
-} /* Danh mục */
-.table th:nth-child(5),
-.table td:nth-child(5) {
-  width: 9%;
-} /* Thương hiệu */
-.table th:nth-child(6),
-.table td:nth-child(6) {
-  width: 8%;
-} /* Xuất xứ */
-.table th:nth-child(7),
-.table td:nth-child(7) {
-  width: 8%;
-} /* Mục đích */
-.table th:nth-child(8),
-.table td:nth-child(8) {
-  width: 7%;
-} /* Số lượng tồn */
-.table th:nth-child(9),
-.table td:nth-child(9) {
-  width: 9%;
-} /* Giá bán */
-.table th:nth-child(10),
-.table td:nth-child(10) {
-  width: 7%;
-} /* Màu sắc */
-.table th:nth-child(11),
-.table td:nth-child(11) {
-  width: 7%;
-} /* Kích thước */
-.table th:nth-child(12),
-.table td:nth-child(12) {
-  width: 7%;
-} /* Chất liệu */
-.table th:nth-child(13),
-.table td:nth-child(13) {
-  width: 5%;
-} /* Thao tác */
+.table th:nth-child(1), .table td:nth-child(1) { width: 5%; } /* STT */
+.table th:nth-child(2), .table td:nth-child(2) { width: 7%; } /* Hình ảnh */
+.table th:nth-child(3), .table td:nth-child(3) { width: 12%; } /* Tên SP */
+.table th:nth-child(4), .table td:nth-child(4) { width: 9%; } /* Danh mục */
+.table th:nth-child(5), .table td:nth-child(5) { width: 9%; } /* Thương hiệu */
+.table th:nth-child(6), .table td:nth-child(6) { width: 8%; } /* Xuất xứ */
+.table th:nth-child(7), .table td:nth-child(7) { width: 8%; } /* Mục đích */
+.table th:nth-child(8), .table td:nth-child(8) { width: 7%; } /* Số lượng tồn */
+.table th:nth-child(9), .table td:nth-child(9) { width: 9%; } /* Giá bán */
+.table th:nth-child(10), .table td:nth-child(10) { width: 7%; } /* Màu sắc */
+.table th:nth-child(11), .table td:nth-child(11) { width: 7%; } /* Kích thước */
+.table th:nth-child(12), .table td:nth-child(12) { width: 7%; } /* Chất liệu */
+.table th:nth-child(13), .table td:nth-child(13) { width: 5%; } /* Thao tác */
 
 .table td {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 150px;
-}
-/* ===== FILTER CARD ===== */
-.filter-card {
-  border-radius: 10px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
-  border: none;
-}
-
-/* ===== HEADER ===== */
-.filter-header {
-  background: #fff;
-  border-bottom: 1px solid #eee;
-  padding: 12px 16px;
-}
-
-.filter-header .card-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-  display: flex;
-  align-items: center;
-}
-
-.filter-header i {
-  color: #f0ad4e; /* vàng bootstrap warning */
-  font-size: 16px;
-}
-
-/* ===== FORM CONTROLS ===== */
-.filter-card .form-control,
-.filter-card .form-select {
-  border-radius: 6px;
-  font-size: 14px;
-  height: 38px;
-}
-
-.filter-card .form-control::placeholder {
-  font-size: 13px;
-  color: #999;
-}
-
-/* ===== LABEL ===== */
-.filter-card .form-label {
-  font-weight: 500;
-}
-
-/* ===== BUTTONS ===== */
-.filter-card .btn {
-  height: 38px;
-  font-size: 14px;
-  border-radius: 6px;
-}
-
-.filter-card .btn-warning {
-  color: #fff;
-  font-weight: 500;
-}
-
-.filter-card .btn-secondary {
-  background: #6c757d;
-  border-color: #6c757d;
-}
-
-/* ===== MOBILE ===== */
-@media (max-width: 768px) {
-  .filter-header .card-title {
-    font-size: 16px;
-  }
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
 }
 </style>

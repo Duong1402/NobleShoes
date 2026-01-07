@@ -220,36 +220,7 @@ const resetFilters = async () => {
   filterNgayBatDau.value = "";
   filterNgayKetThuc.value = "";
   page.value = 0;
-  await loadphieuGiamGia();
-};
-const getStatusCode = (p) => {
-  const now = new Date();
-  const start = new Date(p.ngayBatDau);
-  const end = new Date(p.ngayKetThuc);
-
-  // Ưu tiên kiểm tra xem có bị Admin tắt thủ công không
-  if (!p.trangThai) return 2;
-
-  if (now < start) return 0; // Sắp diễn ra
-  if (now > end) return 3; // Đã kết thúc
-  return 1; // Đang hoạt động
-};
-
-const getStatusLabel = (p) => {
-  const status = getStatusCode(p);
-  const labels = [
-    "Sắp diễn ra",
-    "Còn hoạt động",
-    "Ngừng hoạt động",
-    "Đã kết thúc",
-  ];
-  return labels[status];
-};
-
-const getStatusClass = (p) => {
-  const status = getStatusCode(p);
-  const classes = ["bg-info", "bg-success", "bg-danger", "bg-secondary"];
-  return classes[status];
+  await loadphieuGiamGia(); 
 };
 </script>
 <template>
@@ -281,7 +252,7 @@ const getStatusClass = (p) => {
               <input
                 type="text"
                 class="form-control"
-                placeholder="Nhập mã, tên"
+                placeholder="Mã, tên, email..."
                 v-model="searchQuery"
                 required
               />
@@ -406,10 +377,13 @@ const getStatusClass = (p) => {
                     <td>{{ p.giaTriGiamToiDa }}VNĐ</td>
                     <td>
                       <span
-                        class="badge rounded-pill fs-6 px-3 status-badge text-white"
-                        :class="getStatusClass(p)"
+                        class="badge rounded-pill fs-6 px-3 status-badge"
+                        :class="{
+                          'text-white bg-warning': p.trangThai,
+                          'text-white bg-danger': !p.trangThai,
+                        }"
                       >
-                        {{ getStatusLabel(p) }}
+                        {{ p.trangThai ? "Còn hoạt động" : "Ngừng hoạt động" }}
                       </span>
                     </td>
                     <td class="text-center align-middle">

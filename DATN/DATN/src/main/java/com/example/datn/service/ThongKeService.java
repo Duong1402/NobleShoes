@@ -68,6 +68,19 @@ public class ThongKeService {
         growthStats.add(createGrowthStat("Doanh thu Tháng", thangNay.getTongDoanhThu(), thangTruoc.getTongDoanhThu()));
         growthStats.add(createGrowthStat("Doanh thu năm", namNay.getTongDoanhThu(), namTruoc.getTongDoanhThu()));
 
+        // Đơn hàng (Thành công)
+        growthStats.add(createGrowthStat("Đơn hàng ngày", homNay.getSoDonThanhCong(), homQua.getSoDonThanhCong()));
+        growthStats.add(createGrowthStat("Đơn hàng tuần", tuanNay.getSoDonThanhCong(), tuanTruoc.getSoDonThanhCong()));
+        growthStats.add(createGrowthStat("Đơn hàng tháng", thangNay.getSoDonThanhCong(), thangTruoc.getSoDonThanhCong()));
+        growthStats.add(createGrowthStat("Đơn hàng năm", namNay.getSoDonThanhCong(), namTruoc.getSoDonThanhCong()));
+
+        // Sản phẩm
+        growthStats.add(createGrowthStat("Sản phẩm ngày", homNay.getSoSanPhamDaBan(), homQua.getSoSanPhamDaBan()));
+        growthStats.add(createGrowthStat("Sản phẩm tuần", tuanNay.getSoSanPhamDaBan(), tuanTruoc.getSoSanPhamDaBan()));
+        growthStats.add(createGrowthStat("Sản phẩm tháng", thangNay.getSoSanPhamDaBan(), thangTruoc.getSoSanPhamDaBan()));
+        growthStats.add(createGrowthStat("Sản phẩm năm", namNay.getSoSanPhamDaBan(), namTruoc.getSoSanPhamDaBan()));
+
+
         Page<SanPhamSapHetHangDto> sapHetHangPage = chiTietSanPhamRepository.findSanPhamSapHetHang(lowStockPageable);
 
         return new OverviewResponse(homNay, tuanNay, thangNay, namNay, sapHetHangPage, growthStats);
@@ -138,12 +151,8 @@ public class ThongKeService {
                 .filter(hd -> hd.getTrangThai() == TRANG_THAI_HUY)
                 .collect(Collectors.toList());
         BigDecimal tongDoanhThu = donThanhCong.stream()
-                .map(hd ->
-                        (hd.getTongTienSauGiam() == null ? BigDecimal.ZERO : hd.getTongTienSauGiam())
-                                .subtract(hd.getPhiVanChuyen() == null ? BigDecimal.ZERO : hd.getPhiVanChuyen())
-                )
+                .map(HoaDon::getTongTien)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-
         long soSanPhamDaBan = 0;
         if (!donThanhCong.isEmpty()) {
             List<UUID> ids = donThanhCong.stream().map(HoaDon::getId).collect(Collectors.toList());

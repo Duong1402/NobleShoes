@@ -88,14 +88,14 @@ const sendMessage = async () => {
       ></div>
     </div>
 
-    <div class="chat-footer">
-      <input
-        v-model="message"
-        @keyup.enter="sendMessage"
-        placeholder="Nhập tin nhắn..."
-      />
-      <button @click="sendMessage">Gửi</button>
-    </div>
+      <div class="chat-footer">
+        <input
+          v-model="message"
+          @keyup.enter="sendMessage"
+          placeholder="Nhập tin nhắn..."
+        />
+        <button @click="sendMessage">Gửi</button>
+      </div>
   </div>
 </template>
 
@@ -164,26 +164,4 @@ const sendMessage = async () => {
   border: none;
   padding: 8px;
 }
-.chat-toggle {
-  position: fixed;
-  bottom: 20px;
-  right: 25px;
-  background: #ffc107;
-  border: none;
-  padding: 12px;
-  border-radius: 50%;
-  z-index: 9999; /* 🔥 thêm */
-}
-
-.chat-box {
-  position: fixed;
-  bottom: 90px; /* 🔥 cao hơn footer */
-  right: 25px;
-  width: 320px;
-  border: 2px solid #ffc107;
-  border-radius: 12px;
-  background: white;
-  z-index: 9999; /* 🔥 thêm */
-}
-
 </style>

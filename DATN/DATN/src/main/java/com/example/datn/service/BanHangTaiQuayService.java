@@ -43,7 +43,7 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
     private EntityManager entityManager;
 
     public enum trangThaiHoaDon {
-        HOA_DON_CHO(0),
+        CHO_THANH_TOAN(0),
         CHO_XAC_NHAN(1),
         DA_XAC_NHAN(2),
         DANG_CHUAN_BI(3),
@@ -114,7 +114,7 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
         hd.setNhanVien(nv);
         hd.setMa(hoaDonRepository.getNextMaHoaDon());
         hd.setLoaiHoaDon("Tại cửa hàng");
-        hd.setTrangThai(trangThaiHoaDon.HOA_DON_CHO.getValue());
+        hd.setTrangThai(trangThaiHoaDon.CHO_THANH_TOAN.getValue());
         hd.setNgayTao(LocalDate.now());
         hd.setTongTien(BigDecimal.ZERO);
 
@@ -286,14 +286,14 @@ public class BanHangTaiQuayService implements BanHangTaiQuayServiceImpl {
         hd.setLoaiHoaDon(request.getLoaiHoaDon());
         BigDecimal phiShip = BigDecimal.ZERO;
 
-        if ("Giao hàng".equalsIgnoreCase(request.getLoaiHoaDon())) {
+        if ("Online".equalsIgnoreCase(request.getLoaiHoaDon())) {
             phiShip = request.getPhiVanChuyen() != null ? request.getPhiVanChuyen() : BigDecimal.ZERO;
 
             hd.setPhiVanChuyen(phiShip);
             hd.setTenKhachHang(request.getTenKhachHang());
             hd.setSdt(request.getSdt());
             hd.setDiaChiGiaoHang(request.getDiaChiGiaoHang());
-            hd.setTrangThai(trangThaiHoaDon.DA_XAC_NHAN.getValue());
+            hd.setTrangThai(trangThaiHoaDon.CHO_XAC_NHAN.getValue());
 
             KhachHang kh = hd.getKhachHang();
             if (kh != null && request.getTinhThanh() != null) {

@@ -32,12 +32,9 @@ public class HoaDonController {
     @GetMapping
     public ResponseEntity<Page<HoaDonResponse>> searchHoaDon(
             HoaDonFilterRequest filter,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @PageableDefault(page = 0, size = 10) Pageable pageable
     ) {
-        Page<HoaDonResponse> result =
-                hoaDonService.searchHoaDon(filter, page, size);
-
+        Page<HoaDonResponse> result = hoaDonService.searchHoaDon(filter, pageable);
         return ResponseEntity.ok(result);
     }
 

@@ -165,7 +165,7 @@ export function useThanhToan(
         }
       }
 
-      loaiHoaDonQuyetDinh = "Giao hàng";
+      loaiHoaDonQuyetDinh = "Online";
 
       const diaChiDayDu = [
         diaChiCuTheFinal,

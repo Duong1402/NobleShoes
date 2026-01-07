@@ -1,4 +1,3 @@
-<!-- src/view/hoaDon/chiTietHD.ve -->
 <script setup>
 import { ref, onMounted, watch, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -9,7 +8,6 @@ import {
 } from "@/service/HoaDonService";
 import { useNotify } from "@/composables/useNotify";
 import Swal from "sweetalert2";
-import QRCode from "qrcode";
 
 const route = useRoute();
 const router = useRouter();
@@ -21,10 +19,10 @@ const showHistory = ref(false);
 const lichSuThayDoi = ref([]);
 const lichSuHienThi = ref([]);
 
-const LOAI_HOA_DON = ["Online", "Tại cửa hàng", "Giao hàng"];
+const LOAI_HOA_DON = ["Online", "Tại cửa hàng", "ONLINE"];
 
 const TRANG_THAI_HOA_DON = {
-  0: "Hóa đơn chờ",
+  0: "Chờ thanh toán",
   1: "Chờ xác nhận",
   2: "Đã xác nhận",
   3: "Đang chuẩn bị",
@@ -49,16 +47,8 @@ const formatDateTime = (str) => {
 const renderTimeline = () => {
   if (!hoaDon.value) return;
 
-  const STEP_BY_LOAI_HD = {
-    "tại cửa hàng": [6],
-    "giao hàng": [2, 3, 4, 5, 6],
-    online: [1, 2, 3, 4, 5, 6, 7],
-  };
-
   const currentStatus = Number(hoaDon.value.trangThai ?? 0);
-  const currentType = String(hoaDon.value.loaiHoaDon || "")
-    .trim()
-    .toLowerCase();
+  const currentType = hoaDon.value.loaiHoaDon;
 
   if (currentStatus === 7) {
     lichSuHienThi.value = [
@@ -75,6 +65,20 @@ const renderTimeline = () => {
       },
     ];
     return;
+  }
+
+  let allowedSteps = [];
+  switch ((currentType || "").toLowerCase()) {
+    case "tại cửa hàng":
+      allowedSteps = [0, 6];
+      break;
+
+    case "online":
+      allowedSteps = [1, 2, 3, 4, 5, 6];
+      break;
+
+    default:
+      allowedSteps = [currentStatus];
   }
 
   const findTimeInHistory = (status) => {
@@ -94,20 +98,17 @@ const renderTimeline = () => {
     return time || null;
   };
 
-  const allowedSteps = STEP_BY_LOAI_HD[currentType] ?? [currentStatus];
-  let visibleSteps = allowedSteps.filter((step) => {
-    // luôn hiển thị step hiện tại
-    if (step === currentStatus) return true;
-
-    // hiển thị step đã đi qua
-    if (step < currentStatus) return true;
-
-    return false;
-  });
+  // --- 3. Lọc step hiển thị ---
+  let visibleSteps = allowedSteps.filter((step) => step <= currentStatus);
 
   // Nếu hoàn thành (6) → bỏ step 5 nếu chưa có trong lịch sử
   if (currentStatus === 6) {
-    visibleSteps = visibleSteps.filter((step) => step !== 5);
+    const step5Happen = lichSuThayDoi.value.some(
+      (h) => Number(h.trangThaiMoi) === 5
+    );
+    if (!step5Happen) {
+      visibleSteps = visibleSteps.filter((step) => step !== 5);
+    }
   }
 
   const anchorTime =
@@ -125,7 +126,7 @@ const renderTimeline = () => {
       id: step,
       text: TRANG_THAI_HOA_DON[step],
       thoiGian,
-      isDone: step <= currentStatus,
+      isDone: true,
       isCurrent: step === currentStatus,
       // chỉ đánh dấu canceled nếu currentStatus là 5
       isCanceled: step === 5 && currentStatus === 5,
@@ -248,25 +249,20 @@ const confirmChange = async (newStatus) => {
       hoaDon.value.ngayCapNhat = now;
       if (targetStatus === 7) hoaDon.value.thoiGianHuy = now;
 
-      // lichSuThayDoi.value.push({
-      //   trangThaiMoi: targetStatus,
-      //   thoiGian: now,
-      //   thoiGianCapNhat: now,
-      //   nguoiChinhSua: realName,
-      //   ghiChu: cancelReason,
-      // });
+      lichSuThayDoi.value.push({
+        trangThaiMoi: targetStatus,
+        thoiGian: now,
+        thoiGianCapNhat: now,
+        nguoiChinhSua: realName,
+        ghiChu: cancelReason,
+      });
 
-      // renderTimeline();
+      renderTimeline();
 
       await updateHoaDon(hoaDon.value.id, {
         trangThai: targetStatus,
         ghiChu: cancelReason,
       });
-
-      const historyRes = await getLichSuHoaDon(hoaDon.value.id);
-      lichSuThayDoi.value = historyRes.data || [];
-
-      renderTimeline();
     } catch (err) {
       console.error("Lỗi cập nhật:", err);
       notify.error("Có lỗi xảy ra, vui lòng thử lại!");
@@ -284,7 +280,7 @@ const getActionButtons = (status) => {
   });
 
   switch (status) {
-    case 0: // Hóa đơn chờ
+    case 0: // Chờ thanh toán
       buttons.push(
         createButton("✅ Chờ xác nhận", 1, "btn btn-success btn-sm")
       );
@@ -355,7 +351,7 @@ const getActionButtons = (status) => {
 
 const getStepIcon = (stepId) => {
   switch (stepId) {
-    case 0: // Hóa đơn chờ
+    case 0: // Chờ thanh toán
       return "fa-file-invoice-dollar";
     case 1: // Chờ xác nhận
       return "fa-clipboard-check";
@@ -432,15 +428,6 @@ const isConfirmedOrBeyond = computed(() => {
   const currentStatus = Number(hoaDon.value?.trangThai ?? 0);
   return currentStatus >= 2 && currentStatus !== 5;
 });
-
-const printInvoice = () => {
-  const url = router.resolve({
-    name: "HoaDonPrint",
-    params: { id: hoaDon.value.id },
-  }).href;
-
-  window.open(url, "_blank");
-};
 </script>
 
 <template>
@@ -448,6 +435,12 @@ const printInvoice = () => {
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h3 class="fw-bold text-warning">Hóa đơn: {{ hoaDon.ma }}</h3>
+      <button
+        class="btn btn-secondary"
+        @click="router.push({ name: 'HoaDon' })"
+      >
+        ← Quay lại
+      </button>
     </div>
 
     <!-- Timeline -->
@@ -686,7 +679,7 @@ const printInvoice = () => {
                   style="width: 70px; height: 70px; object-fit: cover"
                 />
               </td>
-              <td>{{ sp.maSanPhamChiTiet }}</td>
+              <td>{{ sp.maSanPham }}</td>
               <td>{{ sp.tenSanPham }}</td>
               <td class="text-center">{{ sp.soLuong }}</td>
               <td class="text-center">{{ sp.mauSac }}</td>
@@ -760,7 +753,13 @@ const printInvoice = () => {
                 Tổng tiền thanh toán:
               </span>
               <span class="px-4">
-                {{ (hoaDon.tongTienSauGiam ?? 0).toLocaleString() }}
+                {{
+                  (
+                    hoaDon.tongTienSauGiam ||
+                    hoaDon.tongTien ||
+                    0
+                  ).toLocaleString()
+                }}
                 ₫
               </span>
             </h5>
@@ -770,7 +769,7 @@ const printInvoice = () => {
     </div>
 
     <!-- Nút hành động -->
-    <div class="d-flex justify-content-end gap-2 mb-4">
+    <div class="d-flex justify-content-end gap-2">
       <button
         v-if="hoaDon.trangThai < 2"
         class="btn btn-secondary"
@@ -784,19 +783,6 @@ const printInvoice = () => {
         @click="handleSave"
       >
         💾 Lưu thay đổi
-      </button>
-      <button
-        v-if="hoaDon.trangThai === 6"
-        class="btn btn-outline-primary"
-        @click="printInvoice"
-      >
-        🖨 In hóa đơn
-      </button>
-      <button
-        class="btn btn-secondary"
-        @click="router.push({ name: 'HoaDon' })"
-      >
-        ← Quay lại
       </button>
     </div>
   </div>

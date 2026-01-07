@@ -98,6 +98,8 @@
               </div>
             </transition>
           </li>
+
+          
         </ul>
       </div>
     </div>
@@ -156,10 +158,10 @@ const menus = [
     ],
   },
   {
-    key: "ThuocTinh",
+    key: "SanPham",
     title: "Danh sách thuộc tính",
-    icon: "fas fa-list",
-    // routeName: "SanPham",
+    icon: "fas fa-cube",
+    routeName: "SanPham",
     children: [
       { text: "Danh mục", route: "DanhMuc" },
       { text: "Mục đích sử dụng", route: "MucDichSuDung" },

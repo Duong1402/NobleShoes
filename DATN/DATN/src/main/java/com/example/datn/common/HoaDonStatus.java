@@ -6,7 +6,7 @@ public final class HoaDonStatus {
     }
 
     // 0 = Chờ thanh toán (mặc định khi tạo hóa đơn)
-    public static final int HOA_DON_CHO = 0;
+    public static final int CHO_THANH_TOAN = 0;
 
     // 1 = Chờ xác nhận
     public static final int CHO_XAC_NHAN = 1;

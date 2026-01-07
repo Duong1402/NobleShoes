@@ -719,7 +719,7 @@ const addSanPham = async () => {
     await createSanPham(payload);
 
     notify.success("Thêm sản phẩm thành công!");
-    router.push("/admin/san-pham/chi-tiet");
+    router.push("/admin/san-pham");
   } catch (err) {
     console.error("Lỗi khi thêm sản phẩm:", err.message);
 
