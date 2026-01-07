@@ -325,14 +325,6 @@ CREATE TABLE password_reset_token (
     expiry_date DATETIME NOT NULL  
 );
 
-CREATE TABLE lich_su_hoa_don (
-    id UNIQUEIDENTIFIER DEFAULT NEWID() PRIMARY KEY,
-    id_hoa_don UNIQUEIDENTIFIER,
-    thoi_gian DATETIME,
-    nguoi_thuc_hien NVARCHAR(100),
-    ghi_chu NVARCHAR(100),
-    FOREIGN KEY (id_hoa_don) REFERENCES hoa_don(id)
-);
 
 -----------------------------------------------------------------------------------------------------------------------------------------
 -- Mục đích sử dụng
